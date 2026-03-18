@@ -1,7 +1,24 @@
 import { Router, Response } from 'express';
+import multer from 'multer';
+import path from 'path';
 import { prisma } from '../lib/prisma';
 import { authMiddleware, adminMiddleware } from '../middleware/auth';
 import type { AuthRequest } from '../types';
+
+const packageUpload = multer({
+  storage: multer.diskStorage({
+    destination: path.join(__dirname, '../../uploads/packages'),
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname);
+      cb(null, `${(_req as AuthRequest).params.id}-${Date.now()}${ext}`);
+    },
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('Only images allowed'));
+  },
+});
 
 const router = Router();
 
@@ -114,7 +131,7 @@ router.get('/admin', authMiddleware, adminMiddleware, async (_req: AuthRequest, 
 
 router.post('/admin', authMiddleware, adminMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { name, price, features, icon, sortOrder, isActive } = req.body;
+    const { name, price, features, icon, sortOrder, isActive, description } = req.body;
 
     if (!name) {
       res.status(400).json({ error: 'Name is required' });
@@ -127,6 +144,7 @@ router.post('/admin', authMiddleware, adminMiddleware, async (req: AuthRequest, 
         price: price !== undefined ? parseFloat(price) : 0,
         features: Array.isArray(features) ? features : [],
         icon: icon || '🎫',
+        description: description || null,
         sortOrder: sortOrder !== undefined ? parseInt(sortOrder, 10) : 0,
         isActive: isActive !== undefined ? isActive : true,
       },
@@ -151,7 +169,7 @@ router.put('/admin/:id', authMiddleware, adminMiddleware, async (req: AuthReques
       return;
     }
 
-    const { name, price, features, icon, sortOrder, isActive } = req.body;
+    const { name, price, features, icon, sortOrder, isActive, description } = req.body;
 
     const data: Record<string, unknown> = {};
     if (name !== undefined) data.name = name;
@@ -160,12 +178,43 @@ router.put('/admin/:id', authMiddleware, adminMiddleware, async (req: AuthReques
     if (icon !== undefined) data.icon = icon;
     if (sortOrder !== undefined) data.sortOrder = parseInt(sortOrder, 10);
     if (isActive !== undefined) data.isActive = isActive;
+    if (description !== undefined) data.description = description || null;
 
     const pkg = await prisma.merchPackage.update({ where: { id }, data });
     res.json(pkg);
   } catch (err) {
     console.error('Update package error:', err);
     res.status(500).json({ error: 'Failed to update package' });
+  }
+});
+
+// ─── POST /api/admin/packages/:id/image — upload image (admin) ──
+
+router.post('/admin/:id/image', authMiddleware, adminMiddleware, packageUpload.single('image'), async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params.id as string;
+
+    const existing = await prisma.merchPackage.findUnique({ where: { id } });
+    if (!existing) {
+      res.status(404).json({ error: 'Package not found' });
+      return;
+    }
+
+    if (!req.file) {
+      res.status(400).json({ error: 'No image file provided' });
+      return;
+    }
+
+    const imageUrl = `/uploads/packages/${req.file.filename}`;
+    const pkg = await prisma.merchPackage.update({
+      where: { id },
+      data: { imageUrl },
+    });
+
+    res.json({ imageUrl: pkg.imageUrl });
+  } catch (err) {
+    console.error('Upload package image error:', err);
+    res.status(500).json({ error: 'Failed to upload package image' });
   }
 });
 

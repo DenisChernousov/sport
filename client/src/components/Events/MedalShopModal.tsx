@@ -15,6 +15,8 @@ interface Package {
   price: number;
   features: string[];
   icon: string;
+  imageUrl?: string;
+  description?: string;
 }
 
 const FALLBACK_PACKAGES: Package[] = [
@@ -245,11 +247,11 @@ export function MedalShopModal({ isOpen, event, onClose, onJoin }: MedalShopModa
                     style={{
                       border: isSelected ? '2px solid #fc4c02' : '1.5px solid #e0e0e0',
                       borderRadius: 14,
-                      padding: 20,
                       cursor: 'pointer',
                       background: isSelected ? '#fff8f5' : '#fff',
                       transition: 'all 0.15s',
                       position: 'relative',
+                      overflow: 'hidden',
                     }}
                   >
                     {isSelected && (
@@ -262,55 +264,86 @@ export function MedalShopModal({ isOpen, event, onClose, onJoin }: MedalShopModa
                           height: 4,
                           background: '#fc4c02',
                           borderRadius: '14px 14px 0 0',
+                          zIndex: 1,
                         }}
                       />
                     )}
 
-                    <div style={{ fontSize: 32, marginBottom: 8 }}>
-                      {pkg.icon}
-                    </div>
+                    {/* Package image */}
+                    {pkg.imageUrl && (
+                      <img
+                        src={pkg.imageUrl}
+                        alt={pkg.name}
+                        style={{
+                          width: '100%',
+                          height: 120,
+                          objectFit: 'cover',
+                          display: 'block',
+                        }}
+                      />
+                    )}
 
-                    <div
-                      style={{
-                        fontSize: 15,
-                        fontWeight: 800,
-                        color: '#242424',
-                        marginBottom: 4,
-                      }}
-                    >
-                      {pkg.name}
-                    </div>
+                    <div style={{ padding: 20 }}>
+                      <div style={{ fontSize: 32, marginBottom: 8 }}>
+                        {pkg.icon}
+                      </div>
 
-                    <div
-                      style={{
-                        fontSize: 22,
-                        fontWeight: 900,
-                        color: pkg.price === 0 ? '#1a7f37' : '#fc4c02',
-                        marginBottom: 12,
-                      }}
-                    >
-                      {pkg.price === 0 ? 'Бесплатно' : `${pkg.price.toLocaleString('ru-RU')}\u20BD`}
-                    </div>
+                      <div
+                        style={{
+                          fontSize: 15,
+                          fontWeight: 800,
+                          color: '#242424',
+                          marginBottom: 4,
+                        }}
+                      >
+                        {pkg.name}
+                      </div>
 
-                    <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                      {pkg.features.map((f, i) => (
-                        <li
-                          key={i}
+                      {/* Description */}
+                      {pkg.description && (
+                        <p
                           style={{
                             fontSize: 12,
-                            color: '#666',
+                            color: '#888',
                             lineHeight: 1.5,
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            gap: 6,
-                            marginBottom: 4,
+                            margin: '0 0 8px 0',
                           }}
                         >
-                          <span style={{ color: '#1a7f37', fontSize: 13, flexShrink: 0 }}>✓</span>
-                          {f}
-                        </li>
-                      ))}
-                    </ul>
+                          {pkg.description}
+                        </p>
+                      )}
+
+                      <div
+                        style={{
+                          fontSize: 22,
+                          fontWeight: 900,
+                          color: pkg.price === 0 ? '#1a7f37' : '#fc4c02',
+                          marginBottom: 12,
+                        }}
+                      >
+                        {pkg.price === 0 ? 'Бесплатно' : `${pkg.price.toLocaleString('ru-RU')}\u20BD`}
+                      </div>
+
+                      <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                        {pkg.features.map((f, i) => (
+                          <li
+                            key={i}
+                            style={{
+                              fontSize: 12,
+                              color: '#666',
+                              lineHeight: 1.5,
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              gap: 6,
+                              marginBottom: 4,
+                            }}
+                          >
+                            <span style={{ color: '#1a7f37', fontSize: 13, flexShrink: 0 }}>✓</span>
+                            {f}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   </div>
                 );
               })}

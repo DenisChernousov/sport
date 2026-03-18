@@ -5,11 +5,11 @@ import { api } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 import { MedalShopModal } from './MedalShopModal';
 
-const SPORT: Record<SportType, { icon: string; label: string; color: string; bg: string }> = {
-  RUNNING: { icon: '🏃', label: 'Бег', color: '#fc4c02', bg: '#fff4ef' },
-  CYCLING: { icon: '🚴', label: 'Вело', color: '#0061ff', bg: '#eef4ff' },
-  SKIING:  { icon: '⛷️', label: 'Лыжи', color: '#0891b2', bg: '#edfbfe' },
-  WALKING: { icon: '🚶', label: 'Ходьба', color: '#7c3aed', bg: '#f5f0ff' },
+const SPORT: Record<SportType, { icon: string; label: string; color: string; bg: string; gradient: string }> = {
+  RUNNING: { icon: '🏃', label: 'Бег', color: '#fc4c02', bg: '#fff4ef', gradient: 'linear-gradient(135deg, #fc4c02, #ff8a50)' },
+  CYCLING: { icon: '🚴', label: 'Вело', color: '#0061ff', bg: '#eef4ff', gradient: 'linear-gradient(135deg, #0061ff, #4d9aff)' },
+  SKIING:  { icon: '⛷️', label: 'Лыжи', color: '#0891b2', bg: '#edfbfe', gradient: 'linear-gradient(135deg, #0891b2, #22d3ee)' },
+  WALKING: { icon: '🚶', label: 'Ходьба', color: '#7c3aed', bg: '#f5f0ff', gradient: 'linear-gradient(135deg, #7c3aed, #a78bfa)' },
 };
 
 const TYPE_LABEL: Record<EventType, string> = {
@@ -69,19 +69,74 @@ function EventCard({ event, onJoin, onLeave, joining }: {
       }}
       whileHover={{ y: -3, boxShadow: '0 8px 30px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.04)' }}
     >
-      {/* Sport accent */}
-      <div style={{ height: 4, background: s.color }} />
-
-      <div style={{ padding: '24px 24px 20px' }}>
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 16 }}>
+      {/* Header image / gradient */}
+      <div style={{
+        height: 140,
+        position: 'relative',
+        background: event.imageUrl ? undefined : s.gradient,
+        overflow: 'hidden',
+      }}>
+        {event.imageUrl ? (
+          <img
+            src={event.imageUrl}
+            alt={event.title}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              display: 'block',
+            }}
+          />
+        ) : (
           <div style={{
-            width: 48, height: 48, borderRadius: 14, background: s.color,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 22, flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 56,
+            opacity: 0.3,
           }}>
             {s.icon}
           </div>
+        )}
+        {/* Sport icon overlay top-left */}
+        <div style={{
+          position: 'absolute',
+          top: 10,
+          left: 10,
+          width: 36,
+          height: 36,
+          borderRadius: 10,
+          background: 'rgba(0,0,0,0.35)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 18,
+        }}>
+          {s.icon}
+        </div>
+        {/* Event type badge top-right */}
+        <span style={{
+          position: 'absolute',
+          top: 10,
+          right: 10,
+          fontSize: 11,
+          fontWeight: 700,
+          padding: '4px 12px',
+          borderRadius: 12,
+          background: 'rgba(0,0,0,0.35)',
+          backdropFilter: 'blur(4px)',
+          color: '#fff',
+        }}>
+          {TYPE_LABEL[event.type]}
+        </span>
+      </div>
+
+      <div style={{ padding: '20px 24px 20px' }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 16 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <h3 style={{ fontSize: 16, fontWeight: 800, color: '#242424', lineHeight: 1.3, marginBottom: 6 }}>
               {event.title}
@@ -91,7 +146,7 @@ function EventCard({ event, onJoin, onLeave, joining }: {
                 fontSize: 11, fontWeight: 700, padding: '2px 10px', borderRadius: 12,
                 background: s.bg, color: s.color,
               }}>
-                {TYPE_LABEL[event.type]}
+                {SPORT[event.sport].label}
               </span>
               <span style={{ fontSize: 11, fontWeight: 700, color: st.color, display: 'flex', alignItems: 'center', gap: 4 }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: st.color }} />

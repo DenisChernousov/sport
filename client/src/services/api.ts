@@ -335,19 +335,27 @@ export const api = {
 
   packages: {
     list() {
-      return request<{ id: string; name: string; price: number; features: string[]; icon: string; sortOrder: number; isActive: boolean }[]>('/packages');
+      return request<{ id: string; name: string; price: number; features: string[]; icon: string; imageUrl?: string; description?: string; sortOrder: number; isActive: boolean }[]>('/packages');
     },
     adminList() {
-      return request<{ id: string; name: string; price: number; features: string[]; icon: string; sortOrder: number; isActive: boolean; createdAt: string; updatedAt: string }[]>('/packages/admin');
+      return request<{ id: string; name: string; price: number; features: string[]; icon: string; imageUrl?: string; description?: string; sortOrder: number; isActive: boolean; createdAt: string; updatedAt: string }[]>('/packages/admin');
     },
-    create(data: { name: string; price?: number; features?: string[]; icon?: string; sortOrder?: number; isActive?: boolean }) {
+    create(data: { name: string; price?: number; features?: string[]; icon?: string; sortOrder?: number; isActive?: boolean; description?: string }) {
       return request('/packages/admin', { method: 'POST', body: JSON.stringify(data) });
     },
-    update(id: string, data: { name?: string; price?: number; features?: string[]; icon?: string; sortOrder?: number; isActive?: boolean }) {
+    update(id: string, data: { name?: string; price?: number; features?: string[]; icon?: string; sortOrder?: number; isActive?: boolean; description?: string }) {
       return request(`/packages/admin/${id}`, { method: 'PUT', body: JSON.stringify(data) });
     },
     delete(id: string) {
       return request<void>(`/packages/admin/${id}`, { method: 'DELETE' });
+    },
+    uploadImage(id: string, file: File) {
+      const form = new FormData();
+      form.append('image', file);
+      return request<{ imageUrl: string }>(`/packages/admin/${id}/image`, {
+        method: 'POST',
+        body: form,
+      });
     },
   },
 

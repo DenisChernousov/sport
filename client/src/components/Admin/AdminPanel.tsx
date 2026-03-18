@@ -9,6 +9,8 @@ interface MerchPackage {
   price: number;
   features: string[];
   icon: string;
+  imageUrl?: string;
+  description?: string;
   sortOrder: number;
   isActive: boolean;
 }
@@ -373,6 +375,7 @@ interface PackageFormData {
   price: string;
   icon: string;
   features: string;
+  description: string;
   isActive: boolean;
   sortOrder: string;
 }
@@ -382,6 +385,7 @@ const emptyPackageForm: PackageFormData = {
   price: '0',
   icon: '🎫',
   features: '',
+  description: '',
   isActive: true,
   sortOrder: '0',
 };
@@ -392,18 +396,23 @@ function pkgToForm(p: MerchPackage): PackageFormData {
     price: String(p.price),
     icon: p.icon,
     features: p.features.join('\n'),
+    description: p.description || '',
     isActive: p.isActive,
     sortOrder: String(p.sortOrder),
   };
 }
 
-function PackageFormModal({ initial, onSave, onClose, saving }: {
+function PackageFormModal({ initial, onSave, onClose, saving, packageId }: {
   initial: PackageFormData;
   onSave: (data: PackageFormData) => void;
   onClose: () => void;
   saving: boolean;
+  packageId?: string;
 }) {
   const [form, setForm] = useState<PackageFormData>(initial);
+  const [imgFile, setImgFile] = useState<File | null>(null);
+  const [imgPreview, setImgPreview] = useState<string>('');
+  const [imgUploading, setImgUploading] = useState(false);
   const isEdit = initial.name !== '';
 
   const set = (key: keyof PackageFormData, value: string | boolean) =>
@@ -421,6 +430,16 @@ function PackageFormModal({ initial, onSave, onClose, saving }: {
           <input style={styles.input} value={form.name} onChange={e => set('name', e.target.value)} placeholder="Название пакета" />
         </div>
 
+        <div style={styles.fieldGroup}>
+          <label style={styles.label}>Описание</label>
+          <textarea
+            style={{ ...styles.input, minHeight: 60, resize: 'vertical' as const }}
+            value={form.description}
+            onChange={e => set('description', e.target.value)}
+            placeholder="Краткое описание пакета"
+          />
+        </div>
+
         <div style={styles.grid2}>
           <div style={styles.fieldGroup}>
             <label style={styles.label}>Цена (руб.)</label>
@@ -430,6 +449,51 @@ function PackageFormModal({ initial, onSave, onClose, saving }: {
             <label style={styles.label}>Иконка (emoji)</label>
             <input style={styles.input} value={form.icon} onChange={e => set('icon', e.target.value)} placeholder="🎫" />
           </div>
+        </div>
+
+        <div style={styles.fieldGroup}>
+          <label style={styles.label}>Изображение пакета</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <label style={{
+              padding: '8px 20px', borderRadius: 8, border: `2px dashed ${BRAND}`,
+              background: '#fff8f5', color: BRAND, fontSize: 13, fontWeight: 700,
+              cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6,
+            }}>
+              🖼️ {imgFile ? imgFile.name : 'Выбрать файл'}
+              <input type="file" accept="image/*" style={{ display: 'none' }}
+                onChange={e => {
+                  const f = e.target.files?.[0];
+                  if (f) {
+                    setImgFile(f);
+                    setImgPreview(URL.createObjectURL(f));
+                  }
+                }}
+              />
+            </label>
+            {packageId && imgFile && !imgUploading && (
+              <button type="button" onClick={async () => {
+                setImgUploading(true);
+                try {
+                  await api.packages.uploadImage(packageId, imgFile);
+                  setImgFile(null);
+                  setImgPreview('');
+                  alert('Изображение загружено!');
+                } catch { alert('Ошибка загрузки'); }
+                finally { setImgUploading(false); }
+              }} style={{
+                padding: '8px 16px', borderRadius: 8, border: 'none',
+                background: BRAND, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+              }}>
+                {imgUploading ? 'Загрузка...' : 'Загрузить'}
+              </button>
+            )}
+            {!packageId && imgFile && (
+              <span style={{ fontSize: 12, color: '#999' }}>Сохраните пакет, затем загрузите изображение</span>
+            )}
+          </div>
+          {imgPreview && (
+            <img src={imgPreview} alt="preview" style={{ marginTop: 8, maxWidth: 200, maxHeight: 120, borderRadius: 8, border: '1px solid #e0e0e0', objectFit: 'cover' }} />
+          )}
         </div>
 
         <div style={styles.fieldGroup}>
@@ -654,6 +718,7 @@ export default function AdminPanel() {
         price: parseFloat(form.price) || 0,
         icon: form.icon || '🎫',
         features,
+        description: form.description || undefined,
         isActive: form.isActive,
         sortOrder: parseInt(form.sortOrder, 10) || 0,
       };
@@ -845,7 +910,11 @@ export default function AdminPanel() {
           <div style={{ display: 'grid', gap: 16 }}>
             {packages.map(pkg => (
               <div key={pkg.id} style={{ ...styles.card, display: 'flex', gap: 20, alignItems: 'flex-start', opacity: pkg.isActive ? 1 : 0.5 }}>
-                <div style={{ fontSize: 40, flexShrink: 0 }}>{pkg.icon}</div>
+                {pkg.imageUrl ? (
+                  <img src={pkg.imageUrl} alt={pkg.name} style={{ width: 80, height: 80, borderRadius: 12, objectFit: 'cover', flexShrink: 0 }} />
+                ) : (
+                  <div style={{ fontSize: 40, flexShrink: 0 }}>{pkg.icon}</div>
+                )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                     <span style={{ fontSize: 17, fontWeight: 800, color: TEXT }}>{pkg.name}</span>
@@ -853,6 +922,9 @@ export default function AdminPanel() {
                       <span style={{ ...styles.badge('#888'), fontSize: 10 }}>Неактивен</span>
                     )}
                   </div>
+                  {pkg.description && (
+                    <p style={{ fontSize: 13, color: '#888', margin: '0 0 6px 0', lineHeight: 1.4 }}>{pkg.description}</p>
+                  )}
                   <div style={{ fontSize: 20, fontWeight: 900, color: pkg.price === 0 ? '#16a34a' : BRAND, marginBottom: 8 }}>
                     {pkg.price === 0 ? 'Бесплатно' : `${pkg.price.toLocaleString('ru-RU')} \u20BD`}
                   </div>
@@ -910,6 +982,7 @@ export default function AdminPanel() {
           onSave={handleSavePkg}
           onClose={() => { setShowPkgForm(false); setEditingPkg(null); }}
           saving={savingPkg}
+          packageId={editingPkg?.id}
         />
       )}
 
