@@ -297,6 +297,16 @@ export const api = {
     leaderboard() {
       return request<Team[]>('/teams/leaderboard');
     },
+    feed(teamId: string, params?: { page?: number; limit?: number }) {
+      return request<{ id: string; sport: string; title?: string; distance: number; duration: number; startedAt: string; createdAt: string; user: { id: string; username: string; avatarUrl?: string; level: number } }[]>(
+        `/teams/${teamId}/feed${toQuery(params)}`
+      );
+    },
+    stats(teamId: string) {
+      return request<{ weekDistance: number; monthDistance: number; weekActivities: number; activeMembers: number }>(
+        `/teams/${teamId}/stats`
+      );
+    },
   },
 
   battles: {

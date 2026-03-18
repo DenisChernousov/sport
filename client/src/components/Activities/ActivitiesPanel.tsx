@@ -337,7 +337,7 @@ function ActivityDetailModal({
               flexShrink: 0,
             }}
           >
-            <span style={{ fontSize: 16 }}>{liked ? '\u2764\uFE0F' : '\u2661'}</span>
+            <span style={{ fontSize: 16 }}>{liked ? '❤️' : '♡'}</span>
             {likeCount > 0 && <span>{likeCount}</span>}
           </button>
         </div>
@@ -661,6 +661,13 @@ const PAGE_SIZE = 10;
 
 export default function ActivitiesPanel() {
   const { user } = useAuth();
+
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const h = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
 
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1032,7 +1039,7 @@ export default function ActivitiesPanel() {
       )}
 
       {/* Сводка */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12, marginBottom: 20 }}>
         <div
           style={{
             background: '#fff',
@@ -1189,14 +1196,14 @@ export default function ActivitiesPanel() {
             </button>
           </div>
 
-          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', flexDirection: isMobile ? 'column' : 'row' }}>
             {/* Превью изображения */}
-            <div style={{ flexShrink: 0 }}>
+            <div style={{ flexShrink: 0, width: isMobile ? '100%' : undefined }}>
               <img
                 src={screenshotPreviewUrl}
                 alt="Скриншот результата"
                 style={{
-                  maxWidth: 300,
+                  maxWidth: isMobile ? '100%' : 300,
                   maxHeight: 400,
                   borderRadius: 12,
                   boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
@@ -1465,7 +1472,7 @@ export default function ActivitiesPanel() {
                 value={formDistance}
                 onChange={(e) => setFormDistance(e.target.value)}
                 placeholder="5.0"
-                style={{ ...inputStyle, width: 160 }}
+                style={{ ...inputStyle, width: isMobile ? '100%' : 160 }}
               />
             </div>
 
@@ -1481,7 +1488,7 @@ export default function ActivitiesPanel() {
                   value={formHours}
                   onChange={(e) => setFormHours(e.target.value)}
                   placeholder="ч"
-                  style={{ ...inputStyle, width: 60, textAlign: 'center' }}
+                  style={{ ...inputStyle, width: isMobile ? '100%' : 60, textAlign: 'center' }}
                 />
                 <span style={{ color: '#999' }}>:</span>
                 <input
@@ -1491,7 +1498,7 @@ export default function ActivitiesPanel() {
                   value={formMinutes}
                   onChange={(e) => setFormMinutes(e.target.value)}
                   placeholder="м"
-                  style={{ ...inputStyle, width: 60, textAlign: 'center' }}
+                  style={{ ...inputStyle, width: isMobile ? '100%' : 60, textAlign: 'center' }}
                 />
                 <span style={{ color: '#999' }}>:</span>
                 <input
@@ -1501,7 +1508,7 @@ export default function ActivitiesPanel() {
                   value={formSeconds}
                   onChange={(e) => setFormSeconds(e.target.value)}
                   placeholder="с"
-                  style={{ ...inputStyle, width: 60, textAlign: 'center' }}
+                  style={{ ...inputStyle, width: isMobile ? '100%' : 60, textAlign: 'center' }}
                 />
               </div>
             </div>
@@ -1744,7 +1751,7 @@ export default function ActivitiesPanel() {
                   </div>
                   {(likesMap[act.id]?.count ?? 0) > 0 && (
                     <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, color: '#fc4c02', fontSize: 14, fontWeight: 600 }}>
-                      <span>{'\u2764\uFE0F'}</span>
+                      <span>{'❤️'}</span>
                       <span>{likesMap[act.id].count}</span>
                     </div>
                   )}

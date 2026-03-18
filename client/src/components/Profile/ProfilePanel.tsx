@@ -5,10 +5,10 @@ import { api } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 
 const SPORT_ICONS: Record<SportType, string> = {
-  RUNNING: '\u{1F3C3}',
-  CYCLING: '\u{1F6B4}',
-  SKIING: '\u26F7\uFE0F',
-  WALKING: '\u{1F6B6}',
+  RUNNING: '🏃',
+  CYCLING: '🚴',
+  SKIING: '⛷️',
+  WALKING: '🚶',
 };
 
 const SPORT_COLORS: Record<SportType, string> = {
@@ -60,6 +60,12 @@ interface AchProgress {
 
 export default function ProfilePanel() {
   const { user, updateUser } = useAuth();
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const h = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
 
   const [achievements, setAchievements] = useState<AchievementWithMeta[]>([]);
   const [achProgress, setAchProgress] = useState<AchProgress>({ totalDistance: 0, currentStreak: 0, bestStreak: 0, finishedEvents: 0 });
@@ -386,7 +392,7 @@ export default function ProfilePanel() {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
+          gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
           gap: 12,
           marginBottom: 20,
         }}
@@ -420,7 +426,7 @@ export default function ProfilePanel() {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
+          gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
           gap: 10,
           marginBottom: 20,
         }}
@@ -504,7 +510,7 @@ export default function ProfilePanel() {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(4, 1fr)',
+              gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
               gap: 12,
             }}
           >
@@ -639,7 +645,7 @@ export default function ProfilePanel() {
             {referralCount} {referralCount === 1 ? 'приглашение' : referralCount >= 2 && referralCount <= 4 ? 'приглашения' : 'приглашений'}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 16 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 16, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
           <input
             readOnly
             value={referralLink}
@@ -648,10 +654,13 @@ export default function ProfilePanel() {
               padding: '8px 12px',
               borderRadius: 8,
               border: '1px solid #e0e0e0',
-              fontSize: 13,
+              fontSize: isMobile ? 11 : 13,
               color: '#242424',
               background: '#eef0f4',
               outline: 'none',
+              minWidth: 0,
+              width: isMobile ? '100%' : undefined,
+              boxSizing: 'border-box' as const,
             }}
           />
           <button
@@ -742,7 +751,7 @@ export default function ProfilePanel() {
           Редактировать профиль
         </div>
         <form onSubmit={handleSave}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12, marginBottom: 12 }}>
             <div>
               <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 4 }}>
                 Имя

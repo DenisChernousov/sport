@@ -5,10 +5,10 @@ import { api } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 
 const SPORT: Record<SportType, { icon: string; label: string; color: string; bg: string }> = {
-  RUNNING: { icon: '\🏃', label: 'Пробежка', color: '#fc4c02', bg: '#fff4ef' },
-  CYCLING: { icon: '\🚴', label: 'Вело', color: '#0061ff', bg: '#eef4ff' },
-  SKIING:  { icon: '\⛷\️', label: 'Лыжи', color: '#0891b2', bg: '#edfbfe' },
-  WALKING: { icon: '\🚶', label: 'Ходьба', color: '#7c3aed', bg: '#f5f0ff' },
+  RUNNING: { icon: '🏃', label: 'Пробежка', color: '#fc4c02', bg: '#fff4ef' },
+  CYCLING: { icon: '🚴', label: 'Вело', color: '#0061ff', bg: '#eef4ff' },
+  SKIING:  { icon: '⛷️', label: 'Лыжи', color: '#0891b2', bg: '#edfbfe' },
+  WALKING: { icon: '🚶', label: 'Ходьба', color: '#7c3aed', bg: '#f5f0ff' },
 };
 
 interface FeedItem extends Activity {
@@ -61,6 +61,12 @@ export default function FeedPanel() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [enlargedPhoto, setEnlargedPhoto] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const h = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
 
   const loadFeed = useCallback(async (p: number, append: boolean) => {
     try {
@@ -97,7 +103,7 @@ export default function FeedPanel() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         <h2 style={{ fontSize: 24, fontWeight: 800, color: '#242424', margin: 0 }}>
-          {'\📰'} Лента активностей
+          {'📰'} Лента активностей
         </h2>
         {[1, 2, 3].map(i => (
           <div key={i} style={{
@@ -130,7 +136,7 @@ export default function FeedPanel() {
   if (items.length === 0) {
     return (
       <div style={{ textAlign: 'center', padding: '80px 24px' }}>
-        <div style={{ fontSize: 64, marginBottom: 16 }}>{'\🏃'}</div>
+        <div style={{ fontSize: 64, marginBottom: 16 }}>{'🏃'}</div>
         <h3 style={{ fontSize: 20, fontWeight: 700, color: '#242424', margin: '0 0 8px' }}>
           Нет активностей
         </h3>
@@ -144,7 +150,7 @@ export default function FeedPanel() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <h2 style={{ fontSize: 24, fontWeight: 800, color: '#242424', margin: 0 }}>
-        {'\📰'} Лента активностей
+        {'📰'} Лента активностей
       </h2>
 
       {items.map(item => {
@@ -170,8 +176,8 @@ export default function FeedPanel() {
           >
             {/* Header: avatar + username + level + time */}
             <div style={{
-              display: 'flex', alignItems: 'center', gap: 12,
-              padding: '16px 20px 12px',
+              display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 12,
+              padding: isMobile ? '12px 14px 8px' : '16px 20px 12px',
             }}>
               <div style={{
                 width: 40, height: 40, minWidth: 40, borderRadius: '50%',
@@ -203,7 +209,7 @@ export default function FeedPanel() {
             </div>
 
             {/* Activity title */}
-            <div style={{ padding: '0 20px 12px' }}>
+            <div style={{ padding: isMobile ? '0 14px 8px' : '0 20px 12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: 20 }}>{sport.icon}</span>
                 <span style={{ fontSize: 16, fontWeight: 700, color: '#242424' }}>
@@ -214,37 +220,37 @@ export default function FeedPanel() {
 
             {/* Stats row */}
             <div style={{
-              display: 'flex', gap: 0, padding: '12px 20px',
+              display: 'flex', gap: 0, padding: isMobile ? '8px 14px' : '12px 20px',
               borderTop: '1px solid #f5f5f5', borderBottom: photos.length > 0 ? '1px solid #f5f5f5' : 'none',
             }}>
               <div style={{ flex: 1, textAlign: 'center' }}>
-                <div style={{ fontSize: 18, fontWeight: 800, color: '#242424' }}>
+                <div style={{ fontSize: isMobile ? 15 : 18, fontWeight: 800, color: '#242424' }}>
                   {distKm.toFixed(1)}
                 </div>
-                <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>Дистанция, км</div>
+                <div style={{ fontSize: isMobile ? 10 : 11, color: '#aaa', marginTop: 2 }}>Дистанция, км</div>
               </div>
               <div style={{ width: 1, background: '#f0f0f0', margin: '0 4px' }} />
               <div style={{ flex: 1, textAlign: 'center' }}>
-                <div style={{ fontSize: 18, fontWeight: 800, color: '#242424' }}>
+                <div style={{ fontSize: isMobile ? 15 : 18, fontWeight: 800, color: '#242424' }}>
                   {formatDuration(item.duration ?? 0)}
                 </div>
-                <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>Время</div>
+                <div style={{ fontSize: isMobile ? 10 : 11, color: '#aaa', marginTop: 2 }}>Время</div>
               </div>
               <div style={{ width: 1, background: '#f0f0f0', margin: '0 4px' }} />
               <div style={{ flex: 1, textAlign: 'center' }}>
                 {item.sport === 'RUNNING' || item.sport === 'WALKING' ? (
                   <>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: '#242424' }}>
+                    <div style={{ fontSize: isMobile ? 15 : 18, fontWeight: 800, color: '#242424' }}>
                       {formatPace(item.avgPace)}
                     </div>
-                    <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>Темп, мин/км</div>
+                    <div style={{ fontSize: isMobile ? 10 : 11, color: '#aaa', marginTop: 2 }}>Темп, мин/км</div>
                   </>
                 ) : (
                   <>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: '#242424' }}>
+                    <div style={{ fontSize: isMobile ? 15 : 18, fontWeight: 800, color: '#242424' }}>
                       {speedKmH.toFixed(1)}
                     </div>
-                    <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>Скорость, км/ч</div>
+                    <div style={{ fontSize: isMobile ? 10 : 11, color: '#aaa', marginTop: 2 }}>Скорость, км/ч</div>
                   </>
                 )}
               </div>
@@ -299,7 +305,7 @@ export default function FeedPanel() {
                   transition={{ duration: 0.3 }}
                   style={{ fontSize: 18 }}
                 >
-                  {item.isLiked ? '\❤\️' : '\🤍'}
+                  {item.isLiked ? '❤️' : '🤍'}
                 </motion.span>
                 {likeCount > 0 && (
                   <span style={{ fontSize: 13 }}>

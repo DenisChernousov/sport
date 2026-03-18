@@ -5,6 +5,55 @@ import { useAuth } from '@/context/AuthContext';
 
 const BattlesSection = lazy(() => import('@/components/Battles/BattlesSection'));
 
+const SPORT_ICONS: Record<string, string> = {
+  RUNNING: '🏃', CYCLING: '🚴', SKIING: '⛷️', WALKING: '🚶',
+};
+const SPORT_COLORS: Record<string, string> = {
+  RUNNING: '#fc4c02', CYCLING: '#0061ff', SKIING: '#0891b2', WALKING: '#7c3aed',
+};
+const SPORT_LABELS: Record<string, string> = {
+  RUNNING: 'Бег', CYCLING: 'Вело', SKIING: 'Лыжи', WALKING: 'Ходьба',
+};
+
+function formatDuration(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (h > 0) return `${h}ч ${m}м`;
+  return `${m}м`;
+}
+
+function formatTimeAgo(dateStr: string): string {
+  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (diff < 60) return 'только что';
+  const mins = Math.floor(diff / 60);
+  if (mins < 60) return `${mins} мин. назад`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} ч. назад`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'вчера';
+  return `${days} дн. назад`;
+}
+
+interface ClubFeedItem {
+  id: string;
+  sport: string;
+  title?: string;
+  distance: number;
+  duration: number;
+  startedAt: string;
+  createdAt: string;
+  user: { id: string; username: string; avatarUrl?: string; level: number };
+}
+
+interface ClubStats {
+  weekDistance: number;
+  monthDistance: number;
+  weekActivities: number;
+  activeMembers: number;
+}
+
+type ClubTab = 'members' | 'feed' | 'leaderboard' | 'challenges';
+
 export default function TeamsPanel() {
   const { user } = useAuth();
   const [teams, setTeams] = useState<Team[]>([]);
@@ -23,6 +72,20 @@ export default function TeamsPanel() {
   const [joining, setJoining] = useState(false);
 
   const [codeCopied, setCodeCopied] = useState(false);
+
+  // Mobile responsive
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const h = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
+
+  // Club features state
+  const [clubTab, setClubTab] = useState<ClubTab>('members');
+  const [clubFeed, setClubFeed] = useState<ClubFeedItem[]>([]);
+  const [clubFeedLoading, setClubFeedLoading] = useState(false);
+  const [clubStats, setClubStats] = useState<ClubStats | null>(null);
 
   const loadTeams = useCallback(async () => {
     setLoading(true);
@@ -133,12 +196,47 @@ export default function TeamsPanel() {
     return team.members?.some((m) => m.userId === user.id) ?? false;
   };
 
+  // Load club feed & stats when myTeam changes
+  const loadClubFeed = useCallback(async () => {
+    if (!myTeam) return;
+    setClubFeedLoading(true);
+    try {
+      const res = await api.teams.feed(myTeam.id);
+      setClubFeed(res ?? []);
+    } catch {
+      setClubFeed([]);
+    } finally {
+      setClubFeedLoading(false);
+    }
+  }, [myTeam]);
+
+  const loadClubStats = useCallback(async () => {
+    if (!myTeam) return;
+    try {
+      const res = await api.teams.stats(myTeam.id);
+      setClubStats(res ?? null);
+    } catch {
+      setClubStats(null);
+    }
+  }, [myTeam]);
+
+  useEffect(() => {
+    if (myTeam) {
+      loadClubFeed();
+      loadClubStats();
+    }
+  }, [myTeam, loadClubFeed, loadClubStats]);
+
+  // Club challenge: weekly 100km target
+  const weeklyTarget = 100;
+  const weeklyProgress = clubStats ? Math.min(100, (clubStats.weekDistance / weeklyTarget) * 100) : 0;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 16 : 24 }}>
       {/* Header */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, color: '#242424', margin: 0 }}>Клубы</h1>
-        <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: isMobile ? 10 : 16 }}>
+        <h1 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 700, color: '#242424', margin: 0 }}>Клубы</h1>
+        <div style={{ display: 'flex', gap: 8, flexDirection: isMobile ? 'column' : 'row', width: isMobile ? '100%' : undefined }}>
           <button
             onClick={() => { setShowCreate(!showCreate); setShowJoinCode(false); }}
             style={{
@@ -150,6 +248,7 @@ export default function TeamsPanel() {
               fontSize: 14,
               fontWeight: 600,
               cursor: 'pointer',
+              width: isMobile ? '100%' : undefined,
             }}
           >
             Создать клуб
@@ -165,6 +264,7 @@ export default function TeamsPanel() {
               fontSize: 14,
               fontWeight: 600,
               cursor: 'pointer',
+              width: isMobile ? '100%' : undefined,
             }}
           >
             Войти по коду
@@ -368,10 +468,15 @@ export default function TeamsPanel() {
             </button>
           </div>
 
-          <div style={{ display: 'flex', gap: 24, fontSize: 14 }}>
-            <div>
-              <span style={{ color: '#999' }}>Участников: </span>
-              <span style={{ fontWeight: 600, color: '#242424' }}>{myTeam.memberCount ?? 0}</span>
+          <div style={{ display: 'flex', gap: isMobile ? 12 : 24, fontSize: 14, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{
+                background: '#fc4c02', color: '#fff', borderRadius: 12,
+                padding: '2px 10px', fontSize: 13, fontWeight: 700,
+              }}>
+                {myTeam.memberCount ?? 0}
+              </span>
+              <span style={{ color: '#999' }}>участников</span>
             </div>
             <div>
               <span style={{ color: '#999' }}>Общая дистанция: </span>
@@ -381,17 +486,40 @@ export default function TeamsPanel() {
             </div>
           </div>
 
+          {/* Club Stats */}
+          {clubStats && (
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 10 }}>
+              <div style={{ background: '#fff4ef', borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#fc4c02' }}>{clubStats.weekDistance.toFixed(1)}</div>
+                <div style={{ fontSize: 11, color: '#999' }}>км за неделю</div>
+              </div>
+              <div style={{ background: '#eef4ff', borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#0061ff' }}>{clubStats.monthDistance.toFixed(1)}</div>
+                <div style={{ fontSize: 11, color: '#999' }}>км за месяц</div>
+              </div>
+              <div style={{ background: '#f5f5f5', borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#242424' }}>{clubStats.weekActivities}</div>
+                <div style={{ fontSize: 11, color: '#999' }}>тренировок</div>
+              </div>
+              <div style={{ background: '#f0fdf4', borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#1a7f37' }}>{clubStats.activeMembers}</div>
+                <div style={{ fontSize: 11, color: '#999' }}>активных</div>
+              </div>
+            </div>
+          )}
+
           {/* Invite code */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 14, color: '#999' }}>Код приглашения:</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
+            <span style={{ fontSize: isMobile ? 12 : 14, color: '#999' }}>Код приглашения:</span>
             <code style={{
               backgroundColor: '#eef0f4',
               padding: '4px 12px',
               borderRadius: 6,
-              fontSize: 14,
+              fontSize: isMobile ? 12 : 14,
               fontFamily: 'monospace',
               color: '#fc4c02',
               fontWeight: 600,
+              wordBreak: 'break-all',
             }}>
               {myTeam.inviteCode ?? ''}
             </code>
@@ -411,10 +539,39 @@ export default function TeamsPanel() {
             </button>
           </div>
 
-          {/* Members list */}
-          {myTeam.members && myTeam.members.length > 0 && (
+          {/* Club tabs */}
+          <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #e0e0e0', overflowX: isMobile ? 'auto' : undefined, whiteSpace: isMobile ? 'nowrap' : undefined }}>
+            {([
+              { id: 'members' as ClubTab, label: '👥 Участники' },
+              { id: 'feed' as ClubTab, label: '📰 Лента' },
+              { id: 'leaderboard' as ClubTab, label: '🏆 Рейтинг' },
+              { id: 'challenges' as ClubTab, label: '🎯 Челленджи' },
+            ]).map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setClubTab(tab.id)}
+                style={{
+                  padding: isMobile ? '8px 12px' : '10px 18px',
+                  fontSize: isMobile ? 12 : 14,
+                  fontWeight: 600,
+                  color: clubTab === tab.id ? '#fc4c02' : '#888',
+                  background: 'none',
+                  border: 'none',
+                  borderBottom: clubTab === tab.id ? '3px solid #fc4c02' : '3px solid transparent',
+                  cursor: 'pointer',
+                  marginBottom: -2,
+                  transition: 'all 0.15s',
+                  flexShrink: 0,
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Members tab */}
+          {clubTab === 'members' && myTeam.members && myTeam.members.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <h4 style={{ margin: 0, fontSize: 14, fontWeight: 500, color: '#999' }}>Участники</h4>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {myTeam.members.map((member) => (
                   <div
@@ -477,6 +634,143 @@ export default function TeamsPanel() {
               </div>
             </div>
           )}
+
+          {/* Feed tab */}
+          {clubTab === 'feed' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {clubFeedLoading ? (
+                <div style={{ textAlign: 'center', color: '#999', padding: 20, fontSize: 14 }}>Загрузка...</div>
+              ) : clubFeed.length === 0 ? (
+                <div style={{ textAlign: 'center', color: '#999', padding: 20, fontSize: 14 }}>
+                  Пока нет активностей в клубе
+                </div>
+              ) : (
+                clubFeed.map(item => {
+                  const sportColor = SPORT_COLORS[item.sport] ?? '#fc4c02';
+                  const sportIcon = SPORT_ICONS[item.sport] ?? '🏃';
+                  const sportLabel = SPORT_LABELS[item.sport] ?? item.sport;
+                  const distKm = (item.distance ?? 0) / 1000;
+                  return (
+                    <div key={item.id} style={{
+                      display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 0',
+                      borderBottom: '1px solid #f0f0f0',
+                    }}>
+                      <div style={{
+                        width: 36, height: 36, borderRadius: '50%',
+                        background: item.user.avatarUrl ? 'none' : '#fc4c02',
+                        color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 14, fontWeight: 700, overflow: 'hidden', flexShrink: 0,
+                      }}>
+                        {item.user.avatarUrl
+                          ? <img src={item.user.avatarUrl} alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }} />
+                          : (item.user.username ?? '?')[0].toUpperCase()}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: '#242424' }}>{item.user.username}</span>
+                          <span style={{ fontSize: 11, color: '#aaa' }}>{formatTimeAgo(item.startedAt ?? item.createdAt)}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: sportColor }}>{sportIcon} {sportLabel}</span>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: '#242424' }}>{distKm.toFixed(1)} км</span>
+                          <span style={{ fontSize: 12, color: '#888' }}>{formatDuration(item.duration ?? 0)}</span>
+                        </div>
+                        {item.title && <div style={{ fontSize: 12, color: '#999', marginTop: 2 }}>{item.title}</div>}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
+
+          {/* Leaderboard tab */}
+          {clubTab === 'leaderboard' && myTeam.members && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              {[...myTeam.members]
+                .sort((a, b) => ((b.user as any).totalDistance ?? 0) - ((a.user as any).totalDistance ?? 0))
+                .map((member, idx) => {
+                  const dist = ((member.user as any).totalDistance ?? 0) / 1000;
+                  const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}`;
+                  return (
+                    <div key={member.id} style={{
+                      display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0',
+                      borderBottom: '1px solid #f0f0f0',
+                    }}>
+                      <div style={{
+                        width: 32, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: idx < 3 ? 18 : 14, fontWeight: 700, color: '#999',
+                      }}>
+                        {medal}
+                      </div>
+                      <div style={{
+                        width: 32, height: 32, borderRadius: '50%', backgroundColor: '#e0e0e0',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 12, fontWeight: 600, color: '#242424', overflow: 'hidden', flexShrink: 0,
+                      }}>
+                        {member.user.avatarUrl
+                          ? <img src={member.user.avatarUrl} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
+                          : (member.user.username ?? '?')[0].toUpperCase()}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: '#242424' }}>{member.user.username ?? '?'}</span>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: '#242424' }}>{dist.toFixed(1)}</span>
+                        <span style={{ fontSize: 12, color: '#999', marginLeft: 4 }}>км</span>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+
+          {/* Challenges tab */}
+          {clubTab === 'challenges' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Weekly challenge */}
+              <div style={{
+                background: 'linear-gradient(135deg, #fff4ef 0%, #fff 100%)',
+                borderRadius: 12, padding: 16, border: '1px solid #ffe0cc',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <span style={{ fontSize: 22 }}>🎯</span>
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: '#242424' }}>Недельный челлендж</div>
+                    <div style={{ fontSize: 12, color: '#888' }}>{weeklyTarget} км всем клубом за неделю</div>
+                  </div>
+                </div>
+                <div style={{ marginBottom: 6 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#666', marginBottom: 4 }}>
+                    <span>{clubStats ? clubStats.weekDistance.toFixed(1) : '0'} км</span>
+                    <span>{weeklyTarget} км</span>
+                  </div>
+                  <div style={{ height: 10, borderRadius: 5, background: '#eee', overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%', borderRadius: 5,
+                      background: weeklyProgress >= 100 ? 'linear-gradient(90deg, #1a7f37, #22c55e)' : 'linear-gradient(90deg, #fc4c02, #ff8a50)',
+                      width: `${weeklyProgress}%`, transition: 'width 0.4s',
+                    }} />
+                  </div>
+                </div>
+                {weeklyProgress >= 100 && (
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#1a7f37', marginTop: 6 }}>
+                    🎉 Челлендж выполнен!
+                  </div>
+                )}
+              </div>
+
+              {/* Chat placeholder */}
+              <div style={{
+                background: '#f9f9f9', borderRadius: 12, padding: 20, textAlign: 'center',
+                border: '1px dashed #ddd',
+              }}>
+                <div style={{ fontSize: 28, marginBottom: 8 }}>💬</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: '#666' }}>Чат клуба скоро будет доступен</div>
+                <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>Общайтесь с участниками клуба в реальном времени</div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -500,7 +794,7 @@ export default function TeamsPanel() {
 
       {/* Teams grid */}
       {loading ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: 16 }}>
           {Array.from({ length: 4 }).map((_, i) => (
             <div
               key={i}
@@ -531,7 +825,7 @@ export default function TeamsPanel() {
           <p style={{ color: '#999', margin: 0 }}>Клубы не найдены</p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: 16 }}>
           {teams.map((team) => (
             <div
               key={team.id}

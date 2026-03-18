@@ -267,6 +267,16 @@ export default function EventsPanel() {
   const [type, setType] = useState<EventType | null>(null);
   const [status, setStatus] = useState<EventStatus | null>(null);
   const [medalShopEvent, setMedalShopEvent] = useState<Event | null>(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [isTablet, setIsTablet] = useState(window.innerWidth >= 768 && window.innerWidth < 1024);
+  useEffect(() => {
+    const h = () => {
+      setIsMobile(window.innerWidth < 768);
+      setIsTablet(window.innerWidth >= 768 && window.innerWidth < 1024);
+    };
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -306,13 +316,13 @@ export default function EventsPanel() {
       {/* Hero */}
       <div style={{
         background: 'linear-gradient(135deg, #fc4c02 0%, #ff6b2b 100%)',
-        borderRadius: 20, padding: '48px 40px', marginBottom: 32, color: '#fff',
+        borderRadius: isMobile ? 14 : 20, padding: isMobile ? '28px 20px' : '48px 40px', marginBottom: isMobile ? 20 : 32, color: '#fff',
         boxShadow: '0 4px 20px rgba(252,76,2,0.25)',
       }}>
-        <h1 style={{ fontSize: 36, fontWeight: 900, marginBottom: 8, lineHeight: 1.2 }}>
+        <h1 style={{ fontSize: isMobile ? 24 : 36, fontWeight: 900, marginBottom: 8, lineHeight: 1.2 }}>
           Виртуальные события
         </h1>
-        <p style={{ fontSize: 16, opacity: 0.9, maxWidth: 500, lineHeight: 1.6, marginBottom: 20 }}>
+        <p style={{ fontSize: isMobile ? 14 : 16, opacity: 0.9, maxWidth: 500, lineHeight: 1.6, marginBottom: isMobile ? 14 : 20 }}>
           Забеги, челленджи и соревнования — участвуй из&nbsp;любой точки мира.
           Зарабатывай&nbsp;XP, получай медали, соревнуйся.
         </p>
@@ -344,7 +354,7 @@ export default function EventsPanel() {
                 Вы пока не участвуете ни в одном событии
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+              <div style={{ display: isMobile ? 'flex' : 'grid', gridTemplateColumns: isMobile ? undefined : 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16, overflowX: isMobile ? 'auto' : undefined, flexWrap: isMobile ? 'nowrap' : undefined, paddingBottom: isMobile ? 8 : undefined }}>
                 {myEvents.map((ev) => {
                   const s = SPORT[ev.sport];
                   const st = STATUS[ev.status] ?? STATUS.FINISHED;
@@ -356,6 +366,7 @@ export default function EventsPanel() {
                     <div key={ev.id} style={{
                       background: '#fafafa', borderRadius: 14, padding: 16,
                       border: '1px solid #e0e0e0', position: 'relative', overflow: 'hidden',
+                      minWidth: isMobile ? 260 : undefined, flexShrink: isMobile ? 0 : undefined,
                     }}>
                       <div style={{ height: 3, background: s.color, position: 'absolute', top: 0, left: 0, right: 0 }} />
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
@@ -426,10 +437,11 @@ export default function EventsPanel() {
 
       {/* Filters */}
       <div style={{
-        background: '#fff', borderRadius: 14, padding: '20px 24px', marginBottom: 28,
+        background: '#fff', borderRadius: 14, padding: isMobile ? '14px 16px' : '20px 24px', marginBottom: isMobile ? 20 : 28,
         boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)',
+        overflowX: isMobile ? 'auto' : undefined,
       }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 20 }}>
+        <div style={{ display: 'flex', flexWrap: isMobile ? 'nowrap' : 'wrap', alignItems: 'center', gap: isMobile ? 12 : 20, whiteSpace: isMobile ? 'nowrap' : undefined }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 11, fontWeight: 800, color: '#aaa', textTransform: 'uppercase', letterSpacing: 1 }}>Спорт</span>
             <div style={{ display: 'flex', gap: 6 }}>
@@ -471,7 +483,7 @@ export default function EventsPanel() {
 
       {/* Grid */}
       {loading ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(320px, 1fr))', gap: isMobile ? 16 : 24 }}>
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} style={{ background: '#fff', borderRadius: 16, padding: 24, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
               <div style={{ display: 'flex', gap: 14, marginBottom: 16 }}>
@@ -501,7 +513,7 @@ export default function EventsPanel() {
       ) : (
         <AnimatePresence mode="popLayout">
           <motion.div
-            style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 24 }}
+            style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(320px, 1fr))', gap: isMobile ? 16 : 24 }}
             initial="hidden" animate="visible" variants={{ visible: { transition: { staggerChildren: 0.04 } } }}>
             {events.map(e => <EventCard key={e.id} event={e} onJoin={openMedalShop} onLeave={leave} joining={joining} />)}
           </motion.div>

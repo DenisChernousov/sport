@@ -32,6 +32,12 @@ export default function LeaderboardPanel() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [loadingTeams, setLoadingTeams] = useState(true);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const h = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
 
   const loadUsers = useCallback(async () => {
     setLoadingUsers(true);
@@ -102,10 +108,10 @@ export default function LeaderboardPanel() {
             onClick={() => setPeriod(p.key)}
             style={{
               flex: 1,
-              padding: '10px 16px',
+              padding: isMobile ? '8px 10px' : '10px 16px',
               borderRadius: 8,
               border: 'none',
-              fontSize: 14,
+              fontSize: isMobile ? 12 : 14,
               fontWeight: 500,
               cursor: 'pointer',
               backgroundColor: period === p.key ? '#fc4c02' : 'transparent',
@@ -119,7 +125,7 @@ export default function LeaderboardPanel() {
       </div>
 
       {/* Sport filter pills */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+      <div style={{ display: 'flex', flexWrap: isMobile ? 'nowrap' : 'wrap', gap: 8, overflowX: isMobile ? 'auto' : undefined, paddingBottom: isMobile ? 4 : undefined }}>
         {SPORT_FILTERS.map((s) => {
           const isActive = sport === s.key;
           return (
@@ -127,15 +133,16 @@ export default function LeaderboardPanel() {
               key={s.key}
               onClick={() => setSport(s.key)}
               style={{
-                padding: '8px 16px',
+                padding: isMobile ? '6px 12px' : '8px 16px',
                 borderRadius: 20,
                 border: 'none',
-                fontSize: 14,
+                fontSize: isMobile ? 12 : 14,
                 fontWeight: 500,
                 cursor: 'pointer',
                 backgroundColor: isActive ? s.color : '#eef0f4',
                 color: isActive ? '#fff' : '#666',
                 transition: 'all 0.2s',
+                flexShrink: 0,
               }}
             >
               {s.label}
@@ -150,6 +157,7 @@ export default function LeaderboardPanel() {
         border: '1px solid #e0e0e0',
         borderRadius: 12,
         overflow: 'hidden',
+        overflowX: isMobile ? 'auto' : undefined,
       }}>
         <div style={{
           borderBottom: '1px solid #e0e0e0',

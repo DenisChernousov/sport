@@ -5,17 +5,17 @@ import { api } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 
 const SPORT_ICONS: Record<SportType, string> = {
-  RUNNING: '\u{1F3C3}',
-  CYCLING: '\u{1F6B4}',
-  SKIING: '\u26F7\uFE0F',
-  WALKING: '\u{1F6B6}',
+  RUNNING: '🏃',
+  CYCLING: '🚴',
+  SKIING: '⛷️',
+  WALKING: '🚶',
 };
 
 const SPORT_LABELS: Record<SportType, string> = {
-  RUNNING: '\u0411\u0435\u0433',
-  CYCLING: '\u0412\u0435\u043B\u043E\u0441\u0438\u043F\u0435\u0434',
-  SKIING: '\u041B\u044B\u0436\u0438',
-  WALKING: '\u0425\u043E\u0434\u044C\u0431\u0430',
+  RUNNING: 'Бег',
+  CYCLING: 'Велосипед',
+  SKIING: 'Лыжи',
+  WALKING: 'Ходьба',
 };
 
 const SPORT_COLORS: Record<SportType, string> = {
@@ -65,8 +65,8 @@ interface PlannedItem {
 function formatDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
-  if (h > 0) return `${h}\u0447 ${m}\u043C`;
-  return `${m}\u043C`;
+  if (h > 0) return `${h}ч ${m}м`;
+  return `${m}м`;
 }
 
 function formatDate(dateStr: string): string {
@@ -796,6 +796,12 @@ function PlannedSection() {
 // ─── Main Community Panel ───────────────────────────────
 
 export default function CommunityPanel() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const h = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
   const [section, setSection] = useState<Section>('feed');
 
   const tabs: { id: Section; label: string; icon: string }[] = [
@@ -825,11 +831,11 @@ export default function CommunityPanel() {
             onClick={() => setSection(tab.id)}
             style={{
               flex: 1,
-              padding: '10px 8px',
+              padding: isMobile ? '8px 6px' : '10px 8px',
               borderRadius: 8,
               border: 'none',
               cursor: 'pointer',
-              fontSize: 14,
+              fontSize: isMobile ? 12 : 14,
               fontWeight: 600,
               background: section === tab.id ? '#fc4c02' : 'transparent',
               color: section === tab.id ? '#fff' : '#888',
@@ -837,7 +843,7 @@ export default function CommunityPanel() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 6,
+              gap: isMobile ? 4 : 6,
             }}
           >
             <span>{tab.icon}</span>

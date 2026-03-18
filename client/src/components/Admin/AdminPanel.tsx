@@ -104,8 +104,8 @@ const styles = {
   select: { width: '100%', padding: '10px 14px', borderRadius: 8, border: `1.5px solid ${BORDER}`, fontSize: 14, outline: 'none', boxSizing: 'border-box' as const, color: TEXT, background: '#fff' } as React.CSSProperties,
   label: { display: 'block', fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 6 } as React.CSSProperties,
   fieldGroup: { marginBottom: 16 } as React.CSSProperties,
-  grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 } as React.CSSProperties,
-  grid3: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 } as React.CSSProperties,
+  grid2: { display: 'grid', gridTemplateColumns: window.innerWidth < 768 ? '1fr' : '1fr 1fr', gap: 16 } as React.CSSProperties,
+  grid3: { display: 'grid', gridTemplateColumns: window.innerWidth < 768 ? '1fr' : '1fr 1fr 1fr', gap: 16 } as React.CSSProperties,
   error: { padding: '10px 14px', background: '#fff0f0', color: '#c00', borderRadius: 8, fontSize: 13, fontWeight: 600, marginBottom: 16 } as React.CSSProperties,
   success: { padding: '10px 14px', background: '#f0fff0', color: '#16a34a', borderRadius: 8, fontSize: 13, fontWeight: 600, marginBottom: 16 } as React.CSSProperties,
   overlay: { position: 'fixed' as const, top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 16 },
@@ -772,6 +772,12 @@ function formatDurationShort(seconds: number): string {
 // ─── Stats Tab ──────────────────────────────────────────
 
 function StatsTab() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const h = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -800,7 +806,7 @@ function StatsTab() {
   return (
     <div>
       {/* Summary cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
         {summaryCards.map((card) => (
           <div key={card.label} style={{
             background: '#fff',
@@ -816,11 +822,11 @@ function StatsTab() {
       </div>
 
       {/* Top 5 users */}
-      <div style={styles.card}>
+      <div style={{ ...styles.card, overflowX: isMobile ? 'auto' : undefined }}>
         <div style={{ fontSize: 18, fontWeight: 800, color: TEXT, marginBottom: 16 }}>
           Топ-5 пользователей по дистанции
         </div>
-        <table style={styles.table}>
+        <table style={{ ...styles.table, minWidth: isMobile ? 500 : undefined }}>
           <thead>
             <tr>
               <th style={styles.th}>#</th>
@@ -901,6 +907,12 @@ function StatsTab() {
 // ─── Users Tab ──────────────────────────────────────────
 
 function UsersTab() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const h = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -1059,6 +1071,13 @@ function UsersTab() {
 // ─── Main Admin Panel ────────────────────────────────────
 
 export default function AdminPanel() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const h = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
+
   const [tab, setTab] = useState<'stats' | 'users' | 'events' | 'packages' | 'achievements'>('stats');
   const [events, setEvents] = useState<Event[]>([]);
   const [packages, setPackages] = useState<MerchPackage[]>([]);
@@ -1339,20 +1358,20 @@ export default function AdminPanel() {
       <h1 style={styles.heading}>Панель администратора</h1>
 
       {/* Tabs */}
-      <div style={styles.tabBar}>
-        <button style={styles.tab(tab === 'stats')} onClick={() => setTab('stats')}>
+      <div style={{ ...styles.tabBar, overflowX: isMobile ? 'auto' : undefined, flexWrap: isMobile ? 'nowrap' : undefined }}>
+        <button style={{ ...styles.tab(tab === 'stats'), flexShrink: 0, fontSize: isMobile ? 12 : undefined, padding: isMobile ? '10px 14px' : undefined }} onClick={() => setTab('stats')}>
           Статистика
         </button>
-        <button style={styles.tab(tab === 'users')} onClick={() => setTab('users')}>
+        <button style={{ ...styles.tab(tab === 'users'), flexShrink: 0, fontSize: isMobile ? 12 : undefined, padding: isMobile ? '10px 14px' : undefined }} onClick={() => setTab('users')}>
           Пользователи
         </button>
-        <button style={styles.tab(tab === 'events')} onClick={() => setTab('events')}>
-          Управление событиями
+        <button style={{ ...styles.tab(tab === 'events'), flexShrink: 0, fontSize: isMobile ? 12 : undefined, padding: isMobile ? '10px 14px' : undefined }} onClick={() => setTab('events')}>
+          События
         </button>
-        <button style={styles.tab(tab === 'packages')} onClick={() => setTab('packages')}>
-          Пакеты участия
+        <button style={{ ...styles.tab(tab === 'packages'), flexShrink: 0, fontSize: isMobile ? 12 : undefined, padding: isMobile ? '10px 14px' : undefined }} onClick={() => setTab('packages')}>
+          Пакеты
         </button>
-        <button style={styles.tab(tab === 'achievements')} onClick={() => setTab('achievements')}>
+        <button style={{ ...styles.tab(tab === 'achievements'), flexShrink: 0, fontSize: isMobile ? 12 : undefined, padding: isMobile ? '10px 14px' : undefined }} onClick={() => setTab('achievements')}>
           Достижения
         </button>
       </div>

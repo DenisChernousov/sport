@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { Header } from '@/components/Layout/Header';
 import type { TabId } from '@/components/Layout/Header';

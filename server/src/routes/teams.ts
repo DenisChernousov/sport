@@ -355,4 +355,100 @@ router.delete('/:id/members/:userId', authMiddleware, async (req: AuthRequest, r
   }
 });
 
+// GET /api/teams/:id/feed — recent activities from team members (paginated)
+router.get('/:id/feed', async (req: AuthRequest, res: Response) => {
+  try {
+    const teamId = req.params.id as string;
+    const page = Math.max(1, parseInt(String(req.query.page || '1'), 10));
+    const limit = Math.min(50, Math.max(1, parseInt(String(req.query.limit || '20'), 10)));
+
+    const team = await prisma.team.findUnique({
+      where: { id: teamId },
+      include: {
+        members: { select: { userId: true } },
+      },
+    });
+
+    if (!team) {
+      res.status(404).json({ error: 'Team not found' });
+      return;
+    }
+
+    const memberIds = team.members.map(m => m.userId);
+
+    const activities = await prisma.activity.findMany({
+      where: { userId: { in: memberIds } },
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
+      include: {
+        user: {
+          select: { id: true, username: true, avatarUrl: true, level: true },
+        },
+      },
+    });
+
+    res.json(activities);
+  } catch (error) {
+    console.error('Team feed error:', error);
+    res.status(500).json({ error: 'Failed to get team feed' });
+  }
+});
+
+// GET /api/teams/:id/stats — team stats: total distance this week/month, active members
+router.get('/:id/stats', async (req: AuthRequest, res: Response) => {
+  try {
+    const teamId = req.params.id as string;
+
+    const team = await prisma.team.findUnique({
+      where: { id: teamId },
+      include: {
+        members: { select: { userId: true } },
+      },
+    });
+
+    if (!team) {
+      res.status(404).json({ error: 'Team not found' });
+      return;
+    }
+
+    const memberIds = team.members.map(m => m.userId);
+
+    const now = new Date();
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const [weekActivities, monthActivities] = await Promise.all([
+      prisma.activity.findMany({
+        where: {
+          userId: { in: memberIds },
+          createdAt: { gte: weekAgo },
+        },
+        select: { distance: true, userId: true },
+      }),
+      prisma.activity.findMany({
+        where: {
+          userId: { in: memberIds },
+          createdAt: { gte: monthAgo },
+        },
+        select: { distance: true },
+      }),
+    ]);
+
+    const weekDistance = weekActivities.reduce((sum, a) => sum + (a.distance ?? 0), 0) / 1000;
+    const monthDistance = monthActivities.reduce((sum, a) => sum + (a.distance ?? 0), 0) / 1000;
+    const activeMembers = new Set(weekActivities.map(a => a.userId)).size;
+
+    res.json({
+      weekDistance,
+      monthDistance,
+      weekActivities: weekActivities.length,
+      activeMembers,
+    });
+  } catch (error) {
+    console.error('Team stats error:', error);
+    res.status(500).json({ error: 'Failed to get team stats' });
+  }
+});
+
 export default router;
