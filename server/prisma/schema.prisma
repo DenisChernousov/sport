@@ -1,0 +1,416 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+  MODERATOR
+}
+
+enum SportType {
+  RUNNING
+  CYCLING
+  SKIING
+  WALKING
+}
+
+enum EventStatus {
+  DRAFT
+  REGISTRATION
+  ACTIVE
+  FINISHED
+  CANCELLED
+}
+
+enum EventType {
+  RACE
+  CHALLENGE
+  ULTRAMARATHON
+  WEEKLY
+  BATTLE
+}
+
+// ─── Users ───────────────────────────────────────────────
+
+model User {
+  id            String   @id @default(cuid())
+  username      String   @unique
+  email         String   @unique
+  passwordHash  String
+  role          Role     @default(USER)
+  avatarUrl     String?
+
+  // Profile
+  firstName     String?
+  lastName      String?
+  city          String?
+  bio           String?
+  birthDate     DateTime?
+
+  // Gamification
+  xp            Int      @default(0)
+  level         Int      @default(1)
+  totalDistance  Float    @default(0)  // km total across all sports
+  totalTime     Int      @default(0)  // seconds total
+  totalActivities Int    @default(0)
+
+  // Streaks
+  currentStreak Int      @default(0)
+  bestStreak    Int      @default(0)
+  lastActivityDate DateTime?
+
+  // Referral
+  referralCode  String   @unique @default(cuid())
+  referredById  String?
+  referredBy    User?    @relation("Referrals", fields: [referredById], references: [id])
+  referrals     User[]   @relation("Referrals")
+
+  // Strava
+  stravaId      String?  @unique
+  stravaToken   String?
+  stravaRefresh String?
+
+  isBanned      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  activities       Activity[]
+  eventParticipations EventParticipant[]
+  teamMemberships  TeamMember[]
+  ownedTeams       Team[]           @relation("TeamOwner")
+  achievements     UserAchievement[]
+  sentBattles      Battle[]         @relation("BattleChallenger")
+  receivedBattles  Battle[]         @relation("BattleOpponent")
+  chatMessages     ChatMessage[]
+  refreshTokens    RefreshToken[]
+  followers        Follow[]         @relation("Following")
+  following        Follow[]         @relation("Followers")
+  plannedActivities PlannedActivity[]
+
+  @@index([totalDistance])
+  @@index([xp])
+  @@index([level])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ─── Activities (GPS tracks) ─────────────────────────────
+
+model Activity {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  sport       SportType
+  title       String?
+  description String?
+
+  distance    Float     // km
+  duration    Int       // seconds
+  avgPace     Float?    // min/km
+  avgSpeed    Float?    // km/h
+  elevGain    Float?    // meters
+  calories    Int?
+
+  // GPS data (GeoJSON LineString stored as JSON)
+  gpsTrack    Json?
+  startLat    Float?
+  startLng    Float?
+
+  // Source
+  stravaId    String?   @unique
+  isManual    Boolean   @default(false)
+
+  startedAt   DateTime
+  createdAt   DateTime  @default(now())
+
+  // Relations
+  eventResults EventResult[]
+  photos       ActivityPhoto[]
+  likes        ActivityLike[]
+
+  @@index([userId, sport])
+  @@index([userId, startedAt])
+  @@index([sport, distance])
+}
+
+model ActivityPhoto {
+  id         String   @id @default(cuid())
+  activityId String
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  imageUrl   String
+  createdAt  DateTime @default(now())
+  @@index([activityId])
+}
+
+model ActivityLike {
+  id         String   @id @default(cuid())
+  activityId String
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  userId     String
+  createdAt  DateTime @default(now())
+  @@unique([activityId, userId])
+  @@index([activityId])
+}
+
+// ─── Events (races, challenges) ──────────────────────────
+
+model Event {
+  id          String      @id @default(cuid())
+  title       String
+  description String?
+  imageUrl    String?
+  diplomaBgUrl String?
+  sport       SportType
+  type        EventType
+  status      EventStatus @default(DRAFT)
+
+  // Distance goals
+  targetDistance  Float?     // km (for races)
+  minDistance     Float?     // km (for challenges — minimum per period)
+  maxDistance     Float?     // km (for ultramarathons — monthly target)
+
+  // Dates
+  startDate   DateTime
+  endDate     DateTime
+  regDeadline DateTime?
+
+  // Settings
+  maxParticipants Int?
+  isPublic    Boolean  @default(true)
+  isPaid      Boolean  @default(false)
+  price       Float?
+
+  // Rewards
+  xpReward    Int      @default(50)
+  medalName   String?
+  medalIcon   String?
+
+  diplomaSettings Json?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  participants EventParticipant[]
+  results      EventResult[]
+
+  @@index([status, sport])
+  @@index([startDate])
+}
+
+model EventParticipant {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  totalDistance Float  @default(0)
+  totalTime    Int    @default(0)
+  isFinished   Boolean @default(false)
+  finishedAt   DateTime?
+  rank         Int?
+
+  joinedAt  DateTime @default(now())
+
+  @@unique([userId, eventId])
+  @@index([eventId, totalDistance])
+}
+
+model EventResult {
+  id          String   @id @default(cuid())
+  eventId     String
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  activityId  String
+  activity    Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  distance    Float
+  duration    Int
+
+  createdAt   DateTime @default(now())
+
+  @@unique([eventId, activityId])
+}
+
+// ─── Teams / Clans ───────────────────────────────────────
+
+model Team {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  avatarUrl   String?
+  ownerId     String
+  owner       User     @relation("TeamOwner", fields: [ownerId], references: [id])
+
+  totalDistance Float  @default(0)
+  totalXp      Int    @default(0)
+  memberCount  Int    @default(1)
+
+  isPublic    Boolean  @default(true)
+  inviteCode  String   @unique @default(cuid())
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members     TeamMember[]
+
+  @@index([totalDistance])
+}
+
+model TeamMember {
+  id       String   @id @default(cuid())
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamId   String
+  team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  role     String   @default("member") // member, officer, leader
+  joinedAt DateTime @default(now())
+
+  @@unique([userId, teamId])
+  @@index([teamId])
+}
+
+// ─── Battles (1v1 & team) ────────────────────────────────
+
+model Battle {
+  id           String    @id @default(cuid())
+  sport        SportType
+  targetDistance Float    // km to complete
+  duration     Int       // hours to complete
+
+  challengerId String
+  challenger   User      @relation("BattleChallenger", fields: [challengerId], references: [id])
+  opponentId   String
+  opponent     User      @relation("BattleOpponent", fields: [opponentId], references: [id])
+
+  challengerDistance Float @default(0)
+  opponentDistance   Float @default(0)
+
+  status       String   @default("pending") // pending, active, finished, declined
+  winnerId     String?
+
+  startsAt     DateTime?
+  endsAt       DateTime?
+  createdAt    DateTime @default(now())
+
+  @@index([challengerId, status])
+  @@index([opponentId, status])
+}
+
+// ─── Achievements ────────────────────────────────────────
+
+model Achievement {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String
+  icon        String
+  xpReward    Int      @default(25)
+  category    String   // distance, speed, streak, social, event
+  threshold   Float?   // numeric threshold to unlock
+
+  users       UserAchievement[]
+}
+
+model UserAchievement {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  unlockedAt    DateTime    @default(now())
+
+  @@unique([userId, achievementId])
+}
+
+// ─── Merch Orders ───────────────────────────────────────
+
+model MerchOrder {
+  id        String   @id @default(cuid())
+  userId    String
+  eventId   String
+  package   String   // 'free', 'medal', 'premium', 'vip'
+  status    String   @default("pending") // pending, paid, shipped, delivered
+  amount    Float    @default(0)
+  address   String?
+  phone     String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([eventId])
+}
+
+// ─── Merch Packages ─────────────────────────────────────
+
+model MerchPackage {
+  id          String   @id @default(cuid())
+  name        String
+  price       Float    @default(0)
+  features    String[]
+  icon        String   @default("🎫")
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ─── Follows ────────────────────────────────────────────
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  follower    User     @relation("Followers", fields: [followerId], references: [id], onDelete: Cascade)
+  followingId String
+  following   User     @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}
+
+// ─── Planned Activities ─────────────────────────────────
+
+model PlannedActivity {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sport       SportType
+  city        String
+  date        DateTime
+  time        String    // "07:00"
+  description String?
+  maxPeople   Int       @default(5)
+  createdAt   DateTime  @default(now())
+  @@index([city, date])
+  @@index([sport, date])
+}
+
+// ─── Chat ────────────────────────────────────────────────
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel   String   @default("general") // general, event:{id}, team:{id}
+  message   String
+  createdAt DateTime @default(now())
+
+  @@index([channel, createdAt])
+}
