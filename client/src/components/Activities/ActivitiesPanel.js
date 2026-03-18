@@ -603,7 +603,10 @@ export default function ActivitiesPanel() {
                 if (parsedDuration.seconds)
                     setScrSeconds(parsedDuration.seconds);
                 // 2. Parse speed (км/ч) — works well
-                const speedMatch = text.match(/(\d{1,4}[.,]\d{1,3})\s*(?:км\s*\/\s*ч|km\s*\/\s*h)/i);
+                // Parse speed: supports "16.4км/ч", "16,4 км/ч", "16.4 km/h", also multiline
+                const allText = text.replace(/\n/g, ' ');
+                const speedMatch = allText.match(/(\d{1,4}[.,]\d{1,3})\s*(?:км\s*\/\s*ч|km\s*\/\s*h|кмч)/i)
+                    || allText.match(/(\d{1,4})\s*(?:км\s*\/\s*ч|km\s*\/\s*h|кмч)/i);
                 const speedKmh = speedMatch ? parseFloat(speedMatch[1].replace(',', '.')) : 0;
                 // 3. ALWAYS calculate distance = speed × time (OCR distance is unreliable)
                 if (speedKmh > 0) {
