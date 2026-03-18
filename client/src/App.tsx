@@ -22,9 +22,17 @@ function LoadingSpinner() {
   );
 }
 
+function useWidth() {
+  const [w, setW] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+  useEffect(() => { const h = () => setW(window.innerWidth); window.addEventListener('resize', h); return () => window.removeEventListener('resize', h); }, []);
+  return w;
+}
+
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>('feed');
+  const w = useWidth();
+  const isMobile = w < 768;
   const [authModal, setAuthModal] = useState<{ open: boolean; tab: 'login' | 'register' }>({
     open: false,
     tab: 'login',
@@ -65,7 +73,7 @@ function AppContent() {
         onRegisterClick={openRegister}
       />
 
-      <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 24px' }}>
+      <main style={{ maxWidth: 1100, margin: '0 auto', padding: isMobile ? '16px 12px' : '32px 24px' }}>
         <Suspense fallback={<LoadingSpinner />}>
           {activeTab === 'feed' && <FeedPanel />}
           {activeTab === 'events' && <EventsPanel />}
