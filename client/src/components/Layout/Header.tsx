@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 
-export type TabId = 'events' | 'activities' | 'teams' | 'leaderboard' | 'community' | 'profile' | 'admin';
+export type TabId = 'feed' | 'events' | 'activities' | 'teams' | 'leaderboard' | 'community' | 'profile' | 'admin';
 
 const tabs: { id: TabId; label: string; short: string; icon: string; adminOnly?: boolean; authOnly?: boolean }[] = [
+  { id: 'feed', label: 'Лента', short: 'Лент.', icon: '📰' },
   { id: 'events', label: 'События', short: 'Соб.', icon: '🏆' },
   { id: 'activities', label: 'Активности', short: 'Акт.', icon: '⚡', authOnly: true },
   { id: 'teams', label: 'Клубы', short: 'Клуб.', icon: '👥' },
@@ -54,7 +55,7 @@ export function Header({ activeTab, onTabChange, onLoginClick, onRegisterClick }
         <div style={{ display: 'flex', alignItems: 'center', height: isMobile ? 56 : 64, gap: isMobile ? 8 : 16 }}>
 
           {/* Logo */}
-          <button onClick={() => go('events')} style={{
+          <button onClick={() => go('feed')} style={{
             display: 'flex', alignItems: 'center', gap: 8, background: 'none',
             border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0,
           }}>

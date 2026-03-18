@@ -733,16 +733,22 @@ export default function ActivitiesPanel() {
     }
   }, [user, page, filterSport, dateFrom, dateTo]);
 
-  useEffect(() => {
+  const loadStats = useCallback(() => {
     if (!user) return;
-    api.profile
-      .statsSummary()
+    api.profile.statsSummary()
       .then((res) => {
         setWeeklyDist(res?.weeklyDistance ?? 0);
         setMonthlyDist(res?.monthlyDistance ?? 0);
       })
       .catch(() => {});
   }, [user]);
+
+  useEffect(() => { loadStats(); }, [loadStats]);
+
+  const refreshAll = useCallback(() => {
+    loadActivities();
+    loadStats();
+  }, [loadActivities, loadStats]);
 
   useEffect(() => {
     loadActivities();
@@ -800,7 +806,7 @@ export default function ActivitiesPanel() {
         setFormDesc('');
         setShowForm(false);
         setPage(1);
-        loadActivities();
+        refreshAll();
       } catch (err: unknown) {
         setFormError(err instanceof Error ? err.message : 'Ошибка при создании активности');
       } finally {
@@ -819,7 +825,7 @@ export default function ActivitiesPanel() {
       try {
         await api.activities.uploadGpx(file);
         setPage(1);
-        loadActivities();
+        refreshAll();
       } catch (err: unknown) {
         setFormError(err instanceof Error ? err.message : 'Ошибка загрузки GPX');
       } finally {
@@ -951,7 +957,7 @@ export default function ActivitiesPanel() {
         setOcrRawText('');
         setOcrTextExpanded(false);
         setPage(1);
-        loadActivities();
+        refreshAll();
       } catch (err: unknown) {
         setScrError(err instanceof Error ? err.message : 'Ошибка при создании активности');
       } finally {
@@ -980,7 +986,7 @@ export default function ActivitiesPanel() {
       if (!confirm('Удалить эту активность?')) return;
       try {
         await api.activities.delete(id);
-        loadActivities();
+        refreshAll();
       } catch {
         // ignore
       }

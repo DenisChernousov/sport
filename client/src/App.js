@@ -11,12 +11,13 @@ const LeaderboardPanel = lazy(() => import('@/components/Leaderboard/Leaderboard
 const ProfilePanel = lazy(() => import('@/components/Profile/ProfilePanel'));
 const AdminPanel = lazy(() => import('@/components/Admin/AdminPanel'));
 const CommunityPanel = lazy(() => import('@/components/Community/CommunityPanel'));
+const FeedPanel = lazy(() => import('@/components/Feed/FeedPanel'));
 function LoadingSpinner() {
     return (_jsx("div", { className: "flex items-center justify-center py-32", children: _jsx("div", { className: "w-10 h-10 border-3 border-primary/30 border-t-primary rounded-full animate-spin" }) }));
 }
 function AppContent() {
     const { isAuthenticated, isLoading } = useAuth();
-    const [activeTab, setActiveTab] = useState('events');
+    const [activeTab, setActiveTab] = useState('feed');
     const [authModal, setAuthModal] = useState({
         open: false,
         tab: 'login',
@@ -34,7 +35,7 @@ function AppContent() {
     if (isLoading) {
         return (_jsx("div", { className: "min-h-screen flex items-center justify-center", style: { background: '#eef0f4' }, children: _jsxs("div", { className: "text-center", children: [_jsx("div", { className: "text-5xl mb-4", children: "\uD83C\uDFC3" }), _jsx("div", { className: "w-10 h-10 mx-auto border-3 border-primary/30 border-t-primary rounded-full animate-spin" })] }) }));
     }
-    return (_jsxs("div", { className: "min-h-screen", style: { background: '#eef0f4' }, children: [_jsx(Header, { activeTab: activeTab, onTabChange: handleTabChange, onLoginClick: openLogin, onRegisterClick: openRegister }), _jsx("main", { style: { maxWidth: '1100px', margin: '0 auto', padding: '32px 24px' }, children: _jsxs(Suspense, { fallback: _jsx(LoadingSpinner, {}), children: [activeTab === 'events' && _jsx(EventsPanel, {}), activeTab === 'activities' && _jsx(ActivitiesPanel, {}), activeTab === 'teams' && _jsx(TeamsPanel, {}), activeTab === 'leaderboard' && _jsx(LeaderboardPanel, {}), activeTab === 'community' && _jsx(CommunityPanel, {}), activeTab === 'profile' && _jsx(ProfilePanel, {}), activeTab === 'admin' && _jsx(AdminPanel, {})] }) }), _jsx(AuthModal, { isOpen: authModal.open, onClose: closeAuth, initialTab: authModal.tab }), _jsx("footer", { style: {
+    return (_jsxs("div", { className: "min-h-screen", style: { background: '#eef0f4' }, children: [_jsx(Header, { activeTab: activeTab, onTabChange: handleTabChange, onLoginClick: openLogin, onRegisterClick: openRegister }), _jsx("main", { style: { maxWidth: '1100px', margin: '0 auto', padding: '32px 24px' }, children: _jsxs(Suspense, { fallback: _jsx(LoadingSpinner, {}), children: [activeTab === 'feed' && _jsx(FeedPanel, {}), activeTab === 'events' && _jsx(EventsPanel, {}), activeTab === 'activities' && _jsx(ActivitiesPanel, {}), activeTab === 'teams' && _jsx(TeamsPanel, {}), activeTab === 'leaderboard' && _jsx(LeaderboardPanel, {}), activeTab === 'community' && _jsx(CommunityPanel, {}), activeTab === 'profile' && _jsx(ProfilePanel, {}), activeTab === 'admin' && _jsx(AdminPanel, {})] }) }), _jsx(AuthModal, { isOpen: authModal.open, onClose: closeAuth, initialTab: authModal.tab }), _jsx("footer", { style: {
                     borderTop: '1px solid #e0e0e0',
                     background: '#fff',
                     padding: '32px 24px',

@@ -386,6 +386,11 @@ export const api = {
         `/users/${userId}/follow-status`
       );
     },
+    publicFeed(params?: { page?: number; limit?: number }) {
+      return request<PaginatedResponse<Activity & { user: { id: string; username: string; avatarUrl?: string; level: number }; photos: { id: string; imageUrl: string }[]; _count: { likes: number }; isLiked: boolean }>>(
+        `/feed/public${toQuery(params)}`
+      );
+    },
     feed(params?: { page?: number; limit?: number }) {
       return request<{ items: (Activity & { user: { id: string; username: string; avatarUrl?: string; level: number }; _count: { likes: number } })[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>(
         `/feed${toQuery(params)}`

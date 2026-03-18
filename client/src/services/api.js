@@ -328,6 +328,9 @@ export const api = {
         followStatus(userId) {
             return request(`/users/${userId}/follow-status`);
         },
+        publicFeed(params) {
+            return request(`/feed/public${toQuery(params)}`);
+        },
         feed(params) {
             return request(`/feed${toQuery(params)}`);
         },

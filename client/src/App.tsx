@@ -12,6 +12,7 @@ const LeaderboardPanel = lazy(() => import('@/components/Leaderboard/Leaderboard
 const ProfilePanel = lazy(() => import('@/components/Profile/ProfilePanel'));
 const AdminPanel = lazy(() => import('@/components/Admin/AdminPanel'));
 const CommunityPanel = lazy(() => import('@/components/Community/CommunityPanel'));
+const FeedPanel = lazy(() => import('@/components/Feed/FeedPanel'));
 
 function LoadingSpinner() {
   return (
@@ -23,7 +24,7 @@ function LoadingSpinner() {
 
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<TabId>('events');
+  const [activeTab, setActiveTab] = useState<TabId>('feed');
   const [authModal, setAuthModal] = useState<{ open: boolean; tab: 'login' | 'register' }>({
     open: false,
     tab: 'login',
@@ -66,6 +67,7 @@ function AppContent() {
 
       <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 24px' }}>
         <Suspense fallback={<LoadingSpinner />}>
+          {activeTab === 'feed' && <FeedPanel />}
           {activeTab === 'events' && <EventsPanel />}
           {activeTab === 'activities' && <ActivitiesPanel />}
           {activeTab === 'teams' && <TeamsPanel />}

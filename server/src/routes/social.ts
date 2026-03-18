@@ -176,6 +176,72 @@ router.get('/feed', authMiddleware, async (req: AuthRequest, res: Response) => {
   }
 });
 
+// ─── Public activity feed (all users) ────────────────────
+
+router.get('/feed/public', optionalAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+    const skip = (page - 1) * limit;
+
+    const [items, total] = await Promise.all([
+      prisma.activity.findMany({
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              avatarUrl: true,
+              level: true,
+            },
+          },
+          photos: {
+            select: { id: true, imageUrl: true },
+            take: 4,
+            orderBy: { createdAt: 'asc' },
+          },
+          _count: { select: { likes: true } },
+        },
+        orderBy: { startedAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.activity.count(),
+    ]);
+
+    // Check which activities are liked by the current user
+    let likedSet = new Set<string>();
+    if (req.userId) {
+      const liked = await prisma.activityLike.findMany({
+        where: {
+          userId: req.userId,
+          activityId: { in: items.map((i) => i.id) },
+        },
+        select: { activityId: true },
+      });
+      likedSet = new Set(liked.map((l) => l.activityId));
+    }
+
+    const result = items.map((item) => ({
+      ...item,
+      isLiked: likedSet.has(item.id),
+    }));
+
+    res.json({
+      items: result,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+  } catch (err) {
+    console.error('Public feed error:', err);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 // ─── Search users ────────────────────────────────────────
 
 router.get('/users/search', async (req: AuthRequest, res: Response) => {

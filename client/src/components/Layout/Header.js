@@ -2,6 +2,7 @@ import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-run
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 const tabs = [
+    { id: 'feed', label: 'Лента', short: 'Лент.', icon: '📰' },
     { id: 'events', label: 'События', short: 'Соб.', icon: '🏆' },
     { id: 'activities', label: 'Активности', short: 'Акт.', icon: '⚡', authOnly: true },
     { id: 'teams', label: 'Клубы', short: 'Клуб.', icon: '👥' },
@@ -35,7 +36,7 @@ export function Header({ activeTab, onTabChange, onLoginClick, onRegisterClick }
             backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
             borderBottom: '1px solid #f0f0f0',
             boxShadow: '0 1px 12px rgba(0,0,0,0.04)',
-        }, children: [_jsx("div", { style: { maxWidth: 1200, margin: '0 auto', padding: isMobile ? '0 12px' : '0 24px' }, children: _jsxs("div", { style: { display: 'flex', alignItems: 'center', height: isMobile ? 56 : 64, gap: isMobile ? 8 : 16 }, children: [_jsxs("button", { onClick: () => go('events'), style: {
+        }, children: [_jsx("div", { style: { maxWidth: 1200, margin: '0 auto', padding: isMobile ? '0 12px' : '0 24px' }, children: _jsxs("div", { style: { display: 'flex', alignItems: 'center', height: isMobile ? 56 : 64, gap: isMobile ? 8 : 16 }, children: [_jsxs("button", { onClick: () => go('feed'), style: {
                                 display: 'flex', alignItems: 'center', gap: 8, background: 'none',
                                 border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0,
                             }, children: [_jsx("div", { style: {
