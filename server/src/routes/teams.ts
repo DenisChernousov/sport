@@ -435,8 +435,8 @@ router.get('/:id/stats', async (req: AuthRequest, res: Response) => {
       }),
     ]);
 
-    const weekDistance = weekActivities.reduce((sum, a) => sum + (a.distance ?? 0), 0) / 1000;
-    const monthDistance = monthActivities.reduce((sum, a) => sum + (a.distance ?? 0), 0) / 1000;
+    const weekDistance = weekActivities.reduce((sum, a) => sum + (a.distance ?? 0), 0);
+    const monthDistance = monthActivities.reduce((sum, a) => sum + (a.distance ?? 0), 0);
     const activeMembers = new Set(weekActivities.map(a => a.userId)).size;
 
     res.json({

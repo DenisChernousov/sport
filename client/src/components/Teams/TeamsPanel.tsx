@@ -481,7 +481,7 @@ export default function TeamsPanel() {
             <div>
               <span style={{ color: '#999' }}>Общая дистанция: </span>
               <span style={{ fontWeight: 600, color: '#242424' }}>
-                {((myTeam.totalDistance ?? 0) / 1000).toFixed(1)} км
+                {(myTeam.totalDistance ?? 0).toFixed(1)} км
               </span>
             </div>
           </div>
@@ -700,7 +700,7 @@ export default function TeamsPanel() {
               {[...myTeam.members]
                 .sort((a, b) => ((b.user as any).totalDistance ?? 0) - ((a.user as any).totalDistance ?? 0))
                 .map((member, idx) => {
-                  const dist = ((member.user as any).totalDistance ?? 0) / 1000;
+                  const dist = (member.user as any).totalDistance ?? 0;
                   const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}`;
                   return (
                     <div key={member.id} style={{
@@ -883,7 +883,7 @@ export default function TeamsPanel() {
                 </span>
                 <span>
                   <span style={{ fontWeight: 600, color: '#242424' }}>
-                    {((team.totalDistance ?? 0) / 1000).toFixed(1)}
+                    {(team.totalDistance ?? 0).toFixed(1)}
                   </span>{' '}км
                 </span>
               </div>
