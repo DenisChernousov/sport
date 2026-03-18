@@ -407,7 +407,7 @@ export const api = {
     },
     update(data: Partial<User>) {
       return request<User>('/profile', {
-        method: 'PATCH',
+        method: 'PUT',
         body: JSON.stringify(data),
       });
     },

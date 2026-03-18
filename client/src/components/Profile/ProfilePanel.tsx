@@ -126,10 +126,27 @@ export default function ProfilePanel() {
   const handleCopyReferral = useCallback(() => {
     if (!user) return;
     const link = `${window.location.origin}/register?ref=${user.referralCode}`;
-    navigator.clipboard.writeText(link).then(() => {
+    // Fallback for HTTP (clipboard API requires HTTPS)
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(link);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = link;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    });
+    } catch {
+      // fallback: select input text
+      const input = document.querySelector('input[readonly]') as HTMLInputElement;
+      if (input) { input.select(); input.setSelectionRange(0, 99999); }
+    }
   }, [user]);
 
   const handleAvatarClick = useCallback(() => {

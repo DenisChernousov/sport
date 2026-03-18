@@ -242,7 +242,7 @@ function EventCard({ event, onJoin, onLeave, joining }: {
               return null;
             })()}
           </div>
-        ) : event.status === 'REGISTRATION' ? (
+        ) : (event.status === 'REGISTRATION' || event.status === 'ACTIVE') ? (
           <button onClick={() => onJoin(event.id)} disabled={busy}
             style={{
               width: '100%', padding: '12px 0', borderRadius: 10, border: 'none',

@@ -107,7 +107,7 @@ function EventCard({ event, onJoin, onLeave, joining }) {
                                 if (target > 0)
                                     return (_jsxs("div", { style: { marginTop: 4 }, children: [_jsxs("div", { style: { display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#999', marginBottom: 3 }, children: [_jsxs("span", { children: [myDist.toFixed(1), " \u043A\u043C"] }), _jsxs("span", { children: [target, " \u043A\u043C"] })] }), _jsx("div", { style: { height: 4, borderRadius: 2, background: '#eee', overflow: 'hidden' }, children: _jsx("div", { style: { height: '100%', borderRadius: 2, background: '#fc4c02', width: `${Math.min(100, (myDist / target) * 100)}%` } }) })] }));
                                 return null;
-                            })()] })) : event.status === 'REGISTRATION' ? (_jsx("button", { onClick: () => onJoin(event.id), disabled: busy, style: {
+                            })()] })) : (event.status === 'REGISTRATION' || event.status === 'ACTIVE') ? (_jsx("button", { onClick: () => onJoin(event.id), disabled: busy, style: {
                             width: '100%', padding: '12px 0', borderRadius: 10, border: 'none',
                             background: '#fc4c02', color: '#fff', fontSize: 14, fontWeight: 800,
                             cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.6 : 1,

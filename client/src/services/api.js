@@ -342,7 +342,7 @@ export const api = {
         },
         update(data) {
             return request('/profile', {
-                method: 'PATCH',
+                method: 'PUT',
                 body: JSON.stringify(data),
             });
         },
