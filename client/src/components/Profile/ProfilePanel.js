@@ -59,6 +59,8 @@ export default function ProfilePanel() {
     const [avatarHover, setAvatarHover] = useState(false);
     const [avatarUploading, setAvatarUploading] = useState(false);
     const fileInputRef = useRef(null);
+    const [referralCount, setReferralCount] = useState(0);
+    const [referredUsers, setReferredUsers] = useState([]);
     useEffect(() => {
         if (user) {
             setFirstName(user.firstName ?? '');
@@ -77,6 +79,16 @@ export default function ProfilePanel() {
             setFollowersCount(res.followersCount);
             setFollowingCount(res.followingCount);
         }).catch(() => { });
+    }, [user]);
+    useEffect(() => {
+        if (!user)
+            return;
+        api.profile.referrals()
+            .then((res) => {
+            setReferralCount(res?.referralCount ?? 0);
+            setReferredUsers(res?.referrals ?? []);
+        })
+            .catch(() => { });
     }, [user]);
     useEffect(() => {
         if (!user)
@@ -314,7 +326,14 @@ export default function ProfilePanel() {
                     boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
                     border: '1px solid #e0e0e0',
                     marginBottom: 20,
-                }, children: [_jsx("div", { style: { fontSize: 16, fontWeight: 700, color: '#242424', marginBottom: 10 }, children: "\u0420\u0435\u0444\u0435\u0440\u0430\u043B\u044C\u043D\u0430\u044F \u0441\u0441\u044B\u043B\u043A\u0430" }), _jsxs("div", { style: { display: 'flex', gap: 8, alignItems: 'center' }, children: [_jsx("input", { readOnly: true, value: referralLink, style: {
+                }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }, children: [_jsx("div", { style: { fontSize: 16, fontWeight: 700, color: '#242424' }, children: "\u0420\u0435\u0444\u0435\u0440\u0430\u043B\u044C\u043D\u0430\u044F \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0430" }), _jsxs("div", { style: {
+                                    background: '#fc4c02',
+                                    color: '#fff',
+                                    borderRadius: 20,
+                                    padding: '4px 14px',
+                                    fontSize: 14,
+                                    fontWeight: 700,
+                                }, children: [referralCount, " ", referralCount === 1 ? 'приглашение' : referralCount >= 2 && referralCount <= 4 ? 'приглашения' : 'приглашений'] })] }), _jsxs("div", { style: { display: 'flex', gap: 8, alignItems: 'center', marginBottom: 16 }, children: [_jsx("input", { readOnly: true, value: referralLink, style: {
                                     flex: 1,
                                     padding: '8px 12px',
                                     borderRadius: 8,
@@ -332,7 +351,32 @@ export default function ProfilePanel() {
                                     fontSize: 13,
                                     fontWeight: 600,
                                     cursor: 'pointer',
-                                }, children: copied ? 'Скопировано!' : 'Копировать' })] })] }), _jsxs("div", { style: {
+                                }, children: copied ? 'Скопировано!' : 'Копировать' })] }), referredUsers.length > 0 ? (_jsx("div", { style: { display: 'flex', flexDirection: 'column', gap: 10 }, children: referredUsers.map((r) => (_jsxs("div", { style: {
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 12,
+                                padding: '10px 0',
+                                borderTop: '1px solid #e0e0e0',
+                            }, children: [r.avatarUrl ? (_jsx("img", { src: r.avatarUrl, alt: "", style: { width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 } })) : (_jsx("div", { style: {
+                                        width: 36,
+                                        height: 36,
+                                        borderRadius: '50%',
+                                        background: '#fc4c02',
+                                        color: '#fff',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: 16,
+                                        fontWeight: 700,
+                                        flexShrink: 0,
+                                    }, children: (r.username ?? '?')[0].toUpperCase() })), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 14, fontWeight: 700, color: '#242424' }, children: r.username }), _jsxs("div", { style: { fontSize: 12, color: '#888' }, children: [formatDate(r.createdAt), " \u2014 ", (r.totalDistance ?? 0).toFixed(1), " \u043A\u043C"] })] }), _jsxs("div", { style: {
+                                        background: '#eef0f4',
+                                        borderRadius: 8,
+                                        padding: '3px 10px',
+                                        fontSize: 12,
+                                        fontWeight: 600,
+                                        color: '#666',
+                                    }, children: ["\u0423\u0440. ", r.level ?? 1] })] }, r.id))) })) : (_jsx("div", { style: { textAlign: 'center', padding: 16, color: '#999', fontSize: 14 }, children: "\u041F\u0440\u0438\u0433\u043B\u0430\u0441\u0438\u0442\u0435 \u0434\u0440\u0443\u0437\u0435\u0439 \u0438 \u043F\u043E\u043B\u0443\u0447\u0438\u0442\u0435 \u0431\u043E\u043D\u0443\u0441\u044B!" }))] }), _jsxs("div", { style: {
                     background: '#fff',
                     borderRadius: 16,
                     padding: 20,

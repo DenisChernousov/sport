@@ -63,6 +63,46 @@ router.post('/avatar', authMiddleware, (req: AuthRequest, res: Response) => {
   });
 });
 
+// ─── GET /api/profile/referrals ──────────────────────────
+
+router.get('/referrals', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        referralCode: true,
+        referrals: {
+          select: {
+            id: true,
+            username: true,
+            avatarUrl: true,
+            totalDistance: true,
+            level: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: 'desc' },
+        },
+      },
+    });
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    res.json({
+      referralCode: user.referralCode,
+      referralCount: user.referrals.length,
+      referrals: user.referrals,
+    });
+  } catch (err) {
+    console.error('Get referrals error:', err);
+    res.status(500).json({ error: 'Failed to fetch referrals' });
+  }
+});
+
 // ─── GET /api/profile/:id ────────────────────────────────
 
 router.get('/:id', async (req: AuthRequest, res: Response) => {

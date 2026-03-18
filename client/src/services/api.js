@@ -344,6 +344,20 @@ export const api = {
             return request(`/planned/${id}`, { method: 'DELETE' });
         },
     },
+    admin: {
+        stats() {
+            return request('/admin/stats');
+        },
+        users(params) {
+            return request(`/admin/users${toQuery(params)}`);
+        },
+        setRole(userId, role) {
+            return request(`/admin/users/${userId}/role`, {
+                method: 'PUT',
+                body: JSON.stringify({ role }),
+            });
+        },
+    },
     profile: {
         get(id) {
             return request(`/profile/${id}`);
@@ -359,6 +373,9 @@ export const api = {
         },
         achievements(id) {
             return request(`/profile/${id}/achievements`);
+        },
+        referrals() {
+            return request('/profile/referrals');
         },
         statsSummary() {
             return request('/profile/stats/summary');

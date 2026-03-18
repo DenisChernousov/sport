@@ -71,6 +71,8 @@ export default function ProfilePanel() {
   const [avatarHover, setAvatarHover] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [referralCount, setReferralCount] = useState(0);
+  const [referredUsers, setReferredUsers] = useState<{ id: string; username: string; avatarUrl?: string; totalDistance: number; level: number; createdAt: string }[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -90,6 +92,16 @@ export default function ProfilePanel() {
       setFollowersCount(res.followersCount);
       setFollowingCount(res.followingCount);
     }).catch(() => {});
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    api.profile.referrals()
+      .then((res) => {
+        setReferralCount(res?.referralCount ?? 0);
+        setReferredUsers(res?.referrals ?? []);
+      })
+      .catch(() => {});
   }, [user]);
 
   useEffect(() => {
@@ -498,7 +510,7 @@ export default function ProfilePanel() {
         )}
       </div>
 
-      {/* Реферальная ссылка */}
+      {/* Реферальная ссылка и приглашённые */}
       <div
         style={{
           background: '#fff',
@@ -509,10 +521,22 @@ export default function ProfilePanel() {
           marginBottom: 20,
         }}
       >
-        <div style={{ fontSize: 16, fontWeight: 700, color: '#242424', marginBottom: 10 }}>
-          Реферальная ссылка
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: '#242424' }}>
+            Реферальная программа
+          </div>
+          <div style={{
+            background: '#fc4c02',
+            color: '#fff',
+            borderRadius: 20,
+            padding: '4px 14px',
+            fontSize: 14,
+            fontWeight: 700,
+          }}>
+            {referralCount} {referralCount === 1 ? 'приглашение' : referralCount >= 2 && referralCount <= 4 ? 'приглашения' : 'приглашений'}
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 16 }}>
           <input
             readOnly
             value={referralLink}
@@ -544,6 +568,60 @@ export default function ProfilePanel() {
             {copied ? 'Скопировано!' : 'Копировать'}
           </button>
         </div>
+
+        {referredUsers.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {referredUsers.map((r) => (
+              <div key={r.id} style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: '10px 0',
+                borderTop: '1px solid #e0e0e0',
+              }}>
+                {r.avatarUrl ? (
+                  <img src={r.avatarUrl} alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                ) : (
+                  <div style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: '50%',
+                    background: '#fc4c02',
+                    color: '#fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 16,
+                    fontWeight: 700,
+                    flexShrink: 0,
+                  }}>
+                    {(r.username ?? '?')[0].toUpperCase()}
+                  </div>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#242424' }}>{r.username}</div>
+                  <div style={{ fontSize: 12, color: '#888' }}>
+                    {formatDate(r.createdAt)} — {(r.totalDistance ?? 0).toFixed(1)} км
+                  </div>
+                </div>
+                <div style={{
+                  background: '#eef0f4',
+                  borderRadius: 8,
+                  padding: '3px 10px',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: '#666',
+                }}>
+                  Ур. {r.level ?? 1}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: 16, color: '#999', fontSize: 14 }}>
+            Пригласите друзей и получите бонусы!
+          </div>
+        )}
       </div>
 
       {/* Редактирование профиля */}

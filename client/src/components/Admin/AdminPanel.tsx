@@ -583,8 +583,342 @@ function ConfirmDialog({ message, onConfirm, onCancel }: {
 
 // ─── Main Admin Panel ────────────────────────────────────
 
+// ─── Admin Stats Types ──────────────────────────────────
+
+interface AdminStats {
+  totalUsers: number;
+  totalEvents: number;
+  totalActivities: number;
+  totalTeams: number;
+  newUsersThisWeek: number;
+  newUsersThisMonth: number;
+  totalDistance: number;
+  topUsers: { id: string; username: string; avatarUrl?: string; totalDistance: number; level: number; city?: string }[];
+  recentActivities: { id: string; sport: string; title?: string; distance: number; duration: number; createdAt: string; user: { id: string; username: string; avatarUrl?: string } }[];
+  eventParticipation: { id: string; title: string; participantCount: number }[];
+}
+
+interface AdminUser {
+  id: string;
+  username: string;
+  email: string;
+  role: string;
+  city?: string;
+  level: number;
+  xp: number;
+  totalDistance: number;
+  totalActivities: number;
+  currentStreak: number;
+  referralCode: string;
+  referredById?: string;
+  createdAt: string;
+  _count: { referrals: number };
+}
+
+const ROLE_COLORS: Record<string, string> = {
+  USER: '#888',
+  MODERATOR: '#2563eb',
+  ADMIN: '#dc2626',
+};
+
+function formatDurationShort(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (h > 0) return `${h}ч ${m}м`;
+  return `${m}м`;
+}
+
+// ─── Stats Tab ──────────────────────────────────────────
+
+function StatsTab() {
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    setLoading(true);
+    api.admin.stats()
+      .then(setStats)
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Ошибка загрузки'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div style={{ textAlign: 'center', padding: 40, color: '#888', fontSize: 15 }}>Загрузка...</div>;
+  if (error) return <div style={styles.error}>{error}</div>;
+  if (!stats) return null;
+
+  const summaryCards = [
+    { label: 'Пользователи', value: stats.totalUsers, color: '#2563eb' },
+    { label: 'События', value: stats.totalEvents, color: '#7c3aed' },
+    { label: 'Активности', value: stats.totalActivities, color: '#16a34a' },
+    { label: 'Команды', value: stats.totalTeams, color: '#ea580c' },
+    { label: 'Новых за неделю', value: stats.newUsersThisWeek, color: '#0891b2' },
+    { label: 'Общая дистанция', value: `${(stats.totalDistance ?? 0).toFixed(1)} км`, color: '#fc4c02' },
+  ];
+
+  return (
+    <div>
+      {/* Summary cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
+        {summaryCards.map((card) => (
+          <div key={card.label} style={{
+            background: '#fff',
+            borderRadius: 14,
+            border: `1px solid ${BORDER}`,
+            padding: 20,
+            textAlign: 'center',
+          }}>
+            <div style={{ fontSize: 28, fontWeight: 900, color: card.color }}>{card.value}</div>
+            <div style={{ fontSize: 13, color: '#888', marginTop: 6, fontWeight: 600 }}>{card.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Top 5 users */}
+      <div style={styles.card}>
+        <div style={{ fontSize: 18, fontWeight: 800, color: TEXT, marginBottom: 16 }}>
+          Топ-5 пользователей по дистанции
+        </div>
+        <table style={styles.table}>
+          <thead>
+            <tr>
+              <th style={styles.th}>#</th>
+              <th style={styles.th}>Пользователь</th>
+              <th style={styles.th}>Город</th>
+              <th style={styles.th}>Уровень</th>
+              <th style={styles.th}>Дистанция</th>
+            </tr>
+          </thead>
+          <tbody>
+            {stats.topUsers.map((u, idx) => (
+              <tr key={u.id}>
+                <td style={styles.td}>{idx + 1}</td>
+                <td style={{ ...styles.td, fontWeight: 700 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {u.avatarUrl ? (
+                      <img src={u.avatarUrl} alt="" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: BRAND, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>
+                        {(u.username ?? '?')[0].toUpperCase()}
+                      </div>
+                    )}
+                    {u.username}
+                  </div>
+                </td>
+                <td style={styles.td}>{u.city ?? '—'}</td>
+                <td style={styles.td}>{u.level}</td>
+                <td style={{ ...styles.td, fontWeight: 700, color: BRAND }}>{(u.totalDistance ?? 0).toFixed(1)} км</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Recent activities */}
+      <div style={{ ...styles.card, marginTop: 16 }}>
+        <div style={{ fontSize: 18, fontWeight: 800, color: TEXT, marginBottom: 16 }}>
+          Последние активности
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {stats.recentActivities.map((a) => (
+            <div key={a.id} style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              padding: '10px 0',
+              borderBottom: `1px solid ${BORDER}`,
+            }}>
+              {a.user.avatarUrl ? (
+                <img src={a.user.avatarUrl} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+              ) : (
+                <div style={{ width: 32, height: 32, borderRadius: '50%', background: BRAND, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, flexShrink: 0 }}>
+                  {(a.user.username ?? '?')[0].toUpperCase()}
+                </div>
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>
+                  {a.user.username} — {a.title ?? a.sport}
+                </div>
+                <div style={{ fontSize: 12, color: '#888' }}>
+                  {(a.distance ?? 0).toFixed(1)} км, {formatDurationShort(a.duration ?? 0)}
+                </div>
+              </div>
+              <div style={{ fontSize: 11, color: '#aaa', flexShrink: 0 }}>
+                {new Date(a.createdAt).toLocaleDateString('ru-RU')}
+              </div>
+            </div>
+          ))}
+          {stats.recentActivities.length === 0 && (
+            <div style={{ textAlign: 'center', color: '#888', padding: 20 }}>Нет активностей</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Users Tab ──────────────────────────────────────────
+
+function UsersTab() {
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [search, setSearch] = useState('');
+  const [roleEdits, setRoleEdits] = useState<Record<string, string>>({});
+  const [savingRole, setSavingRole] = useState<string | null>(null);
+
+  const loadUsers = useCallback(async (searchVal?: string) => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await api.admin.users(searchVal ? { search: searchVal } : undefined);
+      setUsers(res);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Ошибка загрузки');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
+
+  const handleSearch = useCallback(() => {
+    loadUsers(search);
+  }, [search, loadUsers]);
+
+  const handleRoleChange = useCallback(async (userId: string) => {
+    const newRole = roleEdits[userId];
+    if (!newRole) return;
+    setSavingRole(userId);
+    setError('');
+    try {
+      await api.admin.setRole(userId, newRole);
+      setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, role: newRole } : u));
+      setRoleEdits((prev) => {
+        const next = { ...prev };
+        delete next[userId];
+        return next;
+      });
+      setSuccess('Роль обновлена');
+      setTimeout(() => setSuccess(''), 2000);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Ошибка обновления роли');
+    } finally {
+      setSavingRole(null);
+    }
+  }, [roleEdits]);
+
+  return (
+    <div>
+      {error && <div style={styles.error}>{error}</div>}
+      {success && <div style={styles.success}>{success}</div>}
+
+      {/* Search */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+        <input
+          style={{ ...styles.input, flex: 1 }}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Поиск по имени, email или городу..."
+          onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
+        />
+        <button style={styles.btn('primary')} onClick={handleSearch}>Поиск</button>
+      </div>
+
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 40, color: '#888', fontSize: 15 }}>Загрузка...</div>
+      ) : (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={styles.table}>
+            <thead>
+              <tr>
+                <th style={styles.th}>Пользователь</th>
+                <th style={styles.th}>Email</th>
+                <th style={styles.th}>Роль</th>
+                <th style={styles.th}>Город</th>
+                <th style={styles.th}>Уровень</th>
+                <th style={styles.th}>Дистанция</th>
+                <th style={styles.th}>Рефералы</th>
+                <th style={styles.th}>Дата рег.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((u) => {
+                const currentEditRole = roleEdits[u.id];
+                const displayRole = currentEditRole ?? u.role;
+                const isDirty = currentEditRole != null && currentEditRole !== u.role;
+                return (
+                  <tr key={u.id}>
+                    <td style={{ ...styles.td, fontWeight: 700 }}>{u.username}</td>
+                    <td style={{ ...styles.td, fontSize: 12 }}>{u.email}</td>
+                    <td style={styles.td}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <select
+                          value={displayRole}
+                          onChange={(e) => setRoleEdits((prev) => ({ ...prev, [u.id]: e.target.value }))}
+                          style={{
+                            padding: '4px 8px',
+                            borderRadius: 6,
+                            border: `1.5px solid ${ROLE_COLORS[displayRole] ?? '#888'}`,
+                            fontSize: 12,
+                            fontWeight: 700,
+                            color: ROLE_COLORS[displayRole] ?? '#888',
+                            background: '#fff',
+                            outline: 'none',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <option value="USER">USER</option>
+                          <option value="MODERATOR">MODERATOR</option>
+                          <option value="ADMIN">ADMIN</option>
+                        </select>
+                        {isDirty && (
+                          <button
+                            style={{
+                              ...styles.smallBtn('primary'),
+                              opacity: savingRole === u.id ? 0.6 : 1,
+                              fontSize: 11,
+                            }}
+                            disabled={savingRole === u.id}
+                            onClick={() => handleRoleChange(u.id)}
+                          >
+                            {savingRole === u.id ? '...' : 'Сохр.'}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                    <td style={styles.td}>{u.city ?? '—'}</td>
+                    <td style={styles.td}>{u.level}</td>
+                    <td style={{ ...styles.td, fontWeight: 600 }}>{(u.totalDistance ?? 0).toFixed(1)} км</td>
+                    <td style={{ ...styles.td, textAlign: 'center' }}>{u._count?.referrals ?? 0}</td>
+                    <td style={{ ...styles.td, fontSize: 12, whiteSpace: 'nowrap' }}>
+                      {new Date(u.createdAt).toLocaleDateString('ru-RU')}
+                    </td>
+                  </tr>
+                );
+              })}
+              {users.length === 0 && (
+                <tr>
+                  <td colSpan={8} style={{ ...styles.td, textAlign: 'center', color: '#888', padding: 40 }}>
+                    Пользователи не найдены
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Admin Panel ────────────────────────────────────
+
 export default function AdminPanel() {
-  const [tab, setTab] = useState<'events' | 'packages'>('events');
+  const [tab, setTab] = useState<'stats' | 'users' | 'events' | 'packages'>('stats');
   const [events, setEvents] = useState<Event[]>([]);
   const [packages, setPackages] = useState<MerchPackage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -644,7 +978,7 @@ export default function AdminPanel() {
 
   useEffect(() => {
     if (tab === 'events') loadEvents();
-    else loadPackages();
+    else if (tab === 'packages') loadPackages();
   }, [tab, loadEvents, loadPackages]);
 
   // ─── Event handlers ─────────────────────────────────────
@@ -784,6 +1118,12 @@ export default function AdminPanel() {
 
       {/* Tabs */}
       <div style={styles.tabBar}>
+        <button style={styles.tab(tab === 'stats')} onClick={() => setTab('stats')}>
+          Статистика
+        </button>
+        <button style={styles.tab(tab === 'users')} onClick={() => setTab('users')}>
+          Пользователи
+        </button>
         <button style={styles.tab(tab === 'events')} onClick={() => setTab('events')}>
           Управление событиями
         </button>
@@ -801,6 +1141,12 @@ export default function AdminPanel() {
           Загрузка...
         </div>
       )}
+
+      {/* ─── Stats Tab ───────────────────────────────────── */}
+      {tab === 'stats' && <StatsTab />}
+
+      {/* ─── Users Tab ───────────────────────────────────── */}
+      {tab === 'users' && <UsersTab />}
 
       {/* ─── Events Tab ──────────────────────────────────── */}
       {tab === 'events' && !loading && (

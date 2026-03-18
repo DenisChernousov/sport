@@ -409,6 +409,47 @@ export const api = {
     },
   },
 
+  admin: {
+    stats() {
+      return request<{
+        totalUsers: number;
+        totalEvents: number;
+        totalActivities: number;
+        totalTeams: number;
+        newUsersThisWeek: number;
+        newUsersThisMonth: number;
+        totalDistance: number;
+        topUsers: { id: string; username: string; avatarUrl?: string; totalDistance: number; level: number; city?: string }[];
+        recentActivities: { id: string; sport: string; title?: string; distance: number; duration: number; createdAt: string; user: { id: string; username: string; avatarUrl?: string } }[];
+        eventParticipation: { id: string; title: string; participantCount: number }[];
+      }>('/admin/stats');
+    },
+    users(params?: { search?: string }) {
+      return request<{
+        id: string;
+        username: string;
+        email: string;
+        role: string;
+        city?: string;
+        level: number;
+        xp: number;
+        totalDistance: number;
+        totalActivities: number;
+        currentStreak: number;
+        referralCode: string;
+        referredById?: string;
+        createdAt: string;
+        _count: { referrals: number };
+      }[]>(`/admin/users${toQuery(params)}`);
+    },
+    setRole(userId: string, role: string) {
+      return request<{ id: string; username: string; email: string; role: string }>(`/admin/users/${userId}/role`, {
+        method: 'PUT',
+        body: JSON.stringify({ role }),
+      });
+    },
+  },
+
   profile: {
     get(id: string) {
       return request<User>(`/profile/${id}`);
@@ -426,6 +467,13 @@ export const api = {
       return request<{ achievements: { achievement: Achievement; unlockedAt: string }[] }>(
         `/profile/${id}/achievements`
       );
+    },
+    referrals() {
+      return request<{
+        referralCode: string;
+        referralCount: number;
+        referrals: { id: string; username: string; avatarUrl?: string; totalDistance: number; level: number; createdAt: string }[];
+      }>('/profile/referrals');
     },
     statsSummary() {
       return request<{ totalDistance: number; totalTime: number; totalActivities: number; weeklyDistance: number; monthlyDistance: number; bySport: { sport: string; totalDistance: number; activityCount: number }[] }>(
