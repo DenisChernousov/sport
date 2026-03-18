@@ -5,10 +5,10 @@ import { api } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 
 const SPORT: Record<SportType, { icon: string; label: string; color: string; bg: string }> = {
-  RUNNING: { icon: '\🏃', label: '\П\р\о\б\е\ж\к\а', color: '#fc4c02', bg: '#fff4ef' },
-  CYCLING: { icon: '\🚴', label: '\В\е\л\о', color: '#0061ff', bg: '#eef4ff' },
-  SKIING:  { icon: '\⛷\️', label: '\Л\ы\ж\и', color: '#0891b2', bg: '#edfbfe' },
-  WALKING: { icon: '\🚶', label: '\Х\о\д\ь\б\а', color: '#7c3aed', bg: '#f5f0ff' },
+  RUNNING: { icon: '\🏃', label: 'Пробежка', color: '#fc4c02', bg: '#fff4ef' },
+  CYCLING: { icon: '\🚴', label: 'Вело', color: '#0061ff', bg: '#eef4ff' },
+  SKIING:  { icon: '\⛷\️', label: 'Лыжи', color: '#0891b2', bg: '#edfbfe' },
+  WALKING: { icon: '\🚶', label: 'Ходьба', color: '#7c3aed', bg: '#f5f0ff' },
 };
 
 interface FeedItem extends Activity {
@@ -23,18 +23,18 @@ function formatTimeAgo(dateStr: string): string {
   const date = new Date(dateStr).getTime();
   const diff = Math.floor((now - date) / 1000);
 
-  if (diff < 60) return `${diff} \с\е\к. \н\а\з\а\д`;
+  if (diff < 60) return `${diff} сек. назад`;
   const mins = Math.floor(diff / 60);
-  if (mins < 60) return `${mins} \м\и\н. \н\а\з\а\д`;
+  if (mins < 60) return `${mins} мин. назад`;
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours} \ч. \н\а\з\а\д`;
+  if (hours < 24) return `${hours} ч. назад`;
   const days = Math.floor(hours / 24);
-  if (days === 1) return '\в\ч\е\р\а';
-  if (days < 7) return `${days} \д\н. \н\а\з\а\д`;
+  if (days === 1) return 'вчера';
+  if (days < 7) return `${days} дн. назад`;
   const weeks = Math.floor(days / 7);
-  if (weeks < 4) return `${weeks} \н\е\д. \н\а\з\а\д`;
+  if (weeks < 4) return `${weeks} нед. назад`;
   const months = Math.floor(days / 30);
-  return `${months} \м\е\с. \н\а\з\а\д`;
+  return `${months} мес. назад`;
 }
 
 function formatDuration(seconds: number): string {
@@ -97,7 +97,7 @@ export default function FeedPanel() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         <h2 style={{ fontSize: 24, fontWeight: 800, color: '#242424', margin: 0 }}>
-          {'\📰'} \Л\е\н\т\а \а\к\т\и\в\н\о\с\т\е\й
+          {'\📰'} Лента активностей
         </h2>
         {[1, 2, 3].map(i => (
           <div key={i} style={{
@@ -132,10 +132,10 @@ export default function FeedPanel() {
       <div style={{ textAlign: 'center', padding: '80px 24px' }}>
         <div style={{ fontSize: 64, marginBottom: 16 }}>{'\🏃'}</div>
         <h3 style={{ fontSize: 20, fontWeight: 700, color: '#242424', margin: '0 0 8px' }}>
-          \Н\е\т \а\к\т\и\в\н\о\с\т\е\й
+          Нет активностей
         </h3>
         <p style={{ fontSize: 14, color: '#999', margin: 0 }}>
-          \П\о\к\а \н\и\к\т\о \н\е \д\о\б\а\в\и\л \а\к\т\и\в\н\о\с\т\ь. \Б\у\д\ь\т\е \п\е\р\в\ы\м!
+          Пока никто не добавил активность. Будьте первым!
         </p>
       </div>
     );
@@ -144,7 +144,7 @@ export default function FeedPanel() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <h2 style={{ fontSize: 24, fontWeight: 800, color: '#242424', margin: 0 }}>
-        {'\📰'} \Л\е\н\т\а \а\к\т\и\в\н\о\с\т\е\й
+        {'\📰'} Лента активностей
       </h2>
 
       {items.map(item => {
@@ -187,13 +187,13 @@ export default function FeedPanel() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 14, fontWeight: 700, color: '#242424' }}>
-                    {item.user.username ?? '\П\о\л\ь\з\о\в\а\т\е\л\ь'}
+                    {item.user.username ?? 'Пользователь'}
                   </span>
                   <span style={{
                     fontSize: 11, fontWeight: 600, color: sport.color,
                     background: sport.bg, padding: '2px 8px', borderRadius: 10,
                   }}>
-                    \У\р. {item.user.level ?? 0}
+                    Ур. {item.user.level ?? 0}
                   </span>
                 </div>
                 <div style={{ fontSize: 12, color: '#aaa', marginTop: 2 }}>
@@ -207,7 +207,7 @@ export default function FeedPanel() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: 20 }}>{sport.icon}</span>
                 <span style={{ fontSize: 16, fontWeight: 700, color: '#242424' }}>
-                  {item.title ?? sport.label} {distKm.toFixed(1)} \к\м
+                  {item.title ?? sport.label} {distKm.toFixed(1)} км
                 </span>
               </div>
             </div>
@@ -221,14 +221,14 @@ export default function FeedPanel() {
                 <div style={{ fontSize: 18, fontWeight: 800, color: '#242424' }}>
                   {distKm.toFixed(1)}
                 </div>
-                <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>\Д\и\с\т\а\н\ц\и\я, \к\м</div>
+                <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>Дистанция, км</div>
               </div>
               <div style={{ width: 1, background: '#f0f0f0', margin: '0 4px' }} />
               <div style={{ flex: 1, textAlign: 'center' }}>
                 <div style={{ fontSize: 18, fontWeight: 800, color: '#242424' }}>
                   {formatDuration(item.duration ?? 0)}
                 </div>
-                <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>\В\р\е\м\я</div>
+                <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>Время</div>
               </div>
               <div style={{ width: 1, background: '#f0f0f0', margin: '0 4px' }} />
               <div style={{ flex: 1, textAlign: 'center' }}>
@@ -237,14 +237,14 @@ export default function FeedPanel() {
                     <div style={{ fontSize: 18, fontWeight: 800, color: '#242424' }}>
                       {formatPace(item.avgPace)}
                     </div>
-                    <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>\Т\е\м\п, \м\и\н/\к\м</div>
+                    <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>Темп, мин/км</div>
                   </>
                 ) : (
                   <>
                     <div style={{ fontSize: 18, fontWeight: 800, color: '#242424' }}>
                       {speedKmH.toFixed(1)}
                     </div>
-                    <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>\С\к\о\р\о\с\т\ь, \к\м/\ч</div>
+                    <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>Скорость, км/ч</div>
                   </>
                 )}
               </div>
@@ -326,7 +326,7 @@ export default function FeedPanel() {
               transition: 'all 0.2s',
             }}
           >
-            {loadingMore ? '\З\а\г\р\у\з\к\а...' : '\З\а\г\р\у\з\и\т\ь \е\щ\ё'}
+            {loadingMore ? 'Загрузка...' : 'Загрузить ещё'}
           </button>
         </div>
       )}
