@@ -458,7 +458,7 @@ export function PublicProfilePanel({ userId, onClose }: PublicProfilePanelProps)
                       {SPORT_LABELS[sport]}
                     </div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: '#242424', marginTop: 4 }}>
-                      {ss ? `${(ss.totalDistance / 1000).toFixed(1)} км` : '0 км'}
+                      {ss ? `${(ss.totalDistance).toFixed(1)} км` : '0 км'}
                     </div>
                     <div style={{ fontSize: 10, color: '#999' }}>
                       {ss ? `${ss.activityCount} трен.` : '0 трен.'}
@@ -476,7 +476,7 @@ export function PublicProfilePanel({ userId, onClose }: PublicProfilePanelProps)
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {activities.map((act) => {
-                    const distKm = (act.distance ?? 0) / 1000;
+                    const distKm = act.distance ?? 0;
                     return (
                       <div
                         key={act.id}

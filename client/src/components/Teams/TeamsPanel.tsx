@@ -654,7 +654,7 @@ export default function TeamsPanel() {
                   const sportColor = SPORT_COLORS[item.sport] ?? '#fc4c02';
                   const sportIcon = SPORT_ICONS[item.sport] ?? '🏃';
                   const sportLabel = SPORT_LABELS[item.sport] ?? item.sport;
-                  const distKm = (item.distance ?? 0) / 1000;
+                  const distKm = item.distance ?? 0;
                   return (
                     <div key={item.id} style={{
                       display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 0',

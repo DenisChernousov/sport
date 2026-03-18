@@ -310,7 +310,7 @@ export default function LeaderboardPanel() {
                   {/* Distance */}
                   <div style={{ width: 96, textAlign: 'right' }}>
                     <span style={{ fontWeight: 600, color: '#242424' }}>
-                      {((entry.totalDistance ?? 0) / 1000).toFixed(1)}
+                      {((entry.totalDistance ?? 0)).toFixed(1)}
                     </span>
                     <span style={{ marginLeft: 4, fontSize: 12, color: '#999' }}>км</span>
                   </div>
@@ -417,7 +417,7 @@ export default function LeaderboardPanel() {
 
                   <div style={{ width: 96, textAlign: 'right' }}>
                     <span style={{ fontWeight: 600, color: '#242424' }}>
-                      {((team.totalDistance ?? 0) / 1000).toFixed(1)}
+                      {((team.totalDistance ?? 0)).toFixed(1)}
                     </span>
                     <span style={{ marginLeft: 4, fontSize: 12, color: '#999' }}>км</span>
                   </div>

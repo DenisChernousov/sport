@@ -136,7 +136,7 @@ function BattleCard({
             )}
           </p>
           <p className="text-lg font-bold text-white">
-            {(battle.challengerDistance / 1000).toFixed(2)}{' '}
+            {(battle.challengerDistance).toFixed(2)}{' '}
             <span className="text-xs text-gray-500">км</span>
           </p>
         </div>
@@ -166,7 +166,7 @@ function BattleCard({
             )}
           </p>
           <p className="text-lg font-bold text-white">
-            {(battle.opponentDistance / 1000).toFixed(2)}{' '}
+            {(battle.opponentDistance).toFixed(2)}{' '}
             <span className="text-xs text-gray-500">км</span>
           </p>
         </div>
@@ -176,7 +176,7 @@ function BattleCard({
       {(battle.status === 'ACTIVE' || battle.status === 'FINISHED') && target > 0 && (
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-xs text-gray-500">
-            <span>Цель: {(target / 1000).toFixed(1)} км</span>
+            <span>Цель: {(target).toFixed(1)} км</span>
           </div>
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
