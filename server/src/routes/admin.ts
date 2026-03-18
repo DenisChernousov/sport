@@ -1,7 +1,24 @@
 import { Router, Response } from 'express';
+import path from 'path';
+import fs from 'fs';
+import multer from 'multer';
 import { prisma } from '../lib/prisma';
 import { authMiddleware, adminMiddleware } from '../middleware/auth';
 import type { AuthRequest } from '../types';
+
+// ─── Achievement icon upload ────────────────────────────
+const achIconStorage = multer.diskStorage({
+  destination(_req, _file, cb) {
+    const dir = path.join(__dirname, '..', '..', 'uploads', 'achievements');
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename(req, file, cb) {
+    const ext = path.extname(file.originalname) || '.png';
+    cb(null, `${req.params.id}-${Date.now()}${ext}`);
+  },
+});
+const achIconUpload = multer({ storage: achIconStorage, limits: { fileSize: 5 * 1024 * 1024 } });
 
 const router = Router();
 
@@ -201,6 +218,7 @@ router.get('/achievements', authMiddleware, adminMiddleware, async (_req: AuthRe
       name: a.name,
       description: a.description,
       icon: a.icon,
+      iconUrl: a.iconUrl ?? null,
       xpReward: a.xpReward,
       category: a.category,
       threshold: a.threshold,
@@ -216,14 +234,19 @@ router.get('/achievements', authMiddleware, adminMiddleware, async (_req: AuthRe
 
 router.post('/achievements', authMiddleware, adminMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { code, name, description, icon, xpReward, category, threshold } = req.body;
+    const { code: rawCode, name, description, icon, xpReward, category, threshold } = req.body;
 
-    if (!code || !name || !description || !category) {
-      res.status(400).json({ error: 'Заполните обязательные поля: code, name, description, category' });
+    if (!name || !description || !category) {
+      res.status(400).json({ error: 'Заполните обязательные поля: name, description, category' });
       return;
     }
 
-    const existing = await prisma.achievement.findUnique({ where: { code } });
+    // Автогенерация кода из названия, если не указан
+    const generatedCode = rawCode
+      ? rawCode
+      : name.toUpperCase().replace(/\s+/g, '_').replace(/[^A-ZА-ЯЁ0-9_]/g, '') + '_' + Date.now().toString(36);
+
+    const existing = await prisma.achievement.findUnique({ where: { code: generatedCode } });
     if (existing) {
       res.status(400).json({ error: 'Достижение с таким кодом уже существует' });
       return;
@@ -231,7 +254,7 @@ router.post('/achievements', authMiddleware, adminMiddleware, async (req: AuthRe
 
     const achievement = await prisma.achievement.create({
       data: {
-        code,
+        code: generatedCode,
         name,
         description,
         icon: icon ?? '🏅',
@@ -309,6 +332,38 @@ router.delete('/achievements/:id', authMiddleware, adminMiddleware, async (req: 
   } catch (err) {
     console.error('Admin delete achievement error:', err);
     res.status(500).json({ error: 'Ошибка удаления достижения' });
+  }
+});
+
+// ─── POST /api/admin/achievements/:id/icon ──────────────
+
+router.post('/achievements/:id/icon', authMiddleware, adminMiddleware, achIconUpload.single('icon'), async (req: AuthRequest, res: Response) => {
+  try {
+    const achievementId = req.params.id as string;
+    const file = (req as any).file;
+
+    if (!file) {
+      res.status(400).json({ error: 'Файл не загружен' });
+      return;
+    }
+
+    const existing = await prisma.achievement.findUnique({ where: { id: achievementId } });
+    if (!existing) {
+      res.status(404).json({ error: 'Достижение не найдено' });
+      return;
+    }
+
+    const iconUrl = `/uploads/achievements/${file.filename}`;
+
+    const achievement = await prisma.achievement.update({
+      where: { id: achievementId },
+      data: { iconUrl },
+    });
+
+    res.json({ iconUrl: achievement.iconUrl });
+  } catch (err) {
+    console.error('Admin upload achievement icon error:', err);
+    res.status(500).json({ error: 'Ошибка загрузки иконки достижения' });
   }
 });
 

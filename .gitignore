@@ -5,3 +5,6 @@ dist/
 .vite/
 uploads/
 *.pid
+client/src/**/*.js
+client/src/**/*.tsbuildinfo
+*.tsbuildinfo

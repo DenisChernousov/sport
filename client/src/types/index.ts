@@ -135,6 +135,7 @@ export interface Achievement {
   name: string;
   description: string;
   icon: string;
+  iconUrl?: string | null;
   xpReward: number;
   category: string;
   threshold?: number | null;

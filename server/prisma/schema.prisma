@@ -322,6 +322,7 @@ model Achievement {
   name        String
   description String
   icon        String
+  iconUrl     String?
   xpReward    Int      @default(25)
   category    String   // distance, speed, streak, social, event
   threshold   Float?   // numeric threshold to unlock

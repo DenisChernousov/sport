@@ -454,15 +454,15 @@ export const api = {
       });
     },
     achievements() {
-      return request<{ id: string; code: string; name: string; description: string; icon: string; xpReward: number; category: string; threshold: number | null; userCount: number }[]>('/admin/achievements');
+      return request<{ id: string; code: string; name: string; description: string; icon: string; iconUrl?: string | null; xpReward: number; category: string; threshold: number | null; userCount: number }[]>('/admin/achievements');
     },
-    createAchievement(data: { code: string; name: string; description: string; icon: string; xpReward: number; category: string; threshold: number | null }) {
+    createAchievement(data: { name: string; description: string; icon: string; xpReward: number; category: string; threshold: number | null }) {
       return request<Achievement>('/admin/achievements', {
         method: 'POST',
         body: JSON.stringify(data),
       });
     },
-    updateAchievement(id: string, data: { code?: string; name?: string; description?: string; icon?: string; xpReward?: number; category?: string; threshold?: number | null }) {
+    updateAchievement(id: string, data: { name?: string; description?: string; icon?: string; xpReward?: number; category?: string; threshold?: number | null }) {
       return request<Achievement>(`/admin/achievements/${id}`, {
         method: 'PUT',
         body: JSON.stringify(data),
@@ -470,6 +470,14 @@ export const api = {
     },
     deleteAchievement(id: string) {
       return request<void>(`/admin/achievements/${id}`, { method: 'DELETE' });
+    },
+    uploadAchievementIcon(id: string, file: File) {
+      const form = new FormData();
+      form.append('icon', file);
+      return request<{ iconUrl: string }>(`/admin/achievements/${id}/icon`, {
+        method: 'POST',
+        body: form,
+      });
     },
   },
 

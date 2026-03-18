@@ -572,10 +572,11 @@ const ACH_CATEGORY_OPTIONS = [
 ];
 
 interface AchFormData {
-  code: string;
   name: string;
   description: string;
   icon: string;
+  iconFile: File | null;
+  iconPreview: string;
   xpReward: string;
   category: string;
   threshold: string;
