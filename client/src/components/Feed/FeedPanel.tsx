@@ -5,10 +5,10 @@ import { api } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 
 const SPORT: Record<SportType, { icon: string; label: string; color: string; bg: string }> = {
-  RUNNING: { icon: '\u{1F3C3}', label: '\u041F\u0440\u043E\u0431\u0435\u0436\u043A\u0430', color: '#fc4c02', bg: '#fff4ef' },
-  CYCLING: { icon: '\u{1F6B4}', label: '\u0412\u0435\u043B\u043E', color: '#0061ff', bg: '#eef4ff' },
-  SKIING:  { icon: '\u26F7\uFE0F', label: '\u041B\u044B\u0436\u0438', color: '#0891b2', bg: '#edfbfe' },
-  WALKING: { icon: '\u{1F6B6}', label: '\u0425\u043E\u0434\u044C\u0431\u0430', color: '#7c3aed', bg: '#f5f0ff' },
+  RUNNING: { icon: '\🏃', label: '\П\р\о\б\е\ж\к\а', color: '#fc4c02', bg: '#fff4ef' },
+  CYCLING: { icon: '\🚴', label: '\В\е\л\о', color: '#0061ff', bg: '#eef4ff' },
+  SKIING:  { icon: '\⛷\️', label: '\Л\ы\ж\и', color: '#0891b2', bg: '#edfbfe' },
+  WALKING: { icon: '\🚶', label: '\Х\о\д\ь\б\а', color: '#7c3aed', bg: '#f5f0ff' },
 };
 
 interface FeedItem extends Activity {
@@ -23,18 +23,18 @@ function formatTimeAgo(dateStr: string): string {
   const date = new Date(dateStr).getTime();
   const diff = Math.floor((now - date) / 1000);
 
-  if (diff < 60) return `${diff} \u0441\u0435\u043A. \u043D\u0430\u0437\u0430\u0434`;
+  if (diff < 60) return `${diff} \с\е\к. \н\а\з\а\д`;
   const mins = Math.floor(diff / 60);
-  if (mins < 60) return `${mins} \u043C\u0438\u043D. \u043D\u0430\u0437\u0430\u0434`;
+  if (mins < 60) return `${mins} \м\и\н. \н\а\з\а\д`;
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours} \u0447. \u043D\u0430\u0437\u0430\u0434`;
+  if (hours < 24) return `${hours} \ч. \н\а\з\а\д`;
   const days = Math.floor(hours / 24);
-  if (days === 1) return '\u0432\u0447\u0435\u0440\u0430';
-  if (days < 7) return `${days} \u0434\u043D. \u043D\u0430\u0437\u0430\u0434`;
+  if (days === 1) return '\в\ч\е\р\а';
+  if (days < 7) return `${days} \д\н. \н\а\з\а\д`;
   const weeks = Math.floor(days / 7);
-  if (weeks < 4) return `${weeks} \u043D\u0435\u0434. \u043D\u0430\u0437\u0430\u0434`;
+  if (weeks < 4) return `${weeks} \н\е\д. \н\а\з\а\д`;
   const months = Math.floor(days / 30);
-  return `${months} \u043C\u0435\u0441. \u043D\u0430\u0437\u0430\u0434`;
+  return `${months} \м\е\с. \н\а\з\а\д`;
 }
 
 function formatDuration(seconds: number): string {
@@ -97,7 +97,7 @@ export default function FeedPanel() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         <h2 style={{ fontSize: 24, fontWeight: 800, color: '#242424', margin: 0 }}>
-          {'\u{1F4F0}'} \u041B\u0435\u043D\u0442\u0430 \u0430\u043A\u0442\u0438\u0432\u043D\u043E\u0441\u0442\u0435\u0439
+          {'\📰'} \Л\е\н\т\а \а\к\т\и\в\н\о\с\т\е\й
         </h2>
         {[1, 2, 3].map(i => (
           <div key={i} style={{
@@ -130,12 +130,12 @@ export default function FeedPanel() {
   if (items.length === 0) {
     return (
       <div style={{ textAlign: 'center', padding: '80px 24px' }}>
-        <div style={{ fontSize: 64, marginBottom: 16 }}>{'\u{1F3C3}'}</div>
+        <div style={{ fontSize: 64, marginBottom: 16 }}>{'\🏃'}</div>
         <h3 style={{ fontSize: 20, fontWeight: 700, color: '#242424', margin: '0 0 8px' }}>
-          \u041D\u0435\u0442 \u0430\u043A\u0442\u0438\u0432\u043D\u043E\u0441\u0442\u0435\u0439
+          \Н\е\т \а\к\т\и\в\н\о\с\т\е\й
         </h3>
         <p style={{ fontSize: 14, color: '#999', margin: 0 }}>
-          \u041F\u043E\u043A\u0430 \u043D\u0438\u043A\u0442\u043E \u043D\u0435 \u0434\u043E\u0431\u0430\u0432\u0438\u043B \u0430\u043A\u0442\u0438\u0432\u043D\u043E\u0441\u0442\u044C. \u0411\u0443\u0434\u044C\u0442\u0435 \u043F\u0435\u0440\u0432\u044B\u043C!
+          \П\о\к\а \н\и\к\т\о \н\е \д\о\б\а\в\и\л \а\к\т\и\в\н\о\с\т\ь. \Б\у\д\ь\т\е \п\е\р\в\ы\м!
         </p>
       </div>
     );
@@ -144,7 +144,7 @@ export default function FeedPanel() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <h2 style={{ fontSize: 24, fontWeight: 800, color: '#242424', margin: 0 }}>
-        {'\u{1F4F0}'} \u041B\u0435\u043D\u0442\u0430 \u0430\u043A\u0442\u0438\u0432\u043D\u043E\u0441\u0442\u0435\u0439
+        {'\📰'} \Л\е\н\т\а \а\к\т\и\в\н\о\с\т\е\й
       </h2>
 
       {items.map(item => {
@@ -187,13 +187,13 @@ export default function FeedPanel() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 14, fontWeight: 700, color: '#242424' }}>
-                    {item.user.username ?? '\u041F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044C'}
+                    {item.user.username ?? '\П\о\л\ь\з\о\в\а\т\е\л\ь'}
                   </span>
                   <span style={{
                     fontSize: 11, fontWeight: 600, color: sport.color,
                     background: sport.bg, padding: '2px 8px', borderRadius: 10,
                   }}>
-                    \u0423\u0440. {item.user.level ?? 0}
+                    \У\р. {item.user.level ?? 0}
                   </span>
                 </div>
                 <div style={{ fontSize: 12, color: '#aaa', marginTop: 2 }}>
@@ -207,7 +207,7 @@ export default function FeedPanel() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: 20 }}>{sport.icon}</span>
                 <span style={{ fontSize: 16, fontWeight: 700, color: '#242424' }}>
-                  {item.title ?? sport.label} {distKm.toFixed(1)} \u043A\u043C
+                  {item.title ?? sport.label} {distKm.toFixed(1)} \к\м
                 </span>
               </div>
             </div>
@@ -221,14 +221,14 @@ export default function FeedPanel() {
                 <div style={{ fontSize: 18, fontWeight: 800, color: '#242424' }}>
                   {distKm.toFixed(1)}
                 </div>
-                <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>\u0414\u0438\u0441\u0442\u0430\u043D\u0446\u0438\u044F, \u043A\u043C</div>
+                <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>\Д\и\с\т\а\н\ц\и\я, \к\м</div>
               </div>
               <div style={{ width: 1, background: '#f0f0f0', margin: '0 4px' }} />
               <div style={{ flex: 1, textAlign: 'center' }}>
                 <div style={{ fontSize: 18, fontWeight: 800, color: '#242424' }}>
                   {formatDuration(item.duration ?? 0)}
                 </div>
-                <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>\u0412\u0440\u0435\u043C\u044F</div>
+                <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>\В\р\е\м\я</div>
               </div>
               <div style={{ width: 1, background: '#f0f0f0', margin: '0 4px' }} />
               <div style={{ flex: 1, textAlign: 'center' }}>
@@ -237,14 +237,14 @@ export default function FeedPanel() {
                     <div style={{ fontSize: 18, fontWeight: 800, color: '#242424' }}>
                       {formatPace(item.avgPace)}
                     </div>
-                    <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>\u0422\u0435\u043C\u043F, \u043C\u0438\u043D/\u043A\u043C</div>
+                    <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>\Т\е\м\п, \м\и\н/\к\м</div>
                   </>
                 ) : (
                   <>
                     <div style={{ fontSize: 18, fontWeight: 800, color: '#242424' }}>
                       {speedKmH.toFixed(1)}
                     </div>
-                    <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>\u0421\u043A\u043E\u0440\u043E\u0441\u0442\u044C, \u043A\u043C/\u0447</div>
+                    <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>\С\к\о\р\о\с\т\ь, \к\м/\ч</div>
                   </>
                 )}
               </div>
@@ -299,7 +299,7 @@ export default function FeedPanel() {
                   transition={{ duration: 0.3 }}
                   style={{ fontSize: 18 }}
                 >
-                  {item.isLiked ? '\u2764\uFE0F' : '\u{1F90D}'}
+                  {item.isLiked ? '\❤\️' : '\🤍'}
                 </motion.span>
                 {likeCount > 0 && (
                   <span style={{ fontSize: 13 }}>
@@ -326,7 +326,7 @@ export default function FeedPanel() {
               transition: 'all 0.2s',
             }}
           >
-            {loadingMore ? '\u0417\u0430\u0433\u0440\u0443\u0437\u043A\u0430...' : '\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u0435\u0449\u0451'}
+            {loadingMore ? '\З\а\г\р\у\з\к\а...' : '\З\а\г\р\у\з\и\т\ь \е\щ\ё'}
           </button>
         </div>
       )}
