@@ -582,11 +582,12 @@ interface AchFormData {
   threshold: string;
 }
 
-function AchievementFormModal({ initial, onSave, onClose, saving }: {
+function AchievementFormModal({ initial, onSave, onClose, saving, isEditing }: {
   initial: AchFormData;
   onSave: (form: AchFormData) => void;
   onClose: () => void;
   saving: boolean;
+  isEditing: boolean;
 }) {
   const [form, setForm] = useState<AchFormData>(initial);
 
@@ -594,12 +595,25 @@ function AchievementFormModal({ initial, onSave, onClose, saving }: {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  const handleIconFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const preview = URL.createObjectURL(file);
+    setForm((prev) => ({ ...prev, iconFile: file, iconPreview: preview, icon: '' }));
+  };
+
+  const clearIconFile = () => {
+    setForm((prev) => ({ ...prev, iconFile: null, iconPreview: '', icon: '🏅' }));
+  };
+
+  const displayIcon = form.iconPreview || form.icon;
+
   return (
     <div style={styles.overlay} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div style={styles.modal}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <h3 style={{ fontSize: 22, fontWeight: 900, color: TEXT, margin: 0 }}>
-            {initial.code ? 'Редактировать достижение' : 'Новое достижение'}
+            {isEditing ? 'Редактировать достижение' : 'Новое достижение'}
           </h3>
           <button
             onClick={onClose}
@@ -609,15 +623,9 @@ function AchievementFormModal({ initial, onSave, onClose, saving }: {
           </button>
         </div>
 
-        <div style={styles.grid2}>
-          <div style={styles.fieldGroup}>
-            <label style={styles.label}>Код (уникальный)</label>
-            <input style={styles.input} value={form.code} onChange={e => set('code', e.target.value)} placeholder="DIST_10" />
-          </div>
-          <div style={styles.fieldGroup}>
-            <label style={styles.label}>Название</label>
-            <input style={styles.input} value={form.name} onChange={e => set('name', e.target.value)} placeholder="Первые 10 км" />
-          </div>
+        <div style={styles.fieldGroup}>
+          <label style={styles.label}>Название</label>
+          <input style={styles.input} value={form.name} onChange={e => set('name', e.target.value)} placeholder="Первые 10 км" />
         </div>
 
         <div style={styles.fieldGroup}>
@@ -627,8 +635,29 @@ function AchievementFormModal({ initial, onSave, onClose, saving }: {
 
         <div style={styles.grid3}>
           <div style={styles.fieldGroup}>
-            <label style={styles.label}>Иконка (эмодзи)</label>
-            <input style={{ ...styles.input, fontSize: 24, textAlign: 'center' as const }} value={form.icon} onChange={e => set('icon', e.target.value)} placeholder="🏅" />
+            <label style={styles.label}>Иконка (изображение)</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {form.iconPreview ? (
+                <div style={{ position: 'relative' as const }}>
+                  <img src={form.iconPreview} alt="Иконка" style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover', border: `1px solid ${BORDER}` }} />
+                  <button
+                    type="button"
+                    onClick={clearIconFile}
+                    style={{ position: 'absolute' as const, top: -6, right: -6, width: 18, height: 18, borderRadius: '50%', background: '#dc2626', color: '#fff', border: 'none', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, padding: 0 }}
+                  >
+                    x
+                  </button>
+                </div>
+              ) : (
+                <div style={{ fontSize: 32, width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f5', borderRadius: 8, border: `1px solid ${BORDER}` }}>
+                  {form.icon || '🏅'}
+                </div>
+              )}
+              <label style={{ ...styles.btn('secondary'), display: 'inline-flex', alignItems: 'center', cursor: 'pointer', fontSize: 12, padding: '6px 12px' }}>
+                Загрузить
+                <input type="file" accept="image/*" onChange={handleIconFile} style={{ display: 'none' }} />
+              </label>
+            </div>
           </div>
           <div style={styles.fieldGroup}>
             <label style={styles.label}>XP награда</label>
@@ -649,9 +678,13 @@ function AchievementFormModal({ initial, onSave, onClose, saving }: {
           </select>
         </div>
 
-        {form.icon && (
+        {(displayIcon || form.name) && (
           <div style={{ textAlign: 'center', margin: '16px 0', padding: 20, background: '#f9f9f9', borderRadius: 12 }}>
-            <div style={{ fontSize: 48, marginBottom: 8 }}>{form.icon}</div>
+            {form.iconPreview ? (
+              <img src={form.iconPreview} alt="Предпросмотр" style={{ width: 56, height: 56, borderRadius: 10, objectFit: 'cover', marginBottom: 8 }} />
+            ) : (
+              <div style={{ fontSize: 48, marginBottom: 8 }}>{form.icon || '🏅'}</div>
+            )}
             <div style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>{form.name || 'Название'}</div>
             <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{form.description || 'Описание'}</div>
             <div style={{ fontSize: 12, fontWeight: 700, color: BRAND, marginTop: 4 }}>+{form.xpReward || 0} XP</div>
@@ -1044,9 +1077,9 @@ export default function AdminPanel() {
   const [savingPkg, setSavingPkg] = useState(false);
 
   // Achievement management
-  const [adminAchievements, setAdminAchievements] = useState<{ id: string; code: string; name: string; description: string; icon: string; xpReward: number; category: string; threshold: number | null; userCount: number }[]>([]);
+  const [adminAchievements, setAdminAchievements] = useState<{ id: string; code: string; name: string; description: string; icon: string; iconUrl?: string | null; xpReward: number; category: string; threshold: number | null; userCount: number }[]>([]);
   const [showAchForm, setShowAchForm] = useState(false);
-  const [editingAch, setEditingAch] = useState<{ id: string; code: string; name: string; description: string; icon: string; xpReward: number; category: string; threshold: number | null; userCount: number } | null>(null);
+  const [editingAch, setEditingAch] = useState<{ id: string; code: string; name: string; description: string; icon: string; iconUrl?: string | null; xpReward: number; category: string; threshold: number | null; userCount: number } | null>(null);
   const [savingAch, setSavingAch] = useState(false);
 
   // Confirm delete
@@ -1242,9 +1275,9 @@ export default function AdminPanel() {
 
   // ─── Achievement handlers ──────────────────────────────
 
-  const handleSaveAch = async (form: { code: string; name: string; description: string; icon: string; xpReward: string; category: string; threshold: string }) => {
-    if (!form.code || !form.name || !form.description || !form.category) {
-      setError('Заполните обязательные поля: Код, Название, Описание, Категория');
+  const handleSaveAch = async (form: AchFormData) => {
+    if (!form.name || !form.description || !form.category) {
+      setError('Заполните обязательные поля: Название, Описание, Категория');
       return;
     }
 
@@ -1252,7 +1285,6 @@ export default function AdminPanel() {
     setError('');
     try {
       const data = {
-        code: form.code,
         name: form.name,
         description: form.description,
         icon: form.icon || '🏅',
@@ -1261,19 +1293,27 @@ export default function AdminPanel() {
         threshold: form.threshold ? parseFloat(form.threshold) : null,
       };
 
+      let savedId: string;
       if (editingAch) {
-        await api.admin.updateAchievement(editingAch.id, data);
+        const result = await api.admin.updateAchievement(editingAch.id, data);
+        savedId = result.id;
         flash('Достижение обновлено');
       } else {
-        await api.admin.createAchievement(data);
+        const result = await api.admin.createAchievement(data);
+        savedId = result.id;
         flash('Достижение создано');
+      }
+
+      // Загрузка иконки, если выбран файл
+      if (form.iconFile) {
+        await api.admin.uploadAchievementIcon(savedId, form.iconFile);
       }
 
       setShowAchForm(false);
       setEditingAch(null);
       loadAchievements();
     } catch (err: any) {
-      setError(err.message || 'Ошибка сохранения достижения');
+      setError(err.message ?? 'Ошибка сохранения достижения');
     } finally {
       setSavingAch(false);
     }
@@ -1565,7 +1605,13 @@ export default function AdminPanel() {
                   };
                   return (
                     <tr key={ach.id}>
-                      <td style={{ ...styles.td, fontSize: 28, textAlign: 'center' }}>{ach.icon}</td>
+                      <td style={{ ...styles.td, fontSize: 28, textAlign: 'center' }}>
+                        {ach.iconUrl ? (
+                          <img src={ach.iconUrl} alt={ach.name} style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover' }} />
+                        ) : (
+                          ach.icon ?? '🏅'
+                        )}
+                      </td>
                       <td style={{ ...styles.td, fontFamily: 'monospace', fontSize: 12 }}>{ach.code}</td>
                       <td style={{ ...styles.td, fontWeight: 700 }}>{ach.name}</td>
                       <td style={{ ...styles.td, fontSize: 12, color: '#666', maxWidth: 200 }}>{ach.description}</td>
@@ -1634,18 +1680,20 @@ export default function AdminPanel() {
       {showAchForm && (
         <AchievementFormModal
           initial={editingAch ? {
-            code: editingAch.code,
             name: editingAch.name,
             description: editingAch.description,
             icon: editingAch.icon,
+            iconFile: null,
+            iconPreview: editingAch.iconUrl ?? '',
             xpReward: String(editingAch.xpReward),
             category: editingAch.category,
             threshold: editingAch.threshold != null ? String(editingAch.threshold) : '',
           } : {
-            code: '',
             name: '',
             description: '',
             icon: '🏅',
+            iconFile: null,
+            iconPreview: '',
             xpReward: '25',
             category: 'distance',
             threshold: '',
@@ -1653,6 +1701,7 @@ export default function AdminPanel() {
           onSave={handleSaveAch}
           onClose={() => { setShowAchForm(false); setEditingAch(null); }}
           saving={savingAch}
+          isEditing={!!editingAch}
         />
       )}
 

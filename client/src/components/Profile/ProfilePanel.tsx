@@ -64,6 +64,7 @@ export default function ProfilePanel() {
   const [achievements, setAchievements] = useState<AchievementWithMeta[]>([]);
   const [achProgress, setAchProgress] = useState<AchProgress>({ totalDistance: 0, currentStreak: 0, bestStreak: 0, finishedEvents: 0 });
   const [achLoading, setAchLoading] = useState(false);
+  const [achExpanded, setAchExpanded] = useState(false);
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -458,20 +459,43 @@ export default function ProfilePanel() {
         style={{
           background: '#fff',
           borderRadius: 16,
-          padding: 20,
           boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
           border: '1px solid #e0e0e0',
           marginBottom: 20,
+          overflow: 'hidden',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: '#242424' }}>
-            Достижения
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: 20,
+            cursor: 'pointer',
+            userSelect: 'none',
+          }}
+          onClick={() => setAchExpanded((prev) => !prev)}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#242424' }}>
+              Достижения ({achievements.filter((a) => !!a.unlockedAt).length} / {achievements.length})
+            </div>
           </div>
-          <div style={{ fontSize: 13, color: '#888' }}>
-            {achievements.filter((a) => !!a.unlockedAt).length} / {achievements.length}
+          <div style={{
+            fontSize: 18,
+            color: '#888',
+            transition: 'transform 0.25s',
+            transform: achExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+          }}>
+            ▼
           </div>
         </div>
+        <div style={{
+          maxHeight: achExpanded ? 2000 : 0,
+          overflow: 'hidden',
+          transition: 'max-height 0.35s ease-in-out',
+          padding: achExpanded ? '0 20px 20px 20px' : '0 20px',
+        }}>
         {achLoading ? (
           <div style={{ color: '#999', fontSize: 14 }}>Загрузка...</div>
         ) : achievements.length === 0 ? (
@@ -530,8 +554,12 @@ export default function ProfilePanel() {
                     position: 'relative' as const,
                   }}
                 >
-                  <div style={{ fontSize: 40, lineHeight: 1, marginBottom: 6 }}>
-                    {a.achievement.icon ?? '🏅'}
+                  <div style={{ fontSize: 40, lineHeight: 1, marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {a.achievement.iconUrl ? (
+                      <img src={a.achievement.iconUrl} alt={a.achievement.name} style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover' }} />
+                    ) : (
+                      a.achievement.icon ?? '🏅'
+                    )}
                   </div>
                   <div
                     style={{
@@ -582,6 +610,7 @@ export default function ProfilePanel() {
             })}
           </div>
         )}
+        </div>
       </div>
 
       {/* Реферальная ссылка и приглашённые */}
