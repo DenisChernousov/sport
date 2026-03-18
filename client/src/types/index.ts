@@ -137,6 +137,7 @@ export interface Achievement {
   icon: string;
   xpReward: number;
   category: string;
+  threshold?: number | null;
   unlockedAt?: string;
 }
 

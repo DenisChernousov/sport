@@ -453,6 +453,24 @@ export const api = {
         body: JSON.stringify({ role }),
       });
     },
+    achievements() {
+      return request<{ id: string; code: string; name: string; description: string; icon: string; xpReward: number; category: string; threshold: number | null; userCount: number }[]>('/admin/achievements');
+    },
+    createAchievement(data: { code: string; name: string; description: string; icon: string; xpReward: number; category: string; threshold: number | null }) {
+      return request<Achievement>('/admin/achievements', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+    updateAchievement(id: string, data: { code?: string; name?: string; description?: string; icon?: string; xpReward?: number; category?: string; threshold?: number | null }) {
+      return request<Achievement>(`/admin/achievements/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      });
+    },
+    deleteAchievement(id: string) {
+      return request<void>(`/admin/achievements/${id}`, { method: 'DELETE' });
+    },
   },
 
   profile: {
@@ -469,7 +487,10 @@ export const api = {
       return request<PaginatedResponse<Activity>>(`/profile/${id}/activities${toQuery(params)}`);
     },
     achievements(id: string) {
-      return request<{ achievements: { achievement: Achievement; unlockedAt: string }[] }>(
+      return request<{
+        achievements: { achievement: Achievement; unlockedAt: string | null }[];
+        progress: { totalDistance: number; currentStreak: number; bestStreak: number; finishedEvents: number };
+      }>(
         `/profile/${id}/achievements`
       );
     },

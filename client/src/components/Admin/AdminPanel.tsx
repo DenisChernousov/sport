@@ -561,6 +561,113 @@ function PackageFormModal({ initial, onSave, onClose, saving, packageId }: {
   );
 }
 
+// ─── Achievement Form Modal ─────────────────────────────
+
+const ACH_CATEGORY_OPTIONS = [
+  { value: 'distance', label: 'Дистанция' },
+  { value: 'streak', label: 'Стрик' },
+  { value: 'events', label: 'События' },
+  { value: 'social', label: 'Социальные' },
+  { value: 'speed', label: 'Скорость' },
+];
+
+interface AchFormData {
+  code: string;
+  name: string;
+  description: string;
+  icon: string;
+  xpReward: string;
+  category: string;
+  threshold: string;
+}
+
+function AchievementFormModal({ initial, onSave, onClose, saving }: {
+  initial: AchFormData;
+  onSave: (form: AchFormData) => void;
+  onClose: () => void;
+  saving: boolean;
+}) {
+  const [form, setForm] = useState<AchFormData>(initial);
+
+  const set = (key: keyof AchFormData, value: string) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  return (
+    <div style={styles.overlay} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={styles.modal}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <h3 style={{ fontSize: 22, fontWeight: 900, color: TEXT, margin: 0 }}>
+            {initial.code ? 'Редактировать достижение' : 'Новое достижение'}
+          </h3>
+          <button
+            onClick={onClose}
+            style={{ background: 'none', border: 'none', fontSize: 24, color: '#888', cursor: 'pointer', padding: '4px 8px' }}
+          >
+            x
+          </button>
+        </div>
+
+        <div style={styles.grid2}>
+          <div style={styles.fieldGroup}>
+            <label style={styles.label}>Код (уникальный)</label>
+            <input style={styles.input} value={form.code} onChange={e => set('code', e.target.value)} placeholder="DIST_10" />
+          </div>
+          <div style={styles.fieldGroup}>
+            <label style={styles.label}>Название</label>
+            <input style={styles.input} value={form.name} onChange={e => set('name', e.target.value)} placeholder="Первые 10 км" />
+          </div>
+        </div>
+
+        <div style={styles.fieldGroup}>
+          <label style={styles.label}>Описание</label>
+          <input style={styles.input} value={form.description} onChange={e => set('description', e.target.value)} placeholder="Пробеги 10 км суммарно" />
+        </div>
+
+        <div style={styles.grid3}>
+          <div style={styles.fieldGroup}>
+            <label style={styles.label}>Иконка (эмодзи)</label>
+            <input style={{ ...styles.input, fontSize: 24, textAlign: 'center' as const }} value={form.icon} onChange={e => set('icon', e.target.value)} placeholder="🏅" />
+          </div>
+          <div style={styles.fieldGroup}>
+            <label style={styles.label}>XP награда</label>
+            <input style={styles.input} type="number" value={form.xpReward} onChange={e => set('xpReward', e.target.value)} placeholder="25" />
+          </div>
+          <div style={styles.fieldGroup}>
+            <label style={styles.label}>Порог</label>
+            <input style={styles.input} type="number" value={form.threshold} onChange={e => set('threshold', e.target.value)} placeholder="10" />
+          </div>
+        </div>
+
+        <div style={styles.fieldGroup}>
+          <label style={styles.label}>Категория</label>
+          <select style={styles.select} value={form.category} onChange={e => set('category', e.target.value)}>
+            {ACH_CATEGORY_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {form.icon && (
+          <div style={{ textAlign: 'center', margin: '16px 0', padding: 20, background: '#f9f9f9', borderRadius: 12 }}>
+            <div style={{ fontSize: 48, marginBottom: 8 }}>{form.icon}</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>{form.name || 'Название'}</div>
+            <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{form.description || 'Описание'}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: BRAND, marginTop: 4 }}>+{form.xpReward || 0} XP</div>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 20 }}>
+          <button style={styles.btn('secondary')} onClick={onClose}>Отмена</button>
+          <button style={styles.btn('primary')} onClick={() => onSave(form)} disabled={saving}>
+            {saving ? 'Сохранение...' : 'Сохранить'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Confirm Dialog ──────────────────────────────────────
 
 function ConfirmDialog({ message, onConfirm, onCancel }: {
@@ -918,7 +1025,7 @@ function UsersTab() {
 // ─── Main Admin Panel ────────────────────────────────────
 
 export default function AdminPanel() {
-  const [tab, setTab] = useState<'stats' | 'users' | 'events' | 'packages'>('stats');
+  const [tab, setTab] = useState<'stats' | 'users' | 'events' | 'packages' | 'achievements'>('stats');
   const [events, setEvents] = useState<Event[]>([]);
   const [packages, setPackages] = useState<MerchPackage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -935,8 +1042,14 @@ export default function AdminPanel() {
   const [editingPkg, setEditingPkg] = useState<MerchPackage | null>(null);
   const [savingPkg, setSavingPkg] = useState(false);
 
+  // Achievement management
+  const [adminAchievements, setAdminAchievements] = useState<{ id: string; code: string; name: string; description: string; icon: string; xpReward: number; category: string; threshold: number | null; userCount: number }[]>([]);
+  const [showAchForm, setShowAchForm] = useState(false);
+  const [editingAch, setEditingAch] = useState<{ id: string; code: string; name: string; description: string; icon: string; xpReward: number; category: string; threshold: number | null; userCount: number } | null>(null);
+  const [savingAch, setSavingAch] = useState(false);
+
   // Confirm delete
-  const [confirmDelete, setConfirmDelete] = useState<{ type: 'event' | 'package'; id: string; name: string } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ type: 'event' | 'package' | 'achievement'; id: string; name: string } | null>(null);
 
   // Diploma editor
   const [diplomaEvent, setDiplomaEvent] = useState<Event | null>(null);
@@ -976,10 +1089,26 @@ export default function AdminPanel() {
     }
   }, []);
 
+  // ─── Load achievements ─────────────────────────────────
+
+  const loadAchievements = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await api.admin.achievements();
+      setAdminAchievements(res);
+    } catch (err: any) {
+      setError(err.message || 'Ошибка загрузки достижений');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (tab === 'events') loadEvents();
     else if (tab === 'packages') loadPackages();
-  }, [tab, loadEvents, loadPackages]);
+    else if (tab === 'achievements') loadAchievements();
+  }, [tab, loadEvents, loadPackages, loadAchievements]);
 
   // ─── Event handlers ─────────────────────────────────────
 
@@ -1110,6 +1239,58 @@ export default function AdminPanel() {
     }
   };
 
+  // ─── Achievement handlers ──────────────────────────────
+
+  const handleSaveAch = async (form: { code: string; name: string; description: string; icon: string; xpReward: string; category: string; threshold: string }) => {
+    if (!form.code || !form.name || !form.description || !form.category) {
+      setError('Заполните обязательные поля: Код, Название, Описание, Категория');
+      return;
+    }
+
+    setSavingAch(true);
+    setError('');
+    try {
+      const data = {
+        code: form.code,
+        name: form.name,
+        description: form.description,
+        icon: form.icon || '🏅',
+        xpReward: parseInt(form.xpReward, 10) || 25,
+        category: form.category,
+        threshold: form.threshold ? parseFloat(form.threshold) : null,
+      };
+
+      if (editingAch) {
+        await api.admin.updateAchievement(editingAch.id, data);
+        flash('Достижение обновлено');
+      } else {
+        await api.admin.createAchievement(data);
+        flash('Достижение создано');
+      }
+
+      setShowAchForm(false);
+      setEditingAch(null);
+      loadAchievements();
+    } catch (err: any) {
+      setError(err.message || 'Ошибка сохранения достижения');
+    } finally {
+      setSavingAch(false);
+    }
+  };
+
+  const handleDeleteAch = async (id: string) => {
+    setError('');
+    try {
+      await api.admin.deleteAchievement(id);
+      flash('Достижение удалено');
+      setConfirmDelete(null);
+      loadAchievements();
+    } catch (err: any) {
+      setError(err.message || 'Ошибка удаления достижения');
+      setConfirmDelete(null);
+    }
+  };
+
   // ─── Render ─────────────────────────────────────────────
 
   return (
@@ -1129,6 +1310,9 @@ export default function AdminPanel() {
         </button>
         <button style={styles.tab(tab === 'packages')} onClick={() => setTab('packages')}>
           Пакеты участия
+        </button>
+        <button style={styles.tab(tab === 'achievements')} onClick={() => setTab('achievements')}>
+          Достижения
         </button>
       </div>
 
@@ -1332,6 +1516,98 @@ export default function AdminPanel() {
         </>
       )}
 
+      {/* ─── Achievements Tab ─────────────────────────────── */}
+      {tab === 'achievements' && !loading && (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <span style={{ fontSize: 14, color: '#888' }}>
+              Всего достижений: {adminAchievements.length}
+            </span>
+            <button
+              style={styles.btn('primary')}
+              onClick={() => { setEditingAch(null); setShowAchForm(true); }}
+            >
+              + Добавить достижение
+            </button>
+          </div>
+
+          <div style={{ overflowX: 'auto' }}>
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th style={styles.th}>Иконка</th>
+                  <th style={styles.th}>Код</th>
+                  <th style={styles.th}>Название</th>
+                  <th style={styles.th}>Описание</th>
+                  <th style={styles.th}>Категория</th>
+                  <th style={styles.th}>XP</th>
+                  <th style={styles.th}>Порог</th>
+                  <th style={styles.th}>Получили</th>
+                  <th style={styles.th}>Действия</th>
+                </tr>
+              </thead>
+              <tbody>
+                {adminAchievements.map(ach => {
+                  const catLabels: Record<string, string> = {
+                    distance: 'Дистанция',
+                    streak: 'Стрик',
+                    events: 'События',
+                    social: 'Социальные',
+                    speed: 'Скорость',
+                  };
+                  const catColors: Record<string, string> = {
+                    distance: '#16a34a',
+                    streak: '#dc6a00',
+                    events: '#2563eb',
+                    social: '#c026d3',
+                    speed: '#dc2626',
+                  };
+                  return (
+                    <tr key={ach.id}>
+                      <td style={{ ...styles.td, fontSize: 28, textAlign: 'center' }}>{ach.icon}</td>
+                      <td style={{ ...styles.td, fontFamily: 'monospace', fontSize: 12 }}>{ach.code}</td>
+                      <td style={{ ...styles.td, fontWeight: 700 }}>{ach.name}</td>
+                      <td style={{ ...styles.td, fontSize: 12, color: '#666', maxWidth: 200 }}>{ach.description}</td>
+                      <td style={styles.td}>
+                        <span style={styles.badge(catColors[ach.category] ?? '#888')}>
+                          {catLabels[ach.category] ?? ach.category}
+                        </span>
+                      </td>
+                      <td style={{ ...styles.td, fontWeight: 700, color: BRAND }}>{ach.xpReward}</td>
+                      <td style={{ ...styles.td, textAlign: 'center' }}>{ach.threshold ?? '—'}</td>
+                      <td style={{ ...styles.td, textAlign: 'center', fontWeight: 700 }}>{ach.userCount}</td>
+                      <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button
+                            style={styles.smallBtn('secondary')}
+                            onClick={() => { setEditingAch(ach); setShowAchForm(true); }}
+                          >
+                            Изм.
+                          </button>
+                          <button
+                            style={styles.smallBtn('danger')}
+                            onClick={() => setConfirmDelete({ type: 'achievement', id: ach.id, name: ach.name })}
+                          >
+                            Удал.
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {adminAchievements.length === 0 && (
+                  <tr>
+                    <td colSpan={9} style={{ ...styles.td, textAlign: 'center', color: '#888', padding: 40 }}>
+                      Нет достижений
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
       {/* ─── Modals ──────────────────────────────────────── */}
 
       {showEventForm && (
@@ -1354,12 +1630,38 @@ export default function AdminPanel() {
         />
       )}
 
+      {showAchForm && (
+        <AchievementFormModal
+          initial={editingAch ? {
+            code: editingAch.code,
+            name: editingAch.name,
+            description: editingAch.description,
+            icon: editingAch.icon,
+            xpReward: String(editingAch.xpReward),
+            category: editingAch.category,
+            threshold: editingAch.threshold != null ? String(editingAch.threshold) : '',
+          } : {
+            code: '',
+            name: '',
+            description: '',
+            icon: '🏅',
+            xpReward: '25',
+            category: 'distance',
+            threshold: '',
+          }}
+          onSave={handleSaveAch}
+          onClose={() => { setShowAchForm(false); setEditingAch(null); }}
+          saving={savingAch}
+        />
+      )}
+
       {confirmDelete && (
         <ConfirmDialog
           message={`Удалить "${confirmDelete.name}"? Это действие необратимо.`}
           onConfirm={() => {
             if (confirmDelete.type === 'event') handleDeleteEvent(confirmDelete.id);
-            else handleDeletePkg(confirmDelete.id);
+            else if (confirmDelete.type === 'package') handleDeletePkg(confirmDelete.id);
+            else if (confirmDelete.type === 'achievement') handleDeleteAch(confirmDelete.id);
           }}
           onCancel={() => setConfirmDelete(null)}
         />

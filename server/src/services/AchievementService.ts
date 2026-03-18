@@ -11,23 +11,32 @@ interface AchievementDef {
 }
 
 const ACHIEVEMENTS: AchievementDef[] = [
-  { code: 'FIRST_ACTIVITY', name: 'First Step', description: 'Complete your first activity', icon: '👟', xpReward: 25, category: 'distance', threshold: 1 },
-  { code: 'DISTANCE_10', name: '10km Club', description: 'Run a total of 10 km', icon: '🏃', xpReward: 50, category: 'distance', threshold: 10 },
-  { code: 'DISTANCE_50', name: '50km Warrior', description: 'Run a total of 50 km', icon: '⚔️', xpReward: 100, category: 'distance', threshold: 50 },
-  { code: 'DISTANCE_100', name: 'Century', description: 'Run a total of 100 km', icon: '💯', xpReward: 150, category: 'distance', threshold: 100 },
-  { code: 'DISTANCE_500', name: 'Ultra Runner', description: 'Run a total of 500 km', icon: '🦸', xpReward: 300, category: 'distance', threshold: 500 },
-  { code: 'DISTANCE_1000', name: '1000km Legend', description: 'Run a total of 1000 km', icon: '🏆', xpReward: 500, category: 'distance', threshold: 1000 },
-  { code: 'STREAK_7', name: 'Week Warrior', description: 'Maintain a 7-day activity streak', icon: '🔥', xpReward: 75, category: 'streak', threshold: 7 },
-  { code: 'STREAK_30', name: 'Monthly Machine', description: 'Maintain a 30-day activity streak', icon: '⚡', xpReward: 200, category: 'streak', threshold: 30 },
-  { code: 'STREAK_100', name: '100 Day Champion', description: 'Maintain a 100-day activity streak', icon: '👑', xpReward: 500, category: 'streak', threshold: 100 },
-  { code: 'EVENTS_1', name: 'First Race', description: 'Complete your first event', icon: '🎽', xpReward: 50, category: 'event', threshold: 1 },
-  { code: 'EVENTS_5', name: 'Veteran', description: 'Complete 5 events', icon: '🎖️', xpReward: 150, category: 'event', threshold: 5 },
-  { code: 'EVENTS_20', name: 'Champion', description: 'Complete 20 events', icon: '🥇', xpReward: 400, category: 'event', threshold: 20 },
-  { code: 'SPEED_DEMON', name: 'Speed Demon', description: 'Average pace under 4:00 min/km in a run', icon: '💨', xpReward: 100, category: 'speed', threshold: 4.0 },
-  { code: 'TEAM_PLAYER', name: 'Team Player', description: 'Join a team', icon: '🤝', xpReward: 25, category: 'social', threshold: null },
-  { code: 'BATTLE_WIN', name: 'Gladiator', description: 'Win your first battle', icon: '⚔️', xpReward: 75, category: 'social', threshold: null },
-  { code: 'MULTI_SPORT', name: 'Multi-Sport', description: 'Record activities in 3 or more sports', icon: '🎯', xpReward: 100, category: 'distance', threshold: 3 },
-  { code: 'EARLY_BIRD', name: 'Early Bird', description: 'Complete an activity before 6 AM', icon: '🌅', xpReward: 50, category: 'speed', threshold: null },
+  // distance
+  { code: 'DIST_10', name: 'Первые 10 км', description: 'Пробеги 10 км суммарно', icon: '🏃', xpReward: 25, category: 'distance', threshold: 10 },
+  { code: 'DIST_50', name: 'Полтинник', description: '50 км суммарно', icon: '🎯', xpReward: 50, category: 'distance', threshold: 50 },
+  { code: 'DIST_100', name: 'Сотка', description: '100 км суммарно', icon: '💯', xpReward: 100, category: 'distance', threshold: 100 },
+  { code: 'DIST_500', name: 'Ультра бегун', description: '500 км суммарно', icon: '🔥', xpReward: 200, category: 'distance', threshold: 500 },
+  { code: 'DIST_1000', name: 'Тысячник', description: '1000 км суммарно', icon: '👑', xpReward: 500, category: 'distance', threshold: 1000 },
+
+  // streak
+  { code: 'STREAK_3', name: 'Три дня подряд', description: '3 дня активности подряд', icon: '⚡', xpReward: 25, category: 'streak', threshold: 3 },
+  { code: 'STREAK_7', name: 'Неделя воина', description: '7 дней подряд', icon: '🗡️', xpReward: 75, category: 'streak', threshold: 7 },
+  { code: 'STREAK_30', name: 'Месяц стали', description: '30 дней подряд', icon: '🛡️', xpReward: 200, category: 'streak', threshold: 30 },
+  { code: 'STREAK_100', name: 'Железный человек', description: '100 дней подряд', icon: '🦾', xpReward: 500, category: 'streak', threshold: 100 },
+
+  // events
+  { code: 'EVENT_1', name: 'Первый старт', description: 'Участие в первом событии', icon: '🏁', xpReward: 50, category: 'events', threshold: 1 },
+  { code: 'EVENT_5', name: 'Ветеран', description: '5 событий', icon: '🎖️', xpReward: 100, category: 'events', threshold: 5 },
+  { code: 'EVENT_10', name: 'Марафонец', description: '10 событий', icon: '🏆', xpReward: 200, category: 'events', threshold: 10 },
+
+  // social
+  { code: 'FIRST_LIKE', name: 'Первый лайк', description: 'Получи первый лайк', icon: '❤️', xpReward: 10, category: 'social', threshold: 1 },
+  { code: 'FOLLOWERS_10', name: 'Популярный', description: '10 подписчиков', icon: '⭐', xpReward: 50, category: 'social', threshold: 10 },
+  { code: 'TEAM_JOIN', name: 'Командный игрок', description: 'Вступи в клуб', icon: '🤝', xpReward: 25, category: 'social', threshold: 1 },
+
+  // speed
+  { code: 'SPEED_RUN_5', name: 'Быстрый бег', description: 'Средний темп быстрее 5:00 мин/км', icon: '⚡', xpReward: 50, category: 'speed', threshold: 5 },
+  { code: 'SPEED_CYCLE_30', name: 'Велогонщик', description: 'Средняя скорость 30+ км/ч на велосипеде', icon: '🚀', xpReward: 75, category: 'speed', threshold: 30 },
 ];
 
 export async function seedAchievements(): Promise<void> {
@@ -59,9 +68,11 @@ interface CheckContext {
   activityId?: string;
   sport?: string;
   avgPace?: number | null;
+  avgSpeed?: number | null;
   startedAt?: Date;
   joinedTeam?: boolean;
   battleWon?: boolean;
+  receivedLike?: boolean;
 }
 
 export async function checkAndGrant(userId: string, context: CheckContext): Promise<void> {
@@ -110,9 +121,6 @@ export async function checkAndGrant(userId: string, context: CheckContext): Prom
 }
 
 function computeLevel(xp: number): number {
-  // Level N+1 requires (N+1)*100 XP total cumulative
-  // Level 1: 0 XP, Level 2: 200 XP, Level 3: 200+300=500, Level 4: 500+400=900...
-  // Cumulative XP for level L = sum from k=2 to L of k*100 = 100*(sum from 2 to L of k) = 100*(L*(L+1)/2 - 1)
   let level = 1;
   let cumulativeRequired = 0;
   while (true) {
@@ -130,21 +138,24 @@ async function isQualified(
   achievement: { code: string; threshold: number | null },
   context: CheckContext
 ): Promise<boolean> {
-  switch (achievement.code) {
-    case 'FIRST_ACTIVITY':
-      return user.totalActivities >= 1;
+  const threshold = achievement.threshold ?? 0;
 
-    case 'DISTANCE_10':
+  switch (achievement.code) {
+    // distance
+    case 'DIST_10':
       return user.totalDistance >= 10;
-    case 'DISTANCE_50':
+    case 'DIST_50':
       return user.totalDistance >= 50;
-    case 'DISTANCE_100':
+    case 'DIST_100':
       return user.totalDistance >= 100;
-    case 'DISTANCE_500':
+    case 'DIST_500':
       return user.totalDistance >= 500;
-    case 'DISTANCE_1000':
+    case 'DIST_1000':
       return user.totalDistance >= 1000;
 
+    // streak
+    case 'STREAK_3':
+      return user.currentStreak >= 3 || user.bestStreak >= 3;
     case 'STREAK_7':
       return user.currentStreak >= 7 || user.bestStreak >= 7;
     case 'STREAK_30':
@@ -152,66 +163,79 @@ async function isQualified(
     case 'STREAK_100':
       return user.currentStreak >= 100 || user.bestStreak >= 100;
 
-    case 'EVENTS_1': {
+    // events
+    case 'EVENT_1': {
       const count = await prisma.eventParticipant.count({
         where: { userId, isFinished: true },
       });
       return count >= 1;
     }
-    case 'EVENTS_5': {
+    case 'EVENT_5': {
       const count = await prisma.eventParticipant.count({
         where: { userId, isFinished: true },
       });
       return count >= 5;
     }
-    case 'EVENTS_20': {
+    case 'EVENT_10': {
       const count = await prisma.eventParticipant.count({
         where: { userId, isFinished: true },
       });
-      return count >= 20;
+      return count >= 10;
     }
 
-    case 'SPEED_DEMON':
-      // avgPace under 4.0 min/km in a running activity
-      if (context.sport === 'RUNNING' && context.avgPace != null && context.avgPace > 0) {
-        return context.avgPace < 4.0;
-      }
-      return false;
-
-    case 'TEAM_PLAYER':
+    // social
+    case 'FIRST_LIKE': {
+      if (context.receivedLike) return true;
+      const likeCount = await prisma.activityLike.count({
+        where: {
+          activity: { userId },
+        },
+      });
+      return likeCount >= 1;
+    }
+    case 'FOLLOWERS_10': {
+      const followerCount = await prisma.follow.count({
+        where: { followingId: userId },
+      });
+      return followerCount >= 10;
+    }
+    case 'TEAM_JOIN': {
       if (context.joinedTeam) return true;
       const membershipCount = await prisma.teamMember.count({ where: { userId } });
       return membershipCount > 0;
-
-    case 'BATTLE_WIN':
-      if (context.battleWon) return true;
-      const winCount = await prisma.battle.count({
-        where: { winnerId: userId, status: 'finished' },
-      });
-      return winCount > 0;
-
-    case 'MULTI_SPORT': {
-      const sports = await prisma.activity.findMany({
-        where: { userId },
-        select: { sport: true },
-        distinct: ['sport'],
-      });
-      return sports.length >= 3;
     }
 
-    case 'EARLY_BIRD':
-      if (context.startedAt) {
-        const hour = context.startedAt.getHours();
-        return hour < 6;
+    // speed
+    case 'SPEED_RUN_5':
+      if (context.sport === 'RUNNING' && context.avgPace != null && context.avgPace > 0) {
+        return context.avgPace < 5.0;
       }
-      // Check if any existing activity started before 6 AM
-      const earlyActivities = await prisma.activity.findMany({
-        where: { userId },
-        select: { startedAt: true },
-      });
-      return earlyActivities.some((a) => a.startedAt.getHours() < 6);
+      return false;
+
+    case 'SPEED_CYCLE_30':
+      if (context.sport === 'CYCLING' && context.avgSpeed != null && context.avgSpeed > 0) {
+        return context.avgSpeed >= 30;
+      }
+      return false;
 
     default:
+      // Для кастомных достижений — попробуем автоматически по категории и threshold
+      if (achievement.threshold != null) {
+        switch (true) {
+          case achievement.code.startsWith('DIST_'):
+            return user.totalDistance >= threshold;
+          case achievement.code.startsWith('STREAK_'):
+            return user.currentStreak >= threshold || user.bestStreak >= threshold;
+          case achievement.code.startsWith('EVENT_'): {
+            const cnt = await prisma.eventParticipant.count({
+              where: { userId, isFinished: true },
+            });
+            return cnt >= threshold;
+          }
+          default:
+            return false;
+        }
+      }
       return false;
   }
 }

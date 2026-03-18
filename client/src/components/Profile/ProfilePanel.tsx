@@ -48,13 +48,21 @@ function formatDate(dateStr: string): string {
 
 interface AchievementWithMeta {
   achievement: Achievement;
-  unlockedAt: string;
+  unlockedAt: string | null;
+}
+
+interface AchProgress {
+  totalDistance: number;
+  currentStreak: number;
+  bestStreak: number;
+  finishedEvents: number;
 }
 
 export default function ProfilePanel() {
   const { user, updateUser } = useAuth();
 
   const [achievements, setAchievements] = useState<AchievementWithMeta[]>([]);
+  const [achProgress, setAchProgress] = useState<AchProgress>({ totalDistance: 0, currentStreak: 0, bestStreak: 0, finishedEvents: 0 });
   const [achLoading, setAchLoading] = useState(false);
 
   const [firstName, setFirstName] = useState('');
@@ -111,6 +119,7 @@ export default function ProfilePanel() {
       .achievements(user.id)
       .then((res) => {
         setAchievements(res?.achievements ?? []);
+        setAchProgress(res?.progress ?? { totalDistance: 0, currentStreak: 0, bestStreak: 0, finishedEvents: 0 });
       })
       .catch(() => setAchievements([]))
       .finally(() => setAchLoading(false));
@@ -455,8 +464,13 @@ export default function ProfilePanel() {
           marginBottom: 20,
         }}
       >
-        <div style={{ fontSize: 18, fontWeight: 700, color: '#242424', marginBottom: 14 }}>
-          Достижения
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#242424' }}>
+            Достижения
+          </div>
+          <div style={{ fontSize: 13, color: '#888' }}>
+            {achievements.filter((a) => !!a.unlockedAt).length} / {achievements.length}
+          </div>
         </div>
         {achLoading ? (
           <div style={{ color: '#999', fontSize: 14 }}>Загрузка...</div>
@@ -466,41 +480,101 @@ export default function ProfilePanel() {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-              gap: 10,
+              gridTemplateColumns: 'repeat(4, 1fr)',
+              gap: 12,
             }}
           >
             {achievements.map((a) => {
               const unlocked = !!a.unlockedAt;
+              const cat = a.achievement.category ?? '';
+              const threshold = a.achievement.threshold ?? 0;
+
+              let progressValue: number | null = null;
+              if (!unlocked && threshold > 0) {
+                if (cat === 'distance') {
+                  progressValue = achProgress.totalDistance;
+                } else if (cat === 'streak') {
+                  progressValue = Math.max(achProgress.currentStreak, achProgress.bestStreak);
+                } else if (cat === 'events') {
+                  progressValue = achProgress.finishedEvents;
+                }
+              }
+
+              const progressPct = progressValue != null && threshold > 0
+                ? Math.min(100, Math.round((progressValue / threshold) * 100))
+                : null;
+
+              const progressLabel = progressValue != null && threshold > 0
+                ? cat === 'distance'
+                  ? `${Math.round(progressValue)} / ${threshold} км`
+                  : cat === 'streak'
+                    ? `${progressValue} / ${threshold} дн.`
+                    : cat === 'events'
+                      ? `${progressValue} / ${threshold}`
+                      : null
+                : null;
+
               return (
                 <div
                   key={a.achievement.id}
                   style={{
-                    borderRadius: 12,
-                    padding: 12,
+                    borderRadius: 14,
+                    padding: 14,
                     textAlign: 'center',
-                    background: unlocked ? '#fff' : '#f5f5f5',
-                    border: unlocked ? '1px solid #fc4c02' : '1px solid #e0e0e0',
-                    opacity: unlocked ? 1 : 0.5,
+                    background: unlocked ? '#fff' : '#f9f9f9',
+                    border: unlocked ? '2px solid #fc4c02' : '1px solid #e0e0e0',
+                    boxShadow: unlocked ? '0 0 12px rgba(252,76,2,0.2)' : 'none',
+                    opacity: unlocked ? 1 : 0.4,
+                    filter: unlocked ? 'none' : 'grayscale(1)',
+                    transition: 'all 0.2s',
+                    position: 'relative' as const,
                   }}
                 >
-                  <div style={{ fontSize: 28 }}>{a.achievement.icon ?? '\u{1F3C5}'}</div>
+                  <div style={{ fontSize: 40, lineHeight: 1, marginBottom: 6 }}>
+                    {a.achievement.icon ?? '🏅'}
+                  </div>
                   <div
                     style={{
                       fontSize: 13,
-                      fontWeight: 600,
+                      fontWeight: 700,
                       color: unlocked ? '#242424' : '#999',
-                      marginTop: 4,
+                      marginBottom: 2,
+                      lineHeight: 1.2,
                     }}
                   >
                     {a.achievement.name}
                   </div>
-                  <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>
+                  <div style={{ fontSize: 11, color: '#999', marginBottom: 4, lineHeight: 1.3 }}>
                     {a.achievement.description}
                   </div>
-                  {unlocked && (
-                    <div style={{ fontSize: 11, color: '#1a7f37', marginTop: 4 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#fc4c02' }}>
+                    +{a.achievement.xpReward} XP
+                  </div>
+                  {unlocked && a.unlockedAt && (
+                    <div style={{ fontSize: 10, color: '#1a7f37', marginTop: 4, fontWeight: 600 }}>
                       {formatDate(a.unlockedAt)}
+                    </div>
+                  )}
+                  {!unlocked && progressLabel != null && progressPct != null && (
+                    <div style={{ marginTop: 6 }}>
+                      <div style={{
+                        width: '100%',
+                        height: 4,
+                        borderRadius: 2,
+                        background: '#e0e0e0',
+                        overflow: 'hidden',
+                      }}>
+                        <div style={{
+                          width: `${progressPct}%`,
+                          height: '100%',
+                          background: '#fc4c02',
+                          borderRadius: 2,
+                          transition: 'width 0.3s',
+                        }} />
+                      </div>
+                      <div style={{ fontSize: 10, color: '#888', marginTop: 2 }}>
+                        {progressLabel}
+                      </div>
                     </div>
                   )}
                 </div>

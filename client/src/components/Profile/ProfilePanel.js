@@ -45,6 +45,7 @@ function formatDate(dateStr) {
 export default function ProfilePanel() {
     const { user, updateUser } = useAuth();
     const [achievements, setAchievements] = useState([]);
+    const [achProgress, setAchProgress] = useState({ totalDistance: 0, currentStreak: 0, bestStreak: 0, finishedEvents: 0 });
     const [achLoading, setAchLoading] = useState(false);
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
@@ -98,6 +99,7 @@ export default function ProfilePanel() {
             .achievements(user.id)
             .then((res) => {
             setAchievements(res?.achievements ?? []);
+            setAchProgress(res?.progress ?? { totalDistance: 0, currentStreak: 0, bestStreak: 0, finishedEvents: 0 });
         })
             .catch(() => setAchievements([]))
             .finally(() => setAchLoading(false));
@@ -300,25 +302,68 @@ export default function ProfilePanel() {
                     boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
                     border: '1px solid #e0e0e0',
                     marginBottom: 20,
-                }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700, color: '#242424', marginBottom: 14 }, children: "\u0414\u043E\u0441\u0442\u0438\u0436\u0435\u043D\u0438\u044F" }), achLoading ? (_jsx("div", { style: { color: '#999', fontSize: 14 }, children: "\u0417\u0430\u0433\u0440\u0443\u0437\u043A\u0430..." })) : achievements.length === 0 ? (_jsx("div", { style: { color: '#999', fontSize: 14 }, children: "\u041F\u043E\u043A\u0430 \u043D\u0435\u0442 \u0434\u043E\u0441\u0442\u0438\u0436\u0435\u043D\u0438\u0439" })) : (_jsx("div", { style: {
+                }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }, children: [_jsx("div", { style: { fontSize: 18, fontWeight: 700, color: '#242424' }, children: "\u0414\u043E\u0441\u0442\u0438\u0436\u0435\u043D\u0438\u044F" }), _jsxs("div", { style: { fontSize: 13, color: '#888' }, children: [achievements.filter((a) => !!a.unlockedAt).length, " / ", achievements.length] })] }), achLoading ? (_jsx("div", { style: { color: '#999', fontSize: 14 }, children: "\u0417\u0430\u0433\u0440\u0443\u0437\u043A\u0430..." })) : achievements.length === 0 ? (_jsx("div", { style: { color: '#999', fontSize: 14 }, children: "\u041F\u043E\u043A\u0430 \u043D\u0435\u0442 \u0434\u043E\u0441\u0442\u0438\u0436\u0435\u043D\u0438\u0439" })) : (_jsx("div", { style: {
                             display: 'grid',
-                            gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-                            gap: 10,
+                            gridTemplateColumns: 'repeat(4, 1fr)',
+                            gap: 12,
                         }, children: achievements.map((a) => {
                             const unlocked = !!a.unlockedAt;
+                            const cat = a.achievement.category ?? '';
+                            const threshold = a.achievement.threshold ?? 0;
+                            let progressValue = null;
+                            if (!unlocked && threshold > 0) {
+                                if (cat === 'distance') {
+                                    progressValue = achProgress.totalDistance;
+                                }
+                                else if (cat === 'streak') {
+                                    progressValue = Math.max(achProgress.currentStreak, achProgress.bestStreak);
+                                }
+                                else if (cat === 'events') {
+                                    progressValue = achProgress.finishedEvents;
+                                }
+                            }
+                            const progressPct = progressValue != null && threshold > 0
+                                ? Math.min(100, Math.round((progressValue / threshold) * 100))
+                                : null;
+                            const progressLabel = progressValue != null && threshold > 0
+                                ? cat === 'distance'
+                                    ? `${Math.round(progressValue)} / ${threshold} км`
+                                    : cat === 'streak'
+                                        ? `${progressValue} / ${threshold} дн.`
+                                        : cat === 'events'
+                                            ? `${progressValue} / ${threshold}`
+                                            : null
+                                : null;
                             return (_jsxs("div", { style: {
-                                    borderRadius: 12,
-                                    padding: 12,
+                                    borderRadius: 14,
+                                    padding: 14,
                                     textAlign: 'center',
-                                    background: unlocked ? '#fff' : '#f5f5f5',
-                                    border: unlocked ? '1px solid #fc4c02' : '1px solid #e0e0e0',
-                                    opacity: unlocked ? 1 : 0.5,
-                                }, children: [_jsx("div", { style: { fontSize: 28 }, children: a.achievement.icon ?? '\u{1F3C5}' }), _jsx("div", { style: {
+                                    background: unlocked ? '#fff' : '#f9f9f9',
+                                    border: unlocked ? '2px solid #fc4c02' : '1px solid #e0e0e0',
+                                    boxShadow: unlocked ? '0 0 12px rgba(252,76,2,0.2)' : 'none',
+                                    opacity: unlocked ? 1 : 0.4,
+                                    filter: unlocked ? 'none' : 'grayscale(1)',
+                                    transition: 'all 0.2s',
+                                    position: 'relative',
+                                }, children: [_jsx("div", { style: { fontSize: 40, lineHeight: 1, marginBottom: 6 }, children: a.achievement.icon ?? '🏅' }), _jsx("div", { style: {
                                             fontSize: 13,
-                                            fontWeight: 600,
+                                            fontWeight: 700,
                                             color: unlocked ? '#242424' : '#999',
-                                            marginTop: 4,
-                                        }, children: a.achievement.name }), _jsx("div", { style: { fontSize: 11, color: '#999', marginTop: 2 }, children: a.achievement.description }), unlocked && (_jsx("div", { style: { fontSize: 11, color: '#1a7f37', marginTop: 4 }, children: formatDate(a.unlockedAt) }))] }, a.achievement.id));
+                                            marginBottom: 2,
+                                            lineHeight: 1.2,
+                                        }, children: a.achievement.name }), _jsx("div", { style: { fontSize: 11, color: '#999', marginBottom: 4, lineHeight: 1.3 }, children: a.achievement.description }), _jsxs("div", { style: { fontSize: 11, fontWeight: 700, color: '#fc4c02' }, children: ["+", a.achievement.xpReward, " XP"] }), unlocked && a.unlockedAt && (_jsx("div", { style: { fontSize: 10, color: '#1a7f37', marginTop: 4, fontWeight: 600 }, children: formatDate(a.unlockedAt) })), !unlocked && progressLabel != null && progressPct != null && (_jsxs("div", { style: { marginTop: 6 }, children: [_jsx("div", { style: {
+                                                    width: '100%',
+                                                    height: 4,
+                                                    borderRadius: 2,
+                                                    background: '#e0e0e0',
+                                                    overflow: 'hidden',
+                                                }, children: _jsx("div", { style: {
+                                                        width: `${progressPct}%`,
+                                                        height: '100%',
+                                                        background: '#fc4c02',
+                                                        borderRadius: 2,
+                                                        transition: 'width 0.3s',
+                                                    } }) }), _jsx("div", { style: { fontSize: 10, color: '#888', marginTop: 2 }, children: progressLabel })] }))] }, a.achievement.id));
                         }) }))] }), _jsxs("div", { style: {
                     background: '#fff',
                     borderRadius: 16,

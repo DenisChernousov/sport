@@ -263,21 +263,46 @@ router.get('/:id/achievements', async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.params.id as string;
 
-    const userExists = await prisma.user.findUnique({ where: { id: userId } });
+    const userExists = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, totalDistance: true, currentStreak: true, bestStreak: true },
+    });
     if (!userExists) {
       res.status(404).json({ error: 'User not found' });
       return;
     }
 
-    const achievements = await prisma.userAchievement.findMany({
-      where: { userId },
-      include: {
-        achievement: true,
-      },
-      orderBy: { unlockedAt: 'desc' },
+    const allAchievements = await prisma.achievement.findMany({
+      orderBy: [{ category: 'asc' }, { threshold: 'asc' }],
     });
 
-    res.json(achievements);
+    const userAchievements = await prisma.userAchievement.findMany({
+      where: { userId },
+      select: { achievementId: true, unlockedAt: true },
+    });
+
+    const unlockedMap = new Map(
+      userAchievements.map((ua) => [ua.achievementId, ua.unlockedAt])
+    );
+
+    const finishedEvents = await prisma.eventParticipant.count({
+      where: { userId, isFinished: true },
+    });
+
+    const achievements = allAchievements.map((a) => ({
+      achievement: a,
+      unlockedAt: unlockedMap.get(a.id)?.toISOString() ?? null,
+    }));
+
+    res.json({
+      achievements,
+      progress: {
+        totalDistance: userExists.totalDistance,
+        currentStreak: userExists.currentStreak,
+        bestStreak: userExists.bestStreak,
+        finishedEvents,
+      },
+    });
   } catch (err) {
     console.error('Get achievements error:', err);
     res.status(500).json({ error: 'Failed to fetch achievements' });

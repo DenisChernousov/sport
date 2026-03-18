@@ -360,6 +360,24 @@ export const api = {
                 body: JSON.stringify({ role }),
             });
         },
+        achievements() {
+            return request('/admin/achievements');
+        },
+        createAchievement(data) {
+            return request('/admin/achievements', {
+                method: 'POST',
+                body: JSON.stringify(data),
+            });
+        },
+        updateAchievement(id, data) {
+            return request(`/admin/achievements/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify(data),
+            });
+        },
+        deleteAchievement(id) {
+            return request(`/admin/achievements/${id}`, { method: 'DELETE' });
+        },
     },
     profile: {
         get(id) {
