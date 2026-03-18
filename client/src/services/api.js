@@ -129,6 +129,14 @@ export const api = {
                 body: JSON.stringify(data),
             });
         },
+        uploadImage(eventId, file) {
+            const form = new FormData();
+            form.append('image', file);
+            return request(`/events/${eventId}/image`, {
+                method: 'POST',
+                body: form,
+            });
+        },
         uploadDiplomaBg(eventId, file) {
             const form = new FormData();
             form.append('bg', file);

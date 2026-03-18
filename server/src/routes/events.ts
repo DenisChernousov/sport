@@ -237,6 +237,35 @@ router.put('/:id', authMiddleware, adminMiddleware, async (req: AuthRequest, res
   }
 });
 
+// ─── POST /api/events/:id/image ──────────────────────────
+
+const eventImageStorage = multer.diskStorage({
+  destination(_req, _file, cb) {
+    const dir = path.join(__dirname, '..', '..', 'uploads', 'events');
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename(_req, file, cb) {
+    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${path.extname(file.originalname)}`);
+  },
+});
+const eventImageUpload = multer({ storage: eventImageStorage, limits: { fileSize: 10 * 1024 * 1024 } });
+
+router.post('/:id/image', authMiddleware, adminMiddleware, eventImageUpload.single('image'), async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const file = req.file;
+    if (!file) { res.status(400).json({ error: 'Файл не загружен' }); return; }
+
+    const imageUrl = `/uploads/events/${file.filename}`;
+    await prisma.event.update({ where: { id }, data: { imageUrl } });
+    res.json({ imageUrl });
+  } catch (err) {
+    console.error('Upload event image error:', err);
+    res.status(500).json({ error: 'Ошибка загрузки картинки' });
+  }
+});
+
 // ─── POST /api/events/:id/diploma-bg ─────────────────────
 
 router.post('/:id/diploma-bg', authMiddleware, adminMiddleware, diplomaBgUpload.single('bg'), async (req: AuthRequest, res: Response) => {

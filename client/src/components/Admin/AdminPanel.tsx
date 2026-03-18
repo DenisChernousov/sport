@@ -287,8 +287,30 @@ function EventFormModal({ initial, onSave, onClose, saving, eventId }: {
         </div>
 
         <div style={styles.fieldGroup}>
-          <label style={styles.label}>Картинка события (URL)</label>
-          <input style={styles.input} value={form.imageUrl} onChange={e => set('imageUrl', e.target.value)} placeholder="https://..." />
+          <label style={styles.label}>Картинка события</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <input style={{ ...styles.input, flex: 1 }} value={form.imageUrl} onChange={e => set('imageUrl', e.target.value)} placeholder="URL или загрузите файл →" />
+            {eventId && (
+              <label style={{
+                padding: '8px 16px', borderRadius: 8, border: '2px dashed #fc4c02',
+                background: '#fff8f5', color: '#fc4c02', fontSize: 13, fontWeight: 700,
+                cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+              }}>
+                📷 Загрузить
+                <input type="file" accept="image/*" style={{ display: 'none' }}
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    if (!f || !eventId) return;
+                    try {
+                      const res = await api.events.uploadImage(eventId, f);
+                      set('imageUrl', res.imageUrl);
+                    } catch { alert('Ошибка загрузки'); }
+                  }}
+                />
+              </label>
+            )}
+          </div>
+          {form.imageUrl && <img src={form.imageUrl} alt="" style={{ marginTop: 8, maxWidth: 200, borderRadius: 8, border: '1px solid #e0e0e0' }} />}
         </div>
 
         <div style={styles.fieldGroup}>
