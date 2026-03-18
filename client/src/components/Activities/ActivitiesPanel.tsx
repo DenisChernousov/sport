@@ -90,7 +90,8 @@ function parseDistanceFromText(text: string): string {
   const noSpeed = allText
     .replace(/\d{1,4}[.,]?\d{0,3}\s*(?:км\s*\/\s*ч|km\s*\/\s*h|кмч|mph)/gi, '')
     .replace(/\d{1,4}[.,]?\d{0,3}\s*(?:мин\s*\/\s*км|min\s*\/\s*km)/gi, '')
-    .replace(/\d{1,5}\s*(?:ккал|kcal|cal)/gi, '');
+    .replace(/\d{1,5}\s*(?:ккал|kcal|cal)/gi, '')
+    .replace(/\d{5,}/g, ''); // remove phone numbers and other long digit sequences
 
   // Step 2: Find number + "км" or "km" in cleaned text
   const distMatch = noSpeed.match(/(\d{1,4}[.,]\d{1,3})\s*(?:км|km)/i)
@@ -106,13 +107,24 @@ function parseDistanceFromText(text: string): string {
     }
   }
 
-  // Step 4: Largest number in cleaned text (no speed, no calories)
-  const nums = [...noSpeed.matchAll(/(\d{1,4}[.,]\d{1,3})/g)]
+  // Step 4: Find numbers with decimals first (15.65, 30.37 — these are usually distance)
+  // Then fall back to largest integer
+  const decimalNums = [...noSpeed.matchAll(/(\d{1,4}[.,]\d{1,3})/g)]
     .map(m => ({ raw: m[1], val: parseFloat(m[1].replace(',', '.')) }))
     .filter(c => c.val >= 1 && c.val <= 500);
-  if (nums.length > 0) {
-    nums.sort((a, b) => b.val - a.val);
-    return nums[0].raw.replace(',', '.');
+  if (decimalNums.length > 0) {
+    // Prefer the largest decimal number (distance is usually the biggest)
+    decimalNums.sort((a, b) => b.val - a.val);
+    return decimalNums[0].raw.replace(',', '.');
+  }
+
+  // Step 5: No decimals found — try integers near "км" context
+  const intNums = [...noSpeed.matchAll(/\b(\d{1,4})\b/g)]
+    .map(m => ({ raw: m[1], val: parseInt(m[1], 10) }))
+    .filter(c => c.val >= 1 && c.val <= 500);
+  if (intNums.length > 0) {
+    intNums.sort((a, b) => b.val - a.val);
+    return intNums[0].raw;
   }
 
   return '';
