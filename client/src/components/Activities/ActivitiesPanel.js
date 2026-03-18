@@ -594,14 +594,7 @@ export default function ActivitiesPanel() {
             if (ocrResult.status === 'fulfilled') {
                 const text = ocrResult.value.data.text;
                 setOcrRawText(text);
-                console.log('=== OCR RAW TEXT ===');
-                console.log(text);
-                console.log('===================');
-                // 1. Parse distance (number + "км" without "/ч")
-                const parsedDistance = parseDistanceFromText(text);
-                if (parsedDistance)
-                    setScrDistance(parsedDistance);
-                // 2. Parse duration (HH:MM:SS patterns)
+                // 1. Parse duration (HH:MM:SS) — works well
                 const parsedDuration = parseDurationFromText(text);
                 if (parsedDuration.hours)
                     setScrHours(parsedDuration.hours);
@@ -609,39 +602,26 @@ export default function ActivitiesPanel() {
                     setScrMinutes(parsedDuration.minutes);
                 if (parsedDuration.seconds)
                     setScrSeconds(parsedDuration.seconds);
-                // 3. Parse speed (number + "км/ч")
+                // 2. Parse speed (км/ч) — works well
                 const speedMatch = text.match(/(\d{1,4}[.,]\d{1,3})\s*(?:км\s*\/\s*ч|km\s*\/\s*h)/i);
                 const speedKmh = speedMatch ? parseFloat(speedMatch[1].replace(',', '.')) : 0;
-                // 4. If no distance found but have speed + duration → calculate distance
-                if (!parsedDistance && speedKmh > 0) {
+                // 3. ALWAYS calculate distance = speed × time (OCR distance is unreliable)
+                if (speedKmh > 0) {
                     const h = parseInt(parsedDuration.hours || '0', 10);
                     const m = parseInt(parsedDuration.minutes || '0', 10);
                     const s = parseInt(parsedDuration.seconds || '0', 10);
                     const totalHours = h + m / 60 + s / 3600;
                     if (totalHours > 0) {
-                        const calcDist = (speedKmh * totalHours).toFixed(1);
+                        const calcDist = (speedKmh * totalHours).toFixed(2);
                         setScrDistance(calcDist);
-                        console.log(`Distance calculated: ${speedKmh} км/ч × ${totalHours.toFixed(2)} ч = ${calcDist} км`);
                     }
                 }
-                // 5. If no duration but have pace + distance, calculate
-                if (!parsedDuration.hours && !parsedDuration.minutes && !parsedDuration.seconds) {
+                // 4. If no speed but have pace (мин/км), calculate duration from pace
+                if (!speedKmh) {
                     const pace = parsePaceFromText(text);
-                    const dist = parsedDistance ? parseFloat(parsedDistance) : 0;
-                    if (pace && dist > 0) {
-                        const paceMinutes = parseInt(pace.minutes, 10);
-                        const paceSeconds = parseInt(pace.seconds, 10);
-                        const totalPaceSec = paceMinutes * 60 + paceSeconds;
-                        const totalSec = Math.round(totalPaceSec * dist);
-                        const h = Math.floor(totalSec / 3600);
-                        const m = Math.floor((totalSec % 3600) / 60);
-                        const s = totalSec % 60;
-                        if (h > 0)
-                            setScrHours(String(h));
-                        if (m > 0)
-                            setScrMinutes(String(m));
-                        if (s > 0)
-                            setScrSeconds(String(s));
+                    if (pace) {
+                        // Can't calculate distance without speed or distance input
+                        // Leave distance empty for user
                     }
                 }
             }
