@@ -155,7 +155,7 @@ export default function FeedPanel() {
 
       {items.map(item => {
         const sport = SPORT[item.sport] ?? SPORT.RUNNING;
-        const distKm = (item.distance ?? 0) / 1000;
+        const distKm = item.distance ?? 0;
         const speedKmH = item.avgSpeed ?? (item.duration > 0 ? (distKm / (item.duration / 3600)) : 0);
         const photos = item.photos ?? [];
         const likeCount = item._count?.likes ?? 0;

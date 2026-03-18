@@ -10,7 +10,10 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: Props) {
   const [busy, setBusy] = useState(false);
   const [lv, setLv] = useState(''); const [lp, setLp] = useState('');
   const [ru, setRu] = useState(''); const [re, setRe] = useState('');
-  const [rp, setRp] = useState(''); const [rr, setRr] = useState('');
+  const [rp, setRp] = useState('');
+  const [rr, setRr] = useState(() => {
+    try { return new URLSearchParams(window.location.search).get('ref') || ''; } catch { return ''; }
+  });
   const [rc, setRc] = useState(''); // city
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
