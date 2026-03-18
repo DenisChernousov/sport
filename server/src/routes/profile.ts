@@ -247,6 +247,7 @@ router.get('/:id/activities', async (req: AuthRequest, res: Response) => {
           isManual: true,
           startedAt: true,
           createdAt: true,
+          photos: { select: { id: true, imageUrl: true } },
         },
       }),
       prisma.activity.count({ where }),

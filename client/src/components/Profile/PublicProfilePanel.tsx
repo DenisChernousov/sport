@@ -50,6 +50,11 @@ interface ProfileData {
   };
 }
 
+interface ActivityPhoto {
+  id: string;
+  imageUrl: string;
+}
+
 interface ActivityItem {
   id: string;
   sport: SportType;
@@ -59,6 +64,7 @@ interface ActivityItem {
   avgPace?: number;
   avgSpeed?: number;
   startedAt: string;
+  photos?: ActivityPhoto[];
 }
 
 interface AchievementWithMeta {
@@ -116,6 +122,8 @@ export function PublicProfilePanel({ userId, onClose }: PublicProfilePanelProps)
   const [achExpanded, setAchExpanded] = useState(false);
   const [sportStats, setSportStats] = useState<{ sport: string; totalDistance: number; activityCount: number }[]>([]);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [selectedActivity, setSelectedActivity] = useState<ActivityItem | null>(null);
+  const [avatarFullscreen, setAvatarFullscreen] = useState(false);
 
   useEffect(() => {
     const h = () => setIsMobile(window.innerWidth < 768);
@@ -311,21 +319,25 @@ export function PublicProfilePanel({ userId, onClose }: PublicProfilePanelProps)
           <div style={{ padding: isMobile ? 16 : 24 }}>
             {/* Header: avatar + name + follow */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
-              <div style={{
-                width: 64,
-                height: 64,
-                minWidth: 64,
-                borderRadius: '50%',
-                background: profile.avatarUrl ? 'none' : 'linear-gradient(135deg, #fc4c02, #ff6b2b)',
-                color: '#fff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 28,
-                fontWeight: 700,
-                overflow: 'hidden',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-              }}>
+              <div
+                onClick={() => { if (profile.avatarUrl) setAvatarFullscreen(true); }}
+                style={{
+                  width: 64,
+                  height: 64,
+                  minWidth: 64,
+                  borderRadius: '50%',
+                  background: profile.avatarUrl ? 'none' : 'linear-gradient(135deg, #fc4c02, #ff6b2b)',
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 28,
+                  fontWeight: 700,
+                  overflow: 'hidden',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  cursor: profile.avatarUrl ? 'pointer' : 'default',
+                }}
+              >
                 {profile.avatarUrl
                   ? <img src={profile.avatarUrl} alt="" style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover' }} />
                   : (profile.username ?? '?')[0].toUpperCase()}
@@ -477,9 +489,11 @@ export function PublicProfilePanel({ userId, onClose }: PublicProfilePanelProps)
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {activities.map((act) => {
                     const distKm = act.distance ?? 0;
+                    const photos = act.photos ?? [];
                     return (
                       <div
                         key={act.id}
+                        onClick={() => { if (photos.length > 0) setSelectedActivity(act); }}
                         style={{
                           display: 'flex',
                           alignItems: 'center',
@@ -487,6 +501,7 @@ export function PublicProfilePanel({ userId, onClose }: PublicProfilePanelProps)
                           padding: '10px 12px',
                           background: '#f9f9f9',
                           borderRadius: 12,
+                          cursor: photos.length > 0 ? 'pointer' : 'default',
                         }}
                       >
                         <span style={{ fontSize: 20 }}>{SPORT_ICONS[act.sport] ?? '🏃'}</span>
@@ -498,6 +513,13 @@ export function PublicProfilePanel({ userId, onClose }: PublicProfilePanelProps)
                             {formatDuration(act.duration ?? 0)} · {formatTimeAgo(act.startedAt)}
                           </div>
                         </div>
+                        {photos.length > 0 && (
+                          <img
+                            src={photos[0].imageUrl}
+                            alt=""
+                            style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', flexShrink: 0, border: '1px solid #e0e0e0' }}
+                          />
+                        )}
                       </div>
                     );
                   })}
@@ -587,6 +609,124 @@ export function PublicProfilePanel({ userId, onClose }: PublicProfilePanelProps)
           </div>
         )}
       </div>
+
+      {/* Activity detail modal with photo gallery */}
+      {selectedActivity && (
+        <div
+          onClick={() => setSelectedActivity(null)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.7)',
+            zIndex: 10000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#fff',
+              borderRadius: 16,
+              maxWidth: 500,
+              width: '100%',
+              maxHeight: '85vh',
+              overflowY: 'auto',
+              padding: 24,
+              position: 'relative',
+            }}
+          >
+            <button
+              onClick={() => setSelectedActivity(null)}
+              style={{
+                position: 'absolute',
+                top: 12,
+                right: 12,
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                border: 'none',
+                background: '#f0f0f0',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 14,
+                color: '#666',
+              }}
+            >
+              x
+            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+              <span style={{ fontSize: 28 }}>{SPORT_ICONS[selectedActivity.sport] ?? '🏃'}</span>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#242424' }}>
+                  {selectedActivity.title ?? SPORT_LABELS[selectedActivity.sport] ?? 'Тренировка'}
+                </div>
+                <div style={{ fontSize: 13, color: '#888' }}>
+                  {(selectedActivity.distance ?? 0).toFixed(1)} км · {formatDuration(selectedActivity.duration ?? 0)} · {formatTimeAgo(selectedActivity.startedAt)}
+                </div>
+              </div>
+            </div>
+            {(selectedActivity.photos ?? []).length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {(selectedActivity.photos ?? []).map((photo) => (
+                  <img
+                    key={photo.id}
+                    src={photo.imageUrl}
+                    alt=""
+                    style={{
+                      width: '100%',
+                      borderRadius: 12,
+                      objectFit: 'contain',
+                      maxHeight: 400,
+                      background: '#f5f5f5',
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Avatar fullscreen viewer */}
+      {avatarFullscreen && profile?.avatarUrl && (
+        <div
+          onClick={() => setAvatarFullscreen(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.85)',
+            zIndex: 10001,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            padding: 24,
+          }}
+        >
+          <img
+            src={profile.avatarUrl}
+            alt=""
+            style={{
+              maxWidth: '90vw',
+              maxHeight: '90vh',
+              borderRadius: 16,
+              objectFit: 'contain',
+              boxShadow: '0 8px 40px rgba(0,0,0,0.4)',
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }

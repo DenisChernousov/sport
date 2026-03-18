@@ -19,6 +19,7 @@ import diplomaRouter from './routes/diploma';
 import packagesRouter from './routes/packages';
 import socialRouter from './routes/social';
 import adminRouter from './routes/admin';
+import settingsRouter from './routes/settings';
 
 const app = express();
 const server = createServer(app);
@@ -47,6 +48,7 @@ app.use('/api', photosRouter);
 app.use('/api', diplomaRouter);
 app.use('/api', socialRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/settings', settingsRouter);
 
 // Start
 async function start() {

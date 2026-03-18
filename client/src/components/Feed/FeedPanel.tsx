@@ -61,6 +61,7 @@ export default function FeedPanel() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [enlargedPhoto, setEnlargedPhoto] = useState<string | null>(null);
+  const [avatarFullscreen, setAvatarFullscreen] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   useEffect(() => {
     const h = () => setIsMobile(window.innerWidth < 768);
@@ -191,7 +192,12 @@ export default function FeedPanel() {
                 }}
               >
                 {item.user.avatarUrl
-                  ? <img src={item.user.avatarUrl} alt="" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
+                  ? <img
+                      src={item.user.avatarUrl}
+                      alt=""
+                      style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }}
+                      onClick={(e) => { e.stopPropagation(); setAvatarFullscreen(item.user.avatarUrl ?? null); }}
+                    />
                   : (item.user.username ?? '?')[0].toUpperCase()}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -366,6 +372,36 @@ export default function FeedPanel() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
               src={enlargedPhoto}
+              alt=""
+              style={{
+                maxWidth: '90vw', maxHeight: '90vh', borderRadius: 16,
+                objectFit: 'contain', boxShadow: '0 8px 40px rgba(0,0,0,0.4)',
+              }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Avatar fullscreen overlay */}
+      <AnimatePresence>
+        {avatarFullscreen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setAvatarFullscreen(null)}
+            style={{
+              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(0,0,0,0.85)', display: 'flex',
+              alignItems: 'center', justifyContent: 'center',
+              zIndex: 10000, cursor: 'pointer', padding: 24,
+            }}
+          >
+            <motion.img
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              src={avatarFullscreen}
               alt=""
               style={{
                 maxWidth: '90vw', maxHeight: '90vh', borderRadius: 16,

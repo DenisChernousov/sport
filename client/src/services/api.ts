@@ -533,4 +533,24 @@ export const api = {
       });
     },
   },
+
+  settings: {
+    getPublic() {
+      return request<Record<string, string>>('/settings/public');
+    },
+    update(key: string, value: string) {
+      return request<{ key: string; value: string }>(`/settings/${key}`, {
+        method: 'PUT',
+        body: JSON.stringify({ value }),
+      });
+    },
+    uploadHeroBg(file: File) {
+      const form = new FormData();
+      form.append('image', file);
+      return request<{ url: string }>('/settings/hero-bg', {
+        method: 'POST',
+        body: form,
+      });
+    },
+  },
 };

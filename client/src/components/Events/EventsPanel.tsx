@@ -269,6 +269,7 @@ export default function EventsPanel() {
   const [medalShopEvent, setMedalShopEvent] = useState<Event | null>(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isTablet, setIsTablet] = useState(window.innerWidth >= 768 && window.innerWidth < 1024);
+  const [heroSettings, setHeroSettings] = useState<Record<string, string>>({});
   useEffect(() => {
     const h = () => {
       setIsMobile(window.innerWidth < 768);
@@ -276,6 +277,10 @@ export default function EventsPanel() {
     };
     window.addEventListener('resize', h);
     return () => window.removeEventListener('resize', h);
+  }, []);
+
+  useEffect(() => {
+    api.settings.getPublic().then(setHeroSettings).catch(() => {});
   }, []);
 
   const load = useCallback(async () => {
@@ -315,16 +320,22 @@ export default function EventsPanel() {
     <div>
       {/* Hero */}
       <div style={{
-        background: 'linear-gradient(135deg, #fc4c02 0%, #ff6b2b 100%)',
+        background: (heroSettings['hero_bg_url'] ?? '')
+          ? `url(${heroSettings['hero_bg_url']}) center/cover no-repeat`
+          : `linear-gradient(135deg, ${heroSettings['hero_bg_color'] ?? '#fc4c02'} 0%, ${heroSettings['hero_bg_color'] ?? '#fc4c02'}cc 100%)`,
         borderRadius: isMobile ? 14 : 20, padding: isMobile ? '28px 20px' : '48px 40px', marginBottom: isMobile ? 20 : 32, color: '#fff',
         boxShadow: '0 4px 20px rgba(252,76,2,0.25)',
+        position: 'relative' as const,
       }}>
+        {(heroSettings['hero_bg_url'] ?? '') && (
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)', borderRadius: isMobile ? 14 : 20 }} />
+        )}
+        <div style={{ position: 'relative', zIndex: 1 }}>
         <h1 style={{ fontSize: isMobile ? 24 : 36, fontWeight: 900, marginBottom: 8, lineHeight: 1.2 }}>
-          Виртуальные события
+          {heroSettings['hero_title'] ?? 'Виртуальные события'}
         </h1>
         <p style={{ fontSize: isMobile ? 14 : 16, opacity: 0.9, maxWidth: 500, lineHeight: 1.6, marginBottom: isMobile ? 14 : 20 }}>
-          Забеги, челленджи и соревнования — участвуй из&nbsp;любой точки мира.
-          Зарабатывай&nbsp;XP, получай медали, соревнуйся.
+          {heroSettings['hero_subtitle'] ?? 'Забеги, челленджи и соревнования — участвуй из любой точки мира. Зарабатывай XP, получай медали, соревнуйся.'}
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
           <span style={{
@@ -334,6 +345,7 @@ export default function EventsPanel() {
             🏆 {events.length} событий
           </span>
           <span style={{ fontSize: 14, opacity: 0.8 }}>Бег · Вело · Лыжи · Ходьба</span>
+        </div>
         </div>
       </div>
 

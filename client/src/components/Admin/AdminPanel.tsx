@@ -769,6 +769,195 @@ function formatDurationShort(seconds: number): string {
   return `${m}м`;
 }
 
+// ─── Settings Tab ───────────────────────────────────────
+
+function SettingsTab() {
+  const [settings, setSettings] = useState<Record<string, string>>({});
+  const [loadingSettings, setLoadingSettings] = useState(true);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [heroBgPreview, setHeroBgPreview] = useState<string>('');
+  const [heroBgFile, setHeroBgFile] = useState<File | null>(null);
+  const [settingsMsg, setSettingsMsg] = useState('');
+
+  useEffect(() => {
+    setLoadingSettings(true);
+    api.settings.getPublic()
+      .then((data) => {
+        setSettings(data ?? {});
+        setHeroBgPreview(data?.['hero_bg_url'] ?? '');
+      })
+      .catch(() => {})
+      .finally(() => setLoadingSettings(false));
+  }, []);
+
+  const flash = (msg: string) => {
+    setSettingsMsg(msg);
+    setTimeout(() => setSettingsMsg(''), 2500);
+  };
+
+  const saveSetting = async (key: string) => {
+    setSaving(key);
+    try {
+      await api.settings.update(key, settings[key] ?? '');
+      flash('Сохранено');
+    } catch {
+      flash('Ошибка сохранения');
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const handleHeroBgUpload = async () => {
+    if (!heroBgFile) return;
+    setSaving('hero_bg_url');
+    try {
+      const res = await api.settings.uploadHeroBg(heroBgFile);
+      const url = res?.url ?? '';
+      setSettings(prev => ({ ...prev, hero_bg_url: url }));
+      setHeroBgPreview(url);
+      setHeroBgFile(null);
+      flash('Фон загружен');
+    } catch {
+      flash('Ошибка загрузки');
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const clearHeroBg = async () => {
+    setSaving('hero_bg_url');
+    try {
+      await api.settings.update('hero_bg_url', '');
+      setSettings(prev => ({ ...prev, hero_bg_url: '' }));
+      setHeroBgPreview('');
+      setHeroBgFile(null);
+      flash('Фон удалён');
+    } catch {
+      flash('Ошибка');
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  if (loadingSettings) {
+    return <div style={{ textAlign: 'center', padding: 40, color: '#888', fontSize: 15 }}>Загрузка настроек...</div>;
+  }
+
+  return (
+    <div>
+      {settingsMsg && <div style={{ padding: '10px 14px', background: '#f0fff0', color: '#16a34a', borderRadius: 8, fontSize: 13, fontWeight: 600, marginBottom: 16 }}>{settingsMsg}</div>}
+
+      <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e0e0e0', padding: 24, marginBottom: 16 }}>
+        <h3 style={{ fontSize: 18, fontWeight: 800, color: '#242424', margin: '0 0 20px' }}>Герой-баннер</h3>
+
+        {/* Hero title */}
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#242424', marginBottom: 6 }}>Заголовок</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              style={{ flex: 1, padding: '10px 14px', borderRadius: 8, border: '1.5px solid #e0e0e0', fontSize: 14, outline: 'none', boxSizing: 'border-box' as const, color: '#242424' }}
+              value={settings['hero_title'] ?? ''}
+              onChange={(e) => setSettings(prev => ({ ...prev, hero_title: e.target.value }))}
+            />
+            <button
+              style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: '#fc4c02', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', opacity: saving === 'hero_title' ? 0.6 : 1 }}
+              onClick={() => saveSetting('hero_title')}
+              disabled={saving === 'hero_title'}
+            >
+              {saving === 'hero_title' ? '...' : 'Сохранить'}
+            </button>
+          </div>
+        </div>
+
+        {/* Hero subtitle */}
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#242424', marginBottom: 6 }}>Подзаголовок</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <textarea
+              style={{ flex: 1, padding: '10px 14px', borderRadius: 8, border: '1.5px solid #e0e0e0', fontSize: 14, outline: 'none', boxSizing: 'border-box' as const, color: '#242424', minHeight: 60, resize: 'vertical' as const, fontFamily: 'inherit' }}
+              value={settings['hero_subtitle'] ?? ''}
+              onChange={(e) => setSettings(prev => ({ ...prev, hero_subtitle: e.target.value }))}
+            />
+            <button
+              style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: '#fc4c02', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', alignSelf: 'flex-start', opacity: saving === 'hero_subtitle' ? 0.6 : 1 }}
+              onClick={() => saveSetting('hero_subtitle')}
+              disabled={saving === 'hero_subtitle'}
+            >
+              {saving === 'hero_subtitle' ? '...' : 'Сохранить'}
+            </button>
+          </div>
+        </div>
+
+        {/* Hero bg color */}
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#242424', marginBottom: 6 }}>Цвет фона (если нет картинки)</label>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
+              type="color"
+              style={{ width: 48, height: 40, border: '1.5px solid #e0e0e0', borderRadius: 8, cursor: 'pointer', padding: 2 }}
+              value={settings['hero_bg_color'] ?? '#fc4c02'}
+              onChange={(e) => setSettings(prev => ({ ...prev, hero_bg_color: e.target.value }))}
+            />
+            <input
+              style={{ width: 120, padding: '10px 14px', borderRadius: 8, border: '1.5px solid #e0e0e0', fontSize: 14, outline: 'none', color: '#242424' }}
+              value={settings['hero_bg_color'] ?? '#fc4c02'}
+              onChange={(e) => setSettings(prev => ({ ...prev, hero_bg_color: e.target.value }))}
+            />
+            <button
+              style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: '#fc4c02', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', opacity: saving === 'hero_bg_color' ? 0.6 : 1 }}
+              onClick={() => saveSetting('hero_bg_color')}
+              disabled={saving === 'hero_bg_color'}
+            >
+              {saving === 'hero_bg_color' ? '...' : 'Сохранить'}
+            </button>
+          </div>
+        </div>
+
+        {/* Hero bg image */}
+        <div style={{ marginBottom: 0 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#242424', marginBottom: 6 }}>Фоновое изображение</label>
+          {(heroBgPreview ?? '') && (
+            <div style={{ marginBottom: 10, position: 'relative', display: 'inline-block' }}>
+              <img src={heroBgPreview} alt="" style={{ maxWidth: 320, maxHeight: 160, borderRadius: 10, objectFit: 'cover', border: '1px solid #e0e0e0' }} />
+              <button
+                onClick={clearHeroBg}
+                style={{ position: 'absolute', top: 6, right: 6, width: 24, height: 24, borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                x
+              </button>
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const f = e.target.files?.[0] ?? null;
+                setHeroBgFile(f);
+                if (f) {
+                  const reader = new FileReader();
+                  reader.onload = (ev) => setHeroBgPreview((ev.target?.result as string) ?? '');
+                  reader.readAsDataURL(f);
+                }
+              }}
+              style={{ fontSize: 13 }}
+            />
+            {heroBgFile && (
+              <button
+                style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: '#fc4c02', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', opacity: saving === 'hero_bg_url' ? 0.6 : 1 }}
+                onClick={handleHeroBgUpload}
+                disabled={saving === 'hero_bg_url'}
+              >
+                {saving === 'hero_bg_url' ? '...' : 'Загрузить'}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Stats Tab ──────────────────────────────────────────
 
 function StatsTab() {
@@ -1078,7 +1267,7 @@ export default function AdminPanel() {
     return () => window.removeEventListener('resize', h);
   }, []);
 
-  const [tab, setTab] = useState<'stats' | 'users' | 'events' | 'packages' | 'achievements'>('stats');
+  const [tab, setTab] = useState<'stats' | 'users' | 'events' | 'packages' | 'achievements' | 'settings'>('stats');
   const [events, setEvents] = useState<Event[]>([]);
   const [packages, setPackages] = useState<MerchPackage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -1373,6 +1562,9 @@ export default function AdminPanel() {
         </button>
         <button style={{ ...styles.tab(tab === 'achievements'), flexShrink: 0, fontSize: isMobile ? 12 : undefined, padding: isMobile ? '10px 14px' : undefined }} onClick={() => setTab('achievements')}>
           Достижения
+        </button>
+        <button style={{ ...styles.tab(tab === 'settings'), flexShrink: 0, fontSize: isMobile ? 12 : undefined, padding: isMobile ? '10px 14px' : undefined }} onClick={() => setTab('settings')}>
+          Настройки
         </button>
       </div>
 
@@ -1673,6 +1865,9 @@ export default function AdminPanel() {
           </div>
         </>
       )}
+
+      {/* ─── Settings Tab ─────────────────────────────────── */}
+      {tab === 'settings' && <SettingsTab />}
 
       {/* ─── Modals ──────────────────────────────────────── */}
 

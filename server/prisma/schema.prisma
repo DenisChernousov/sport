@@ -406,6 +406,14 @@ model PlannedActivity {
   @@index([sport, date])
 }
 
+// ─── Site Settings ──────────────────────────────────────
+
+model SiteSetting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String @default("")
+}
+
 // ─── Chat ────────────────────────────────────────────────
 
 model ChatMessage {
