@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { Header } from '@/components/Layout/Header';
 import type { TabId } from '@/components/Layout/Header';
 import { AuthModal } from '@/components/Auth/AuthModal';
+import { PublicProfilePanel } from '@/components/Profile/PublicProfilePanel';
 
 // Lazy-loaded panels
 const EventsPanel = lazy(() => import('@/components/Events/EventsPanel'));
@@ -33,10 +34,20 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState<TabId>('feed');
   const w = useWidth();
   const isMobile = w < 768;
+  const [viewUserId, setViewUserId] = useState<string | null>(null);
   const [authModal, setAuthModal] = useState<{ open: boolean; tab: 'login' | 'register' }>({
     open: false,
     tab: 'login',
   });
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.userId) setViewUserId(detail.userId);
+    };
+    window.addEventListener('open-profile', handler);
+    return () => window.removeEventListener('open-profile', handler);
+  }, []);
 
   const openLogin = useCallback(() => setAuthModal({ open: true, tab: 'login' }), []);
   const openRegister = useCallback(() => setAuthModal({ open: true, tab: 'register' }), []);
@@ -87,6 +98,10 @@ function AppContent() {
       </main>
 
       <AuthModal isOpen={authModal.open} onClose={closeAuth} initialTab={authModal.tab} />
+
+      {viewUserId && (
+        <PublicProfilePanel userId={viewUserId} onClose={() => setViewUserId(null)} />
+      )}
 
       {/* Footer */}
       <footer style={{

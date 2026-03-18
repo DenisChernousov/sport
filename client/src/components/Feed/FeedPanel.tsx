@@ -179,20 +179,29 @@ export default function FeedPanel() {
               display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 12,
               padding: isMobile ? '12px 14px 8px' : '16px 20px 12px',
             }}>
-              <div style={{
-                width: 40, height: 40, minWidth: 40, borderRadius: '50%',
-                background: item.user.avatarUrl ? 'none' : 'linear-gradient(135deg, #fc4c02, #ff6b2b)',
-                color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 16, fontWeight: 700, overflow: 'hidden',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
-              }}>
+              <div
+                onClick={() => window.dispatchEvent(new CustomEvent('open-profile', { detail: { userId: item.user.id } }))}
+                style={{
+                  width: 40, height: 40, minWidth: 40, borderRadius: '50%',
+                  background: item.user.avatarUrl ? 'none' : 'linear-gradient(135deg, #fc4c02, #ff6b2b)',
+                  color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 16, fontWeight: 700, overflow: 'hidden',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+                  cursor: 'pointer',
+                }}
+              >
                 {item.user.avatarUrl
                   ? <img src={item.user.avatarUrl} alt="" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
                   : (item.user.username ?? '?')[0].toUpperCase()}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: '#242424' }}>
+                  <span
+                    onClick={() => window.dispatchEvent(new CustomEvent('open-profile', { detail: { userId: item.user.id } }))}
+                    style={{ fontSize: 14, fontWeight: 700, color: '#242424', cursor: 'pointer' }}
+                    onMouseEnter={(e) => { (e.target as HTMLElement).style.color = '#fc4c02'; }}
+                    onMouseLeave={(e) => { (e.target as HTMLElement).style.color = '#242424'; }}
+                  >
                     {item.user.username ?? 'Пользователь'}
                   </span>
                   <span style={{

@@ -79,6 +79,7 @@ export default function ProfilePanel() {
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
 
+  const [isPublic, setIsPublic] = useState(true);
   const [copied, setCopied] = useState(false);
   const [sportStats, setSportStats] = useState<{ sport: string; totalDistance: number; activityCount: number }[]>([]);
   const [followersCount, setFollowersCount] = useState(0);
@@ -95,6 +96,7 @@ export default function ProfilePanel() {
       setLastName(user.lastName ?? '');
       setCity(user.city ?? '');
       setBio(user.bio ?? '');
+      setIsPublic(user.isPublic !== false);
     }
   }, [user]);
 
@@ -139,7 +141,7 @@ export default function ProfilePanel() {
       setSaving(true);
       setSaveMsg('');
       try {
-        const updated = await api.profile.update({ firstName, lastName, city, bio });
+        const updated = await api.profile.update({ firstName, lastName, city, bio, isPublic } as any);
         updateUser(updated);
         setSaveMsg('Профиль обновлён');
       } catch (err: unknown) {
@@ -148,7 +150,7 @@ export default function ProfilePanel() {
         setSaving(false);
       }
     },
-    [user, firstName, lastName, city, bio, updateUser],
+    [user, firstName, lastName, city, bio, isPublic, updateUser],
   );
 
   const handleCopyReferral = useCallback(() => {
@@ -827,6 +829,43 @@ export default function ProfilePanel() {
                 fontFamily: 'inherit',
               }}
             />
+          </div>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '12px 0', marginBottom: 12,
+            borderTop: '1px solid #f0f0f0', borderBottom: '1px solid #f0f0f0',
+          }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#242424' }}>Публичный профиль</div>
+              <div style={{ fontSize: 12, color: '#999', marginTop: 2 }}>Другие пользователи могут видеть ваш профиль</div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsPublic(prev => !prev)}
+              style={{
+                width: 48,
+                height: 26,
+                borderRadius: 13,
+                border: 'none',
+                background: isPublic ? '#fc4c02' : '#ccc',
+                cursor: 'pointer',
+                position: 'relative',
+                transition: 'background 0.2s',
+                flexShrink: 0,
+              }}
+            >
+              <div style={{
+                width: 22,
+                height: 22,
+                borderRadius: '50%',
+                background: '#fff',
+                position: 'absolute',
+                top: 2,
+                left: isPublic ? 24 : 2,
+                transition: 'left 0.2s',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+              }} />
+            </button>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <button

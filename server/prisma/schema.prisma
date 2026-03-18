@@ -76,6 +76,7 @@ model User {
   stravaToken   String?
   stravaRefresh String?
 
+  isPublic      Boolean  @default(true)
   isBanned      Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

@@ -604,7 +604,12 @@ export default function TeamsPanel() {
                         (member.user.username ?? '?').charAt(0).toUpperCase()
                       )}
                     </div>
-                    <span style={{ fontSize: 14, color: '#242424' }}>{member.user.username ?? '?'}</span>
+                    <span
+                      onClick={() => window.dispatchEvent(new CustomEvent('open-profile', { detail: { userId: member.user.id } }))}
+                      style={{ fontSize: 14, color: '#242424', cursor: 'pointer' }}
+                      onMouseEnter={(e) => { (e.target as HTMLElement).style.color = '#fc4c02'; }}
+                      onMouseLeave={(e) => { (e.target as HTMLElement).style.color = '#242424'; }}
+                    >{member.user.username ?? '?'}</span>
                     {member.role === 'OWNER' && (
                       <span style={{
                         backgroundColor: 'rgba(252,76,2,0.1)',
@@ -667,7 +672,12 @@ export default function TeamsPanel() {
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: '#242424' }}>{item.user.username}</span>
+                          <span
+                            onClick={() => window.dispatchEvent(new CustomEvent('open-profile', { detail: { userId: item.user.id } }))}
+                            style={{ fontSize: 13, fontWeight: 700, color: '#242424', cursor: 'pointer' }}
+                            onMouseEnter={(e) => { (e.target as HTMLElement).style.color = '#fc4c02'; }}
+                            onMouseLeave={(e) => { (e.target as HTMLElement).style.color = '#242424'; }}
+                          >{item.user.username}</span>
                           <span style={{ fontSize: 11, color: '#aaa' }}>{formatTimeAgo(item.startedAt ?? item.createdAt)}</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>

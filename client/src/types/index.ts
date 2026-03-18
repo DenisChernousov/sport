@@ -19,6 +19,7 @@ export interface User {
   totalActivities: number;
   currentStreak: number;
   bestStreak: number;
+  isPublic?: boolean;
   referralCode: string;
   createdAt: string;
 }

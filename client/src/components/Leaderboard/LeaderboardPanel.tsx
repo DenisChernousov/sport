@@ -247,20 +247,24 @@ export default function LeaderboardPanel() {
                   </div>
 
                   {/* Avatar */}
-                  <div style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: '50%',
-                    backgroundColor: '#eef0f4',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 14,
-                    fontWeight: 600,
-                    color: '#242424',
-                    overflow: 'hidden',
-                    flexShrink: 0,
-                  }}>
+                  <div
+                    onClick={() => window.dispatchEvent(new CustomEvent('open-profile', { detail: { userId: entry.id } }))}
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: '50%',
+                      backgroundColor: '#eef0f4',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: '#242424',
+                      overflow: 'hidden',
+                      flexShrink: 0,
+                      cursor: 'pointer',
+                    }}
+                  >
                     {entry.avatarUrl ? (
                       <img src={entry.avatarUrl} alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }} />
                     ) : (
@@ -270,14 +274,20 @@ export default function LeaderboardPanel() {
 
                   {/* Username */}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{
-                      fontWeight: 500,
-                      color: '#242424',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      display: 'block',
-                    }}>
+                    <span
+                      onClick={() => window.dispatchEvent(new CustomEvent('open-profile', { detail: { userId: entry.id } }))}
+                      style={{
+                        fontWeight: 500,
+                        color: '#242424',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        display: 'block',
+                        cursor: 'pointer',
+                      }}
+                      onMouseEnter={(e) => { (e.target as HTMLElement).style.color = '#fc4c02'; }}
+                      onMouseLeave={(e) => { (e.target as HTMLElement).style.color = '#242424'; }}
+                    >
                       {entry.username ?? '?'}
                     </span>
                   </div>

@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import { prisma } from '../lib/prisma';
-import { authMiddleware } from '../middleware/auth';
+import { authMiddleware, optionalAuth } from '../middleware/auth';
 import { AuthRequest } from '../types';
 
 const router = Router();
@@ -105,7 +105,7 @@ router.get('/referrals', authMiddleware, async (req: AuthRequest, res: Response)
 
 // ─── GET /api/profile/:id ────────────────────────────────
 
-router.get('/:id', async (req: AuthRequest, res: Response) => {
+router.get('/:id', optionalAuth, async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params.id as string;
 
@@ -126,12 +126,15 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
         totalActivities: true,
         currentStreak: true,
         bestStreak: true,
+        isPublic: true,
         createdAt: true,
         _count: {
           select: {
             activities: true,
             eventParticipations: true,
             achievements: true,
+            followers: true,
+            following: true,
           },
         },
       },
@@ -139,6 +142,11 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
 
     if (!user) {
       res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    if (!user.isPublic && req.userId !== id) {
+      res.status(403).json({ error: 'Профиль скрыт' });
       return;
     }
 
@@ -154,7 +162,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
 router.put('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { firstName, lastName, city, bio, avatarUrl, birthDate } = req.body;
+    const { firstName, lastName, city, bio, avatarUrl, birthDate, isPublic } = req.body;
 
     const data: Record<string, unknown> = {};
     if (firstName !== undefined) data.firstName = firstName;
@@ -163,6 +171,7 @@ router.put('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     if (bio !== undefined) data.bio = bio;
     if (avatarUrl !== undefined) data.avatarUrl = avatarUrl;
     if (birthDate !== undefined) data.birthDate = birthDate ? new Date(birthDate) : null;
+    if (isPublic !== undefined) data.isPublic = !!isPublic;
 
     const user = await prisma.user.update({
       where: { id: userId },
@@ -184,6 +193,7 @@ router.put('/', authMiddleware, async (req: AuthRequest, res: Response) => {
         totalActivities: true,
         currentStreak: true,
         bestStreak: true,
+        isPublic: true,
         createdAt: true,
         updatedAt: true,
       },
