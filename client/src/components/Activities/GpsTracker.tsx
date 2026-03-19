@@ -152,7 +152,7 @@ export default function GpsTracker({ onClose, onSaved }: Props) {
       </div>
 
       {/* ── Map ─────────────────────────────────── */}
-      <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+      <div style={{ position: 'relative', flex: isActive ? '0 0 220px' : '1 1 0', minHeight: 0 }}>
         <div ref={mapRef} style={{ position: 'absolute', inset: 0 }} />
 
         {/* Error banner over map */}
@@ -164,31 +164,6 @@ export default function GpsTracker({ onClose, onSaved }: Props) {
           }}>{error}</div>
         )}
 
-        {/* Stats overlay (active/paused) — bottom of map */}
-        {isActive && (
-          <div style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10,
-            background: 'linear-gradient(transparent, rgba(10,22,40,0.97) 30%)',
-            padding: '28px 14px 14px',
-            pointerEvents: 'none',
-          }}>
-            {/* Timer */}
-            <div style={{ textAlign: 'center', marginBottom: 8, fontVariantNumeric: 'tabular-nums' }}>
-              <span style={{
-                fontSize: 44, fontWeight: 900, color: '#fff',
-                letterSpacing: -2, lineHeight: 1, fontFamily: 'ui-monospace, monospace',
-              }}>
-                {fmtTime(stats.duration)}
-              </span>
-            </div>
-            {/* Stats row */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
-              <Stat label="Дистанция" value={fmtDist(stats.distance)} accent={primary} />
-              <Stat label="Ср. темп"  value={stats.avgPace + ' /км'} accent={primary} />
-              <Stat label="Скорость"  value={stats.currentSpeed.toFixed(1) + ' км/ч'} accent={primary} />
-            </div>
-          </div>
-        )}
       </div>
 
       {/* ── Bottom bar (controls only) ───────────── */}
@@ -218,6 +193,22 @@ export default function GpsTracker({ onClose, onSaved }: Props) {
               Нажмите ▶ для старта записи маршрута
             </p>
           </>
+        )}
+
+        {/* Stats (active/paused) */}
+        {isActive && (
+          <div style={{ padding: '0 14px 10px' }}>
+            <div style={{ textAlign: 'center', marginBottom: 8, fontVariantNumeric: 'tabular-nums' }}>
+              <span style={{ fontSize: 44, fontWeight: 900, color: '#fff', letterSpacing: -2, lineHeight: 1, fontFamily: 'ui-monospace, monospace' }}>
+                {fmtTime(stats.duration)}
+              </span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
+              <Stat label="Дистанция" value={fmtDist(stats.distance)} accent={primary} />
+              <Stat label="Ср. темп"  value={stats.avgPace + ' /км'} accent={primary} />
+              <Stat label="Скорость"  value={stats.currentSpeed.toFixed(1) + ' км/ч'} accent={primary} />
+            </div>
+          </div>
         )}
 
         {/* Controls */}
