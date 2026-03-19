@@ -661,7 +661,6 @@ function ActivityDetailModal({
 
 function ActivityWizard({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
-  const [mode, setMode] = useState<'screenshot' | 'manual' | null>(null);
 
   // Step 1/2
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
@@ -693,7 +692,6 @@ function ActivityWizard({ onClose, onSuccess }: { onClose: () => void; onSuccess
 
   const handleScreenshotFile = async (file: File) => {
     setOcrRunning(true);
-    setMode('screenshot');
     setError('');
     try {
       const [ocrResult, uploadRes] = await Promise.allSettled([
@@ -709,16 +707,28 @@ function ActivityWizard({ onClose, onSuccess }: { onClose: () => void; onSuccess
         if (dur.hours) setHours(dur.hours);
         if (dur.minutes) setMinutes(dur.minutes);
         if (dur.seconds) setSeconds(dur.seconds);
+
         const allText = text.replace(/\n/g, ' ');
-        const speedMatch = allText.match(/(\d{1,4}[.,]\d{1,3})\s*(?:км\s*\/\s*ч|km\s*\/\s*h|кмч)/i)
-          || allText.match(/(\d{1,4})\s*(?:км\s*\/\s*ч|km\s*\/\s*h|кмч)/i);
+
+        // Speed: handle uppercase Cyrillic (КМ/Ч, Км/ч etc.)
+        const speedMatch = allText.match(/(\d{1,4}[.,]\d{1,3})\s*[кКkK][мМmM]\s*\/\s*[чЧhH]/i)
+          || allText.match(/(\d{1,4})\s*[кКkK][мМmM]\s*\/\s*[чЧhH]/i)
+          || allText.match(/(\d{1,4}[.,]\d{1,3})\s*(?:кмч|kmh)/i)
+          || allText.match(/(\d{1,4})\s*(?:кмч|kmh)/i);
         const spd = speedMatch ? parseFloat(speedMatch[1].replace(',', '.')) : 0;
+
         if (spd > 0) {
           const h = parseInt(dur.hours || '0', 10);
           const m = parseInt(dur.minutes || '0', 10);
           const s = parseInt(dur.seconds || '0', 10);
           const totalHours = h + m / 60 + s / 3600;
           if (totalHours > 0) setDistance((spd * totalHours).toFixed(2));
+        }
+
+        // Fallback: parse distance directly from text (e.g. "25,06км")
+        if (!spd) {
+          const directDist = parseDistanceFromText(text);
+          if (directDist) setDistance(directDist);
         }
       }
       setStep(2);
@@ -878,22 +888,6 @@ function ActivityWizard({ onClose, onSuccess }: { onClose: () => void; onSuccess
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) handleScreenshotFile(f); }} />
             </label>
 
-            <button
-              onClick={() => { setMode('manual'); setStep(2); }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 16,
-                padding: '18px 20px', borderRadius: 14,
-                border: '1.5px solid #e0e0e0', background: '#fff',
-                cursor: 'pointer', textAlign: 'left', width: '100%',
-              }}
-            >
-              <span style={{ fontSize: 32, flexShrink: 0 }}>✏️</span>
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#242424' }}>Ввести вручную</div>
-                <div style={{ fontSize: 13, color: '#999', marginTop: 2 }}>Дистанция, время, вид спорта</div>
-              </div>
-            </button>
-
             <label style={{
               display: 'flex', alignItems: 'center', gap: 16,
               padding: '18px 20px', borderRadius: 14,
@@ -979,7 +973,7 @@ function ActivityWizard({ onClose, onSuccess }: { onClose: () => void; onSuccess
             {error && <div style={{ color: '#d32f2f', fontSize: 13, marginBottom: 12 }}>{error}</div>}
 
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => { setError(''); setStep(1); setScreenshotUrl(null); setMode(null); }} style={outlineBtn}>
+              <button onClick={() => { setError(''); setStep(1); setScreenshotUrl(null); }} style={outlineBtn}>
                 Назад
               </button>
               <button onClick={() => { setError(''); if (validateStep2()) setStep(3); }} style={primaryBtn}>
