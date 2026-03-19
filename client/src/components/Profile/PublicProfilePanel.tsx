@@ -64,6 +64,7 @@ interface ActivityItem {
   avgPace?: number;
   avgSpeed?: number;
   startedAt: string;
+  imageUrl?: string;
   photos?: ActivityPhoto[];
 }
 
@@ -493,7 +494,7 @@ export function PublicProfilePanel({ userId, onClose }: PublicProfilePanelProps)
                     return (
                       <div
                         key={act.id}
-                        onClick={() => { if (photos.length > 0) setSelectedActivity(act); }}
+                        onClick={() => setSelectedActivity(act)}
                         style={{
                           display: 'flex',
                           alignItems: 'center',
@@ -501,8 +502,11 @@ export function PublicProfilePanel({ userId, onClose }: PublicProfilePanelProps)
                           padding: '10px 12px',
                           background: '#f9f9f9',
                           borderRadius: 12,
-                          cursor: photos.length > 0 ? 'pointer' : 'default',
+                          cursor: 'pointer',
+                          transition: 'background 0.15s',
                         }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = '#f0f0f0'; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = '#f9f9f9'; }}
                       >
                         <span style={{ fontSize: 20 }}>{SPORT_ICONS[act.sport] ?? '🏃'}</span>
                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -669,10 +673,46 @@ export function PublicProfilePanel({ userId, onClose }: PublicProfilePanelProps)
                   {selectedActivity.title ?? SPORT_LABELS[selectedActivity.sport] ?? 'Тренировка'}
                 </div>
                 <div style={{ fontSize: 13, color: '#888' }}>
-                  {(selectedActivity.distance ?? 0).toFixed(1)} км · {formatDuration(selectedActivity.duration ?? 0)} · {formatTimeAgo(selectedActivity.startedAt)}
+                  {formatTimeAgo(selectedActivity.startedAt)}
                 </div>
               </div>
             </div>
+            {/* Stats */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 16 }}>
+              {[
+                { label: 'Дистанция', value: `${(selectedActivity.distance ?? 0).toFixed(1)} км` },
+                { label: 'Время', value: formatDuration(selectedActivity.duration ?? 0) },
+                {
+                  label: selectedActivity.sport === 'RUNNING' || selectedActivity.sport === 'WALKING' ? 'Темп' : 'Скорость',
+                  value: (() => {
+                    const d = selectedActivity.distance ?? 0;
+                    const t = selectedActivity.duration ?? 0;
+                    if (selectedActivity.sport === 'RUNNING' || selectedActivity.sport === 'WALKING') {
+                      if (d <= 0) return '—';
+                      const totalMin = t / d / 60;
+                      const m = Math.floor(totalMin);
+                      const s = Math.round((totalMin - m) * 60);
+                      return `${m}:${String(s).padStart(2, '0')} мин/км`;
+                    }
+                    return t > 0 ? `${((d / t) * 3600).toFixed(1)} км/ч` : '—';
+                  })(),
+                },
+              ].map(({ label, value }) => (
+                <div key={label} style={{ background: '#f5f5f5', borderRadius: 10, padding: '10px 8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#242424' }}>{value}</div>
+                  <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>{label}</div>
+                </div>
+              ))}
+            </div>
+            {/* Screenshot */}
+            {selectedActivity.imageUrl && (
+              <img
+                src={selectedActivity.imageUrl}
+                alt="Скриншот"
+                style={{ width: '100%', borderRadius: 12, objectFit: 'contain', maxHeight: 360, background: '#f5f5f5', marginBottom: 12 }}
+              />
+            )}
+            {/* Photos */}
             {(selectedActivity.photos ?? []).length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {(selectedActivity.photos ?? []).map((photo) => (

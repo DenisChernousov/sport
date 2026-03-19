@@ -408,6 +408,8 @@ router.get('/:id/leaderboard', async (req: AuthRequest, res: Response) => {
               avatarUrl: true,
               firstName: true,
               lastName: true,
+              city: true,
+              level: true,
             },
           },
         },

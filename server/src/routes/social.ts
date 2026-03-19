@@ -26,8 +26,23 @@ router.post('/users/:id/follow', authMiddleware, async (req: AuthRequest, res: R
       await prisma.follow.delete({ where: { id: existing.id } });
       res.json({ isFollowing: false });
     } else {
-      await prisma.follow.create({ data: { followerId, followingId } });
-      res.json({ isFollowing: true });
+      const [, follower, reverseFollow] = await Promise.all([
+        prisma.follow.create({ data: { followerId, followingId } }),
+        prisma.user.findUnique({ where: { id: followerId }, select: { username: true } }),
+        prisma.follow.findUnique({ where: { followerId_followingId: { followerId: followingId, followingId: followerId } } }),
+      ]);
+      const isFriend = !!reverseFollow;
+      await prisma.notification.create({
+        data: {
+          userId: followingId,
+          type: 'follow',
+          fromUserId: followerId,
+          text: isFriend
+            ? `${follower?.username ?? 'Кто-то'} теперь ваш друг!`
+            : `${follower?.username ?? 'Кто-то'} подписался на вас`,
+        },
+      }).catch(() => {});
+      res.json({ isFollowing: true, isFriend });
     }
   } catch (err) {
     console.error('Follow toggle error:', err);

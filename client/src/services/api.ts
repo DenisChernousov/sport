@@ -193,8 +193,8 @@ export const api = {
     leave(id: string) {
       return request<void>(`/events/${id}/leave`, { method: 'POST' });
     },
-    leaderboard(id: string) {
-      return request<LeaderboardEntry[]>(`/events/${id}/leaderboard`);
+    leaderboard(id: string, params?: { page?: number; limit?: number }) {
+      return request<{ leaderboard: { rank: number; user: { id: string; username: string; avatarUrl?: string; firstName?: string; lastName?: string; city?: string; level: number }; totalDistance: number; totalTime: number; isFinished: boolean }[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>(`/events/${id}/leaderboard${toQuery(params)}`);
     },
     downloadDiploma(eventId: string) {
       const token = localStorage.getItem('accessToken');
@@ -379,7 +379,7 @@ export const api = {
 
   social: {
     follow(userId: string) {
-      return request<{ isFollowing: boolean }>(`/users/${userId}/follow`, { method: 'POST' });
+      return request<{ isFollowing: boolean; isFriend?: boolean }>(`/users/${userId}/follow`, { method: 'POST' });
     },
     followers(userId: string) {
       return request<{ id: string; username: string; avatarUrl?: string; city?: string; level: number; totalDistance: number }[]>(
@@ -426,6 +426,32 @@ export const api = {
     },
     deletePlanned(id: string) {
       return request<void>(`/planned/${id}`, { method: 'DELETE' });
+    },
+  },
+
+  messages: {
+    conversations() {
+      return request<{ user: { id: string; username: string; avatarUrl?: string; level: number; city?: string }; isFriend: boolean; isFollowing: boolean; isFollower: boolean; lastText: string; lastAt: string; unread: number }[]>('/messages/conversations');
+    },
+    history(userId: string) {
+      return request<{ id: string; senderId: string; receiverId: string; text: string; isRead: boolean; createdAt: string }[]>(`/messages/${userId}`);
+    },
+    send(userId: string, text: string) {
+      return request<{ id: string; senderId: string; receiverId: string; text: string; createdAt: string }>(`/messages/${userId}`, {
+        method: 'POST', body: JSON.stringify({ text }),
+      });
+    },
+  },
+
+  notifications: {
+    list() {
+      return request<{ notifications: { id: string; type: string; text: string; isRead: boolean; createdAt: string; entityId?: string; fromUser?: { id: string; username: string; avatarUrl?: string } }[]; unreadCount: number }>('/notifications');
+    },
+    readAll() {
+      return request<{ ok: boolean }>('/notifications/read-all', { method: 'POST' });
+    },
+    read(id: string) {
+      return request<{ ok: boolean }>(`/notifications/${id}/read`, { method: 'POST' });
     },
   },
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Event, SportType, EventType, EventStatus } from '@/types';
 import { api } from '@/services/api';
@@ -51,8 +51,234 @@ function StatBox({ value, label, color }: { value: string | number; label: strin
   );
 }
 
-function EventCard({ event, onJoin, onLeave, joining }: {
-  event: Event; onJoin: (id: string) => void; onLeave: (id: string) => void; joining: string | null;
+type Participant = {
+  rank: number;
+  user: { id: string; username: string; avatarUrl?: string; firstName?: string; lastName?: string; city?: string; level: number };
+  totalDistance: number;
+  totalTime: number;
+  isFinished: boolean;
+};
+
+function formatDur(sec: number) {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  if (h > 0) return `${h}ч ${m}м`;
+  return `${m}м`;
+}
+
+function EventParticipantsModal({ event, currentUserId, onClose }: {
+  event: Event;
+  currentUserId?: string;
+  onClose: () => void;
+}) {
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [cityFilter, setCityFilter] = useState('');
+  const [followState, setFollowState] = useState<Record<string, { isFollowing: boolean; isFriend: boolean }>>({});
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  useEffect(() => {
+    setLoading(true);
+    api.events.leaderboard(event.id, { page, limit: 20 })
+      .then(res => {
+        setParticipants(res.leaderboard);
+        setTotalPages(res.pagination.totalPages);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [event.id, page]);
+
+  const cities = Array.from(new Set(participants.map(p => p.user.city).filter(Boolean))) as string[];
+
+  const filtered = cityFilter
+    ? participants.filter(p => p.user.city === cityFilter)
+    : participants;
+
+  const handleFollow = async (userId: string) => {
+    try {
+      const res = await api.social.follow(userId);
+      setFollowState(prev => ({
+        ...prev,
+        [userId]: { isFollowing: res.isFollowing, isFriend: res.isFriend ?? false },
+      }));
+    } catch {}
+  };
+
+  const openChat = (userId: string) => {
+    window.dispatchEvent(new CustomEvent('open-messages', { detail: { userId } }));
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+        zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: '#fff', borderRadius: 20, width: '100%', maxWidth: 560,
+          maxHeight: '88vh', display: 'flex', flexDirection: 'column',
+          boxShadow: '0 8px 40px rgba(0,0,0,0.2)', overflow: 'hidden',
+        }}
+      >
+        {/* Header */}
+        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #f0f0f0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: '#242424' }}>Участники</div>
+              <div style={{ fontSize: 13, color: '#999', marginTop: 2 }}>{event.title}</div>
+            </div>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#aaa', padding: '4px 8px' }}>✕</button>
+          </div>
+          {/* City filter */}
+          {cities.length > 0 && (
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              <button
+                onClick={() => setCityFilter('')}
+                style={{
+                  padding: '4px 12px', borderRadius: 14, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                  border: cityFilter === '' ? '2px solid #fc4c02' : '1px solid #e0e0e0',
+                  background: cityFilter === '' ? '#fff4ef' : '#f5f5f5',
+                  color: cityFilter === '' ? '#fc4c02' : '#666',
+                }}
+              >
+                Все города
+              </button>
+              {cities.map(c => (
+                <button
+                  key={c}
+                  onClick={() => setCityFilter(c === cityFilter ? '' : c)}
+                  style={{
+                    padding: '4px 12px', borderRadius: 14, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                    border: cityFilter === c ? '2px solid #fc4c02' : '1px solid #e0e0e0',
+                    background: cityFilter === c ? '#fff4ef' : '#f5f5f5',
+                    color: cityFilter === c ? '#fc4c02' : '#666',
+                  }}
+                >
+                  📍 {c}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* List */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>Загрузка...</div>
+          ) : filtered.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>Нет участников</div>
+          ) : filtered.map(p => {
+            const isMe = p.user.id === currentUserId;
+            const isFollowed = following[p.user.id];
+            return (
+              <div key={p.user.id} style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '10px 24px',
+                borderBottom: '1px solid #f8f8f8',
+                background: isMe ? '#fff8f5' : '#fff',
+              }}>
+                {/* Rank */}
+                <div style={{
+                  width: 28, textAlign: 'center', fontSize: 13, fontWeight: 700,
+                  color: p.rank === 1 ? '#f59e0b' : p.rank === 2 ? '#94a3b8' : p.rank === 3 ? '#b45309' : '#bbb',
+                  flexShrink: 0,
+                }}>
+                  {p.rank <= 3 ? ['🥇','🥈','🥉'][p.rank - 1] : `#${p.rank}`}
+                </div>
+                {/* Avatar */}
+                <div style={{
+                  width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
+                  background: p.user.avatarUrl ? 'none' : 'linear-gradient(135deg, #fc4c02, #ff6b2b)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 16, color: '#fff', fontWeight: 700, overflow: 'hidden',
+                }}>
+                  {p.user.avatarUrl
+                    ? <img src={p.user.avatarUrl} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: '50%' }} />
+                    : (p.user.username[0] ?? '?').toUpperCase()}
+                </div>
+                {/* Info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#242424', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {p.user.username}
+                    {isMe && <span style={{ fontSize: 11, color: '#fc4c02', fontWeight: 600 }}>Вы</span>}
+                    {p.isFinished && <span style={{ fontSize: 11, color: '#1a7f37', fontWeight: 600 }}>✓</span>}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#999', marginTop: 2, display: 'flex', gap: 8 }}>
+                    {p.user.city && <span>📍 {p.user.city}</span>}
+                    <span>Ур. {p.user.level}</span>
+                  </div>
+                </div>
+                {/* Stats */}
+                <div style={{ textAlign: 'right', flexShrink: 0, marginRight: 8 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#fc4c02' }}>{p.totalDistance.toFixed(1)} км</div>
+                  {p.totalTime > 0 && <div style={{ fontSize: 11, color: '#999' }}>{formatDur(p.totalTime)}</div>}
+                </div>
+                {/* Buttons */}
+                {!isMe && currentUserId && (() => {
+                  const fs = followState[p.user.id];
+                  const isFollowing = fs?.isFollowing ?? false;
+                  const isFriend = fs?.isFriend ?? false;
+                  return (
+                    <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                      {isFriend && (
+                        <button
+                          onClick={() => openChat(p.user.id)}
+                          style={{
+                            padding: '5px 10px', borderRadius: 16, fontSize: 12, fontWeight: 700,
+                            cursor: 'pointer', border: '1.5px solid #0061ff',
+                            background: '#eef4ff', color: '#0061ff',
+                          }}
+                        >
+                          💬
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleFollow(p.user.id)}
+                        style={{
+                          padding: '5px 12px', borderRadius: 16, fontSize: 12, fontWeight: 700,
+                          cursor: 'pointer',
+                          border: isFriend ? '1.5px solid #1a7f37' : isFollowing ? '1.5px solid #e0e0e0' : '1.5px solid #fc4c02',
+                          background: isFriend ? '#f0fdf4' : isFollowing ? '#f5f5f5' : '#fc4c02',
+                          color: isFriend ? '#1a7f37' : isFollowing ? '#999' : '#fff',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        {isFriend ? '🤝 Друзья' : isFollowing ? 'Подписан' : '+ Подписаться'}
+                      </button>
+                    </div>
+                  );
+                })()}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div style={{ padding: '12px 24px', borderTop: '1px solid #f0f0f0', display: 'flex', gap: 8, justifyContent: 'center' }}>
+            <button disabled={page <= 1} onClick={() => setPage(p => p - 1)}
+              style={{ padding: '6px 16px', borderRadius: 8, border: '1px solid #e0e0e0', background: '#fff', cursor: page <= 1 ? 'not-allowed' : 'pointer', opacity: page <= 1 ? 0.4 : 1, fontSize: 13 }}>
+              ←
+            </button>
+            <span style={{ padding: '6px 12px', fontSize: 13, color: '#666' }}>{page} / {totalPages}</span>
+            <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}
+              style={{ padding: '6px 16px', borderRadius: 8, border: '1px solid #e0e0e0', background: '#fff', cursor: page >= totalPages ? 'not-allowed' : 'pointer', opacity: page >= totalPages ? 0.4 : 1, fontSize: 13 }}>
+              →
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function EventCard({ event, onJoin, onLeave, joining, onShowParticipants }: {
+  event: Event; onJoin: (id: string) => void; onLeave: (id: string) => void; joining: string | null; onShowParticipants: (event: Event) => void;
 }) {
   const s = SPORT[event.sport];
   const st = STATUS[event.status] ?? STATUS.FINISHED;
@@ -167,7 +393,13 @@ function EventCard({ event, onJoin, onLeave, joining }: {
         {/* Stats */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 24, padding: '16px 0', borderTop: '1px solid #f0f0f0', borderBottom: '1px solid #f0f0f0', marginBottom: 16 }}>
           {dist != null && dist > 0 && <StatBox value={dist} label="км" />}
-          <StatBox value={pCount} label="участников" />
+          <button
+            onClick={() => onShowParticipants(event)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'center' }}
+            title="Посмотреть участников"
+          >
+            <StatBox value={pCount} label="участников" color="#0061ff" />
+          </button>
           <StatBox value={event.xpReward} label="XP" color="#fc4c02" />
         </div>
 
@@ -259,7 +491,7 @@ function EventCard({ event, onJoin, onLeave, joining }: {
 }
 
 export default function EventsPanel() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState<string | null>(null);
@@ -267,6 +499,7 @@ export default function EventsPanel() {
   const [type, setType] = useState<EventType | null>(null);
   const [status, setStatus] = useState<EventStatus | null>(null);
   const [medalShopEvent, setMedalShopEvent] = useState<Event | null>(null);
+  const [participantsEvent, setParticipantsEvent] = useState<Event | null>(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isTablet, setIsTablet] = useState(window.innerWidth >= 768 && window.innerWidth < 1024);
   const [heroSettings, setHeroSettings] = useState<Record<string, string>>({});
@@ -527,9 +760,17 @@ export default function EventsPanel() {
           <motion.div
             style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(320px, 1fr))', gap: isMobile ? 16 : 24 }}
             initial="hidden" animate="visible" variants={{ visible: { transition: { staggerChildren: 0.04 } } }}>
-            {events.map(e => <EventCard key={e.id} event={e} onJoin={openMedalShop} onLeave={leave} joining={joining} />)}
+            {events.map(e => <EventCard key={e.id} event={e} onJoin={openMedalShop} onLeave={leave} joining={joining} onShowParticipants={setParticipantsEvent} />)}
           </motion.div>
         </AnimatePresence>
+      )}
+
+      {participantsEvent && (
+        <EventParticipantsModal
+          event={participantsEvent}
+          currentUserId={isAuthenticated ? (user as any)?.id : undefined}
+          onClose={() => setParticipantsEvent(null)}
+        />
       )}
 
       {medalShopEvent && (

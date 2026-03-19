@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { api } from '@/services/api';
 
-export type TabId = 'feed' | 'events' | 'activities' | 'teams' | 'leaderboard' | 'community' | 'profile' | 'admin';
+export type TabId = 'feed' | 'events' | 'activities' | 'teams' | 'leaderboard' | 'community' | 'messages' | 'profile' | 'admin';
 
 const tabs: { id: TabId; label: string; short: string; icon: string; adminOnly?: boolean; authOnly?: boolean }[] = [
   { id: 'feed', label: 'Лента', short: 'Лент.', icon: '📰' },
@@ -10,6 +11,7 @@ const tabs: { id: TabId; label: string; short: string; icon: string; adminOnly?:
   { id: 'teams', label: 'Клубы', short: 'Клуб.', icon: '👥' },
   { id: 'leaderboard', label: 'Рейтинг', short: 'Рейт.', icon: '📊' },
   { id: 'community', label: 'Сообщество', short: 'Сооб.', icon: '🌍' },
+  { id: 'messages', label: 'Сообщения', short: 'Сообщ.', icon: '💬', authOnly: true },
   { id: 'profile', label: 'Профиль', short: 'Проф.', icon: '👤', authOnly: true },
   { id: 'admin', label: 'Админ', short: 'Адм.', icon: '⚙️', adminOnly: true },
 ];
@@ -25,6 +27,10 @@ export function Header({ activeTab, onTabChange, onLoginClick, onRegisterClick }
   const { user, isAuthenticated, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [w, setW] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState<{ id: string; type: string; text: string; isRead: boolean; createdAt: string; fromUser?: { id: string; username: string; avatarUrl?: string } }[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onResize = () => setW(window.innerWidth);
@@ -42,6 +48,50 @@ export function Header({ activeTab, onTabChange, onLoginClick, onRegisterClick }
   });
 
   const go = useCallback((id: TabId) => { onTabChange(id); setMobileOpen(false); }, [onTabChange]);
+
+  const loadNotifications = useCallback(async () => {
+    if (!isAuthenticated) return;
+    try {
+      const res = await api.notifications.list();
+      setNotifications(res.notifications);
+      setUnreadCount(res.unreadCount);
+    } catch {}
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    loadNotifications();
+    const interval = setInterval(loadNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [loadNotifications]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
+      }
+    };
+    if (notifOpen) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [notifOpen]);
+
+  const handleOpenNotif = async () => {
+    setNotifOpen(o => !o);
+    if (!notifOpen && unreadCount > 0) {
+      try {
+        await api.notifications.readAll();
+        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+        setUnreadCount(0);
+      } catch {}
+    }
+  };
+
+  function timeAgo(dateStr: string) {
+    const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+    if (diff < 60) return 'только что';
+    if (diff < 3600) return `${Math.floor(diff / 60)} мин назад`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)} ч назад`;
+    return `${Math.floor(diff / 86400)} дн назад`;
+  }
 
   return (
     <header style={{
@@ -111,6 +161,80 @@ export function Header({ activeTab, onTabChange, onLoginClick, onRegisterClick }
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
             {isAuthenticated && user ? (
               <>
+                {/* Notification Bell */}
+                <div ref={notifRef} style={{ position: 'relative' }}>
+                  <button
+                    onClick={handleOpenNotif}
+                    style={{
+                      width: 36, height: 36, borderRadius: 10, border: 'none',
+                      background: notifOpen ? '#fff4ef' : 'none',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center',
+                      justifyContent: 'center', position: 'relative', flexShrink: 0,
+                    }}
+                    title="Уведомления"
+                  >
+                    <svg style={{ width: 20, height: 20, color: '#666' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                    {unreadCount > 0 && (
+                      <span style={{
+                        position: 'absolute', top: 4, right: 4,
+                        width: 16, height: 16, borderRadius: '50%',
+                        background: '#fc4c02', color: '#fff',
+                        fontSize: 10, fontWeight: 800,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Dropdown */}
+                  {notifOpen && (
+                    <div style={{
+                      position: 'absolute', top: 44, right: 0,
+                      width: 320, maxHeight: 400, overflowY: 'auto',
+                      background: '#fff', borderRadius: 14,
+                      boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+                      border: '1px solid #f0f0f0', zIndex: 1000,
+                    }}>
+                      <div style={{ padding: '12px 16px', borderBottom: '1px solid #f0f0f0', fontSize: 14, fontWeight: 700, color: '#242424' }}>
+                        Уведомления
+                      </div>
+                      {notifications.length === 0 ? (
+                        <div style={{ padding: '24px 16px', textAlign: 'center', color: '#999', fontSize: 13 }}>
+                          Нет уведомлений
+                        </div>
+                      ) : notifications.map(n => (
+                        <div key={n.id} style={{
+                          display: 'flex', alignItems: 'flex-start', gap: 10,
+                          padding: '10px 16px',
+                          background: n.isRead ? '#fff' : '#fff8f5',
+                          borderBottom: '1px solid #f8f8f8',
+                        }}>
+                          <div style={{
+                            width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+                            background: n.fromUser?.avatarUrl ? 'none' : 'linear-gradient(135deg, #fc4c02, #ff6b2b)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 14, color: '#fff', fontWeight: 700, overflow: 'hidden',
+                          }}>
+                            {n.fromUser?.avatarUrl
+                              ? <img src={n.fromUser.avatarUrl} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: '50%' }} />
+                              : (n.fromUser?.username?.[0] ?? '?').toUpperCase()}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13, color: '#242424', lineHeight: 1.4 }}>{n.text}</div>
+                            <div style={{ fontSize: 11, color: '#aaa', marginTop: 3 }}>{timeAgo(n.createdAt)}</div>
+                          </div>
+                          {!n.isRead && (
+                            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#fc4c02', flexShrink: 0, marginTop: 4 }} />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <button onClick={() => go('profile')} style={{
                   display: 'flex', alignItems: 'center', gap: 8,
                   background: 'none', border: 'none', cursor: 'pointer', padding: 4,

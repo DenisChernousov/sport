@@ -1132,6 +1132,12 @@ export default function ActivitiesPanel() {
     loadActivities();
   }, [loadActivities]);
 
+  useEffect(() => {
+    const h = () => setWizardOpen(true);
+    window.addEventListener('open-add-activity', h);
+    return () => window.removeEventListener('open-add-activity', h);
+  }, []);
+
   // Load likes for visible activities
   useEffect(() => {
     if (activities.length === 0) return;

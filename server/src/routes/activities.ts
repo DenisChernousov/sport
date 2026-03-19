@@ -379,6 +379,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
           calories: true,
           startLat: true,
           startLng: true,
+          imageUrl: true,
           stravaId: true,
           isManual: true,
           startedAt: true,
