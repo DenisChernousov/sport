@@ -57,6 +57,30 @@ export function useGpsTracker() {
   // All mutable state in refs to avoid stale closures
   const watchIdRef = useRef<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+
+  const acquireWakeLock = useCallback(async () => {
+    if (!('wakeLock' in navigator)) return;
+    try {
+      wakeLockRef.current = await navigator.wakeLock.request('screen');
+    } catch { /* ignore */ }
+  }, []);
+
+  const releaseWakeLock = useCallback(() => {
+    wakeLockRef.current?.release().catch(() => {});
+    wakeLockRef.current = null;
+  }, []);
+
+  // Re-acquire wake lock when page becomes visible again (e.g. user unlocks phone)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && stateRef.current === 'tracking') {
+        acquireWakeLock();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [acquireWakeLock]);
   const pointsRef = useRef<TrackPoint[]>([]);
   const startTimeRef = useRef<number>(0);
   const pausedDurationRef = useRef<number>(0);
@@ -198,8 +222,9 @@ export function useGpsTracker() {
       return;
     }
 
+    acquireWakeLock();
     timerRef.current = setInterval(refreshStats, 1000);
-  }, [startWatch, refreshStats]);
+  }, [startWatch, refreshStats, acquireWakeLock]);
 
   const pause = useCallback(() => {
     pauseStartRef.current = Date.now();
@@ -210,16 +235,18 @@ export function useGpsTracker() {
       watchIdRef.current = null;
     }
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    releaseWakeLock();
     refreshStats();
-  }, [refreshStats]);
+  }, [refreshStats, releaseWakeLock]);
 
   const resume = useCallback(() => {
     pausedDurationRef.current += Date.now() - pauseStartRef.current;
     stateRef.current = 'tracking';
     setState('tracking');
     startWatch();
+    acquireWakeLock();
     timerRef.current = setInterval(refreshStats, 1000);
-  }, [startWatch, refreshStats]);
+  }, [startWatch, refreshStats, acquireWakeLock]);
 
   const stop = useCallback((): { points: TrackPoint[]; stats: TrackerStats } => {
     pauseStartRef.current = Date.now();
@@ -229,6 +256,7 @@ export function useGpsTracker() {
       watchIdRef.current = null;
     }
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    releaseWakeLock();
     setState('finished');
     const finalStats = computeStats(pointsRef.current, getActiveSecs());
     setStats(finalStats);
