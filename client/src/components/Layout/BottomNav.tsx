@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import type { TabId } from './Header';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
+import { usePwaInstall } from '@/hooks/usePwaInstall';
 
 interface Props {
   activeTab: TabId;
@@ -12,6 +14,8 @@ interface Props {
 export function BottomNav({ activeTab, onTabChange, onAddActivity, unreadMessages = 0 }: Props) {
   const { isAuthenticated } = useAuth();
   const { preset } = useTheme();
+  const { canInstall, install } = usePwaInstall();
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   const ITEMS = [
     { id: 'feed' as TabId, icon: (active: boolean, primary: string) => (
@@ -38,6 +42,35 @@ export function BottomNav({ activeTab, onTabChange, onAddActivity, unreadMessage
   ];
 
   return (
+    <>
+      {canInstall && !bannerDismissed && (
+        <div style={{
+          position: 'fixed', bottom: 60, left: 0, right: 0, zIndex: 99,
+          background: preset.secondary,
+          borderTop: `1px solid ${preset.primary}44`,
+          padding: '10px 14px',
+          display: 'flex', alignItems: 'center', gap: 10,
+        }}>
+          <div style={{ fontSize: 22, flexShrink: 0 }}>📱</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: preset.light }}>Установить приложение</div>
+            <div style={{ fontSize: 11, color: '#8aadcc' }}>Работает без интернета, быстрее</div>
+          </div>
+          <button onClick={install} style={{
+            padding: '7px 14px', borderRadius: 10, border: 'none',
+            background: preset.primary, color: '#fff',
+            fontSize: 13, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
+          }}>
+            Установить
+          </button>
+          <button onClick={() => setBannerDismissed(true)} style={{
+            width: 28, height: 28, borderRadius: 8, border: 'none',
+            background: 'rgba(255,255,255,0.1)', color: '#8aadcc',
+            fontSize: 16, cursor: 'pointer', flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>✕</button>
+        </div>
+      )}
     <nav style={{
       position: 'fixed', bottom: 0, left: 0, right: 0, height: 60,
       background: preset.dark,
@@ -101,5 +134,6 @@ export function BottomNav({ activeTab, onTabChange, onAddActivity, unreadMessage
         );
       })}
     </nav>
+    </>
   );
 }
