@@ -73,11 +73,11 @@ export function TopBar({ onTabChange, onLoginClick, onRegisterClick }: Props) {
     searchTimer.current = setTimeout(async () => {
       try {
         const [users, events] = await Promise.all([
-          api.community.searchUsers({ q }).catch(() => ({ users: [] })),
-          api.events.list({ limit: 3 } as Parameters<typeof api.events.list>[0]).catch(() => ({ items: [] })),
+          api.social.searchUsers({ q }).catch(() => []),
+          api.events.list({ limit: 10 } as Parameters<typeof api.events.list>[0]).catch(() => ({ items: [] })),
         ]);
         const results: SearchResult[] = [
-          ...(users.users ?? []).slice(0, 4).map((u: { id: string; username: string; city?: string; avatarUrl?: string }) => ({
+          ...(Array.isArray(users) ? users : []).slice(0, 4).map((u: { id: string; username: string; city?: string; avatarUrl?: string }) => ({
             type: 'user' as const,
             id: u.id,
             title: u.username,

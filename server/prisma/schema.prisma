@@ -98,6 +98,8 @@ model User {
   sentNotifications Notification[]  @relation("NotificationFrom")
   sentDMs          DirectMessage[]  @relation("DMSender")
   receivedDMs      DirectMessage[]  @relation("DMReceiver")
+  ownedGroups      Group[]          @relation("GroupOwner")
+  groupMemberships GroupMember[]
 
   @@index([totalDistance])
   @@index([xp])
@@ -451,6 +453,37 @@ model Notification {
 
   @@index([userId, isRead])
   @@index([userId, createdAt])
+}
+
+// ─── Groups / Communities ────────────────────────────────
+
+model Group {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  avatarUrl   String?
+  type        String        @default("PUBLIC") // PUBLIC | PRIVATE
+  sport       String?
+  ownerId     String
+  owner       User          @relation("GroupOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members     GroupMember[]
+  createdAt   DateTime      @default(now())
+
+  @@index([ownerId])
+  @@index([type])
+}
+
+model GroupMember {
+  id       String   @id @default(cuid())
+  groupId  String
+  group    Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role     String   @default("MEMBER") // MEMBER | ADMIN
+  joinedAt DateTime @default(now())
+
+  @@unique([groupId, userId])
+  @@index([userId])
 }
 
 // ─── Chat ────────────────────────────────────────────────
