@@ -396,6 +396,11 @@ export const api = {
         `/users/${userId}/follow-status`
       );
     },
+    trendingActivities() {
+      return request<(Activity & { user: { id: string; username: string; avatarUrl?: string; level: number }; photos: { id: string; imageUrl: string }[]; _count: { likes: number }; isLiked: boolean })[]>(
+        '/feed/trending'
+      );
+    },
     publicFeed(params?: { page?: number; limit?: number }) {
       return request<PaginatedResponse<Activity & { user: { id: string; username: string; avatarUrl?: string; level: number }; photos: { id: string; imageUrl: string }[]; _count: { likes: number }; isLiked: boolean }>>(
         `/feed/public${toQuery(params)}`

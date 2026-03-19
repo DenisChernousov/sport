@@ -56,6 +56,7 @@ function formatPace(avgPace?: number): string {
 export default function FeedPanel() {
   const { isAuthenticated } = useAuth();
   const [items, setItems] = useState<FeedItem[]>([]);
+  const [trending, setTrending] = useState<FeedItem[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -67,6 +68,12 @@ export default function FeedPanel() {
     const h = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', h);
     return () => window.removeEventListener('resize', h);
+  }, []);
+
+  useEffect(() => {
+    api.social.trendingActivities()
+      .then(data => setTrending(data as FeedItem[]))
+      .catch(() => {});
   }, []);
 
   const loadFeed = useCallback(async (p: number, append: boolean) => {
@@ -153,6 +160,57 @@ export default function FeedPanel() {
       <h2 style={{ fontSize: 24, fontWeight: 800, color: '#242424', margin: 0 }}>
         {'📰'} Лента активностей
       </h2>
+
+      {/* Trending section */}
+      {trending.length > 0 && (
+        <div style={{
+          background: 'linear-gradient(135deg, #fff8f5, #fff)',
+          border: '1px solid #fde0d0',
+          borderRadius: 16,
+          padding: isMobile ? '14px 14px 10px' : '16px 20px 12px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <span style={{ fontSize: 18 }}>🔥</span>
+            <span style={{ fontSize: 15, fontWeight: 800, color: '#242424' }}>Тренды недели</span>
+            <span style={{ fontSize: 11, color: '#aaa', marginLeft: 4 }}>топ по лайкам</span>
+          </div>
+          <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
+            {trending.map((t, idx) => {
+              const sp = SPORT[t.sport] ?? SPORT.RUNNING;
+              return (
+                <div key={t.id} style={{
+                  minWidth: isMobile ? 140 : 160, maxWidth: isMobile ? 140 : 160,
+                  background: '#fff',
+                  border: `1px solid ${sp.color}22`,
+                  borderRadius: 12,
+                  padding: '10px 12px',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                    <span style={{
+                      fontSize: 11, fontWeight: 800, color: sp.color,
+                      background: sp.bg, borderRadius: 6, padding: '2px 6px',
+                    }}>#{idx + 1} {sp.icon}</span>
+                    <span style={{ fontSize: 11, color: '#fc4c02', fontWeight: 700 }}>
+                      ❤️ {t._count.likes}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#242424', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {t.title ?? sp.label} {(t.distance ?? 0).toFixed(1)} км
+                  </div>
+                  <div
+                    onClick={() => window.dispatchEvent(new CustomEvent('open-profile', { detail: { userId: t.user.id } }))}
+                    style={{ fontSize: 11, color: '#aaa', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}
+                  >
+                    {t.user.username}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {items.map(item => {
         const sport = SPORT[item.sport] ?? SPORT.RUNNING;

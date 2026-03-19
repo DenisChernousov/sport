@@ -176,6 +176,45 @@ router.get('/feed', authMiddleware, async (req: AuthRequest, res: Response) => {
   }
 });
 
+// ─── Trending activities (top 5 by likes, last 7 days) ──
+
+router.get('/feed/trending', optionalAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    const items = await prisma.activity.findMany({
+      where: { startedAt: { gte: since } },
+      include: {
+        user: {
+          select: { id: true, username: true, avatarUrl: true, level: true },
+        },
+        photos: {
+          select: { id: true, imageUrl: true },
+          take: 1,
+          orderBy: { createdAt: 'asc' },
+        },
+        _count: { select: { likes: true } },
+      },
+      orderBy: { likes: { _count: 'desc' } },
+      take: 5,
+    });
+
+    let likedSet = new Set<string>();
+    if (req.userId) {
+      const liked = await prisma.activityLike.findMany({
+        where: { userId: req.userId, activityId: { in: items.map((i) => i.id) } },
+        select: { activityId: true },
+      });
+      likedSet = new Set(liked.map((l) => l.activityId));
+    }
+
+    res.json(items.map((item) => ({ ...item, isLiked: likedSet.has(item.id) })));
+  } catch (err) {
+    console.error('Trending feed error:', err);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 // ─── Public activity feed (all users) ────────────────────
 
 router.get('/feed/public', optionalAuth, async (req: AuthRequest, res: Response) => {
