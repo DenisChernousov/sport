@@ -330,6 +330,27 @@ export const api = {
     },
   },
 
+  teamBattles: {
+    list() {
+      return request<any[]>('/team-battles');
+    },
+    my() {
+      return request<any[]>('/team-battles/my');
+    },
+    forTeam(teamId: string) {
+      return request<any[]>(`/team-battles/team/${teamId}`);
+    },
+    challenge(data: { opponentTeamId: string; sport?: string | null; targetDistance: number; durationDays: number }) {
+      return request<any>('/team-battles/challenge', { method: 'POST', body: JSON.stringify(data) });
+    },
+    accept(id: string) {
+      return request<any>(`/team-battles/${id}/accept`, { method: 'PUT' });
+    },
+    decline(id: string) {
+      return request<any>(`/team-battles/${id}/decline`, { method: 'PUT' });
+    },
+  },
+
   leaderboard: {
     users(params?: { period?: string; page?: number }) {
       return request<PaginatedResponse<LeaderboardEntry>>(`/leaderboard/users${toQuery(params)}`);

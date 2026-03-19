@@ -1,9 +1,8 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { Team } from '@/types';
 import { api } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
-
-const BattlesSection = lazy(() => import('@/components/Battles/BattlesSection'));
+import ClubBattles from './ClubBattles';
 
 const SPORT_ICONS: Record<string, string> = {
   RUNNING: '🏃', CYCLING: '🚴', SKIING: '⛷️', WALKING: '🚶',
@@ -770,15 +769,12 @@ export default function TeamsPanel() {
                 )}
               </div>
 
-              {/* Chat placeholder */}
-              <div style={{
-                background: '#f9f9f9', borderRadius: 12, padding: 20, textAlign: 'center',
-                border: '1px dashed #ddd',
-              }}>
-                <div style={{ fontSize: 28, marginBottom: 8 }}>💬</div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: '#666' }}>Чат клуба скоро будет доступен</div>
-                <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>Общайтесь с участниками клуба в реальном времени</div>
-              </div>
+              {/* Club vs Club Battles */}
+              <ClubBattles
+                myTeamId={myTeam.id}
+                isLeader={!!(user && (myTeam.ownerId === user.id || myTeam.members?.some(m => m.userId === user.id && (m.role === 'leader' || m.role === 'officer'))))}
+                isMobile={isMobile}
+              />
             </div>
           )}
         </div>
@@ -967,12 +963,6 @@ export default function TeamsPanel() {
         </div>
       )}
 
-      {/* Battles Section */}
-      {user && (
-        <Suspense fallback={null}>
-          <BattlesSection />
-        </Suspense>
-      )}
     </div>
   );
 }

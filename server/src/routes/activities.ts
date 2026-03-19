@@ -121,7 +121,7 @@ async function updateEventParticipants(
   }
 }
 
-async function updateTeamDistance(userId: string, distance: number): Promise<void> {
+async function updateTeamDistance(userId: string, distance: number, sport?: string): Promise<void> {
   const memberships = await prisma.teamMember.findMany({
     where: { userId },
     select: { teamId: true },
@@ -132,6 +132,40 @@ async function updateTeamDistance(userId: string, distance: number): Promise<voi
       where: { id: m.teamId },
       data: { totalDistance: { increment: distance } },
     });
+
+    // Update active TeamBattles for this team
+    const now = new Date();
+    const activeBattles = await (prisma as any).teamBattle.findMany({
+      where: {
+        status: 'active',
+        endsAt: { gte: now },
+        OR: [{ challengerTeamId: m.teamId }, { opponentTeamId: m.teamId }],
+        ...(sport ? { OR: [{ sport: null }, { sport }] } : {}),
+      },
+    });
+
+    for (const battle of activeBattles) {
+      const isChallenger = battle.challengerTeamId === m.teamId;
+      await (prisma as any).teamBattle.update({
+        where: { id: battle.id },
+        data: isChallenger
+          ? { challengerDistance: { increment: distance } }
+          : { opponentDistance: { increment: distance } },
+      });
+
+      // Check if target reached → finish
+      const updated = await (prisma as any).teamBattle.findUnique({ where: { id: battle.id } });
+      if (updated.challengerDistance >= battle.targetDistance || updated.opponentDistance >= battle.targetDistance) {
+        const winnerId =
+          updated.challengerDistance >= battle.targetDistance
+            ? battle.challengerTeamId
+            : battle.opponentTeamId;
+        await (prisma as any).teamBattle.update({
+          where: { id: battle.id },
+          data: { status: 'finished', winnerId },
+        });
+      }
+    }
   }
 }
 
@@ -320,7 +354,7 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     await updateEventParticipants(userId, sport, distNum, durNum);
 
     // Update team distance
-    await updateTeamDistance(userId, distNum);
+    await updateTeamDistance(userId, distNum, sport);
 
     // Check achievements
     const updatedUser = await prisma.user.findUnique({ where: { id: userId } });
@@ -515,7 +549,7 @@ router.post('/upload-gpx', authMiddleware, upload.single('file'), async (req: Au
     // Update stats
     await updateUserStats(userId, distance, duration, startedAt);
     await updateEventParticipants(userId, sport, distance, duration);
-    await updateTeamDistance(userId, distance);
+    await updateTeamDistance(userId, distance, sport);
 
     // Check achievements
     await checkAndGrant(userId, {

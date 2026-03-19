@@ -278,8 +278,29 @@ model Team {
   updatedAt   DateTime @updatedAt
 
   members     TeamMember[]
+  battlesAsChallenger TeamBattle[] @relation("TeamBattleChallenger")
+  battlesAsOpponent   TeamBattle[] @relation("TeamBattleOpponent")
 
   @@index([totalDistance])
+}
+
+model TeamBattle {
+  id                 String     @id @default(cuid())
+  challengerTeamId   String
+  challengerTeam     Team       @relation("TeamBattleChallenger", fields: [challengerTeamId], references: [id])
+  opponentTeamId     String
+  opponentTeam       Team       @relation("TeamBattleOpponent", fields: [opponentTeamId], references: [id])
+  sport              SportType?
+  targetDistance     Float
+  endsAt             DateTime
+  challengerDistance Float      @default(0)
+  opponentDistance   Float      @default(0)
+  status             String     @default("pending") // pending, active, finished, declined
+  winnerId           String?
+  createdAt          DateTime   @default(now())
+
+  @@index([challengerTeamId, status])
+  @@index([opponentTeamId, status])
 }
 
 model TeamMember {
