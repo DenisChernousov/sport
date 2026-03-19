@@ -167,7 +167,14 @@ export default function FeedPanel() {
               padding: '2px 8px', borderRadius: 10,
             }}>топ по лайкам</span>
           </div>
-          <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none' }}>
+          <div style={{
+            display: isMobile ? 'flex' : 'grid',
+            gridTemplateColumns: isMobile ? undefined : `repeat(${Math.min(trending.length, 5)}, 1fr)`,
+            gap: 10,
+            overflowX: isMobile ? 'auto' : undefined,
+            paddingBottom: isMobile ? 4 : 0,
+            scrollbarWidth: 'none',
+          }}>
             {trending.map((t, idx) => {
               const sp = SPORT[t.sport] ?? SPORT.RUNNING;
               return (
@@ -175,11 +182,11 @@ export default function FeedPanel() {
                   key={t.id}
                   onClick={() => setSelectedTrending(t)}
                   style={{
-                    minWidth: isMobile ? 148 : 165,
+                    minWidth: isMobile ? 148 : undefined,
                     borderRadius: 14,
                     overflow: 'hidden',
                     cursor: 'pointer',
-                    flexShrink: 0,
+                    flexShrink: isMobile ? 0 : undefined,
                     background: sp.gradient,
                     position: 'relative',
                     transition: 'transform 0.15s, box-shadow 0.15s',
