@@ -2,6 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 
+const EMOJI_CATEGORIES = [
+  { label: '😀', emojis: ['😀','😂','😍','🥰','😎','🤩','😊','🙃','🤔','😅','😭','😤','🥳','🤗','😏','😬','🤯','😴','🥺','😱'] },
+  { label: '👍', emojis: ['👍','👎','👏','🙌','🤝','💪','🫶','❤️','🔥','⭐','✅','🎉','🏆','💯','🚀','💪','🫠','🤌','👀','💀'] },
+  { label: '🏃', emojis: ['🏃','🚴','⛷️','🚶','🏋️','🤸','🏊','🧗','🤾','⛹️','🏇','🧘','🏌️','🤺','🏄','🥊','🎯','🏅','🥇','🏆'] },
+  { label: '😤', emojis: ['😤','💪','🔥','⚡','💥','🎯','🏅','👊','🤜','🫡','🫶','❤️‍🔥','💦','😮‍💨','🥵','🤮','🤢','😵','😵‍💫','🤕'] },
+];
+
 type ConvUser = { id: string; username: string; avatarUrl?: string; level: number; city?: string };
 type Conversation = { user: ConvUser; isFriend: boolean; isFollowing: boolean; isFollower: boolean; lastText: string; lastAt: string; unread: number };
 type DM = { id: string; senderId: string; receiverId: string; text: string; isRead: boolean; createdAt: string };
@@ -42,6 +49,33 @@ export default function MessagesPanel() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Emoji picker
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const [emojiCat, setEmojiCat] = useState(0);
+  const emojiRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (emojiRef.current && !emojiRef.current.contains(e.target as Node)) setEmojiOpen(false);
+    };
+    if (emojiOpen) document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [emojiOpen]);
+
+  const insertEmoji = (emoji: string) => {
+    const input = inputRef.current;
+    if (!input) { setText(t => t + emoji); return; }
+    const start = input.selectionStart ?? text.length;
+    const end = input.selectionEnd ?? text.length;
+    const next = text.slice(0, start) + emoji + text.slice(end);
+    setText(next);
+    requestAnimationFrame(() => {
+      input.focus();
+      input.setSelectionRange(start + emoji.length, start + emoji.length);
+    });
+  };
 
   // New conversation search
   const [searchMode, setSearchMode] = useState(false);
@@ -366,35 +400,76 @@ export default function MessagesPanel() {
           </div>
 
           {/* Input */}
-          <div style={{
-            display: 'flex', gap: 8, padding: '10px 12px', borderTop: '1px solid #f0f0f0',
-            background: '#fff',
-          }}>
-            <input
-              value={text}
-              onChange={e => setText(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-              placeholder="Написать сообщение..."
-              style={{
-                flex: 1, padding: '9px 14px', borderRadius: 20, border: '1px solid #e0e0e0',
-                fontSize: 14, outline: 'none', background: '#f9f9f9',
-              }}
-            />
-            <button
-              onClick={handleSend}
-              disabled={!text.trim() || sending}
-              style={{
-                width: 38, height: 38, borderRadius: '50%', border: 'none',
-                background: text.trim() ? '#fc4c02' : '#e0e0e0',
-                color: '#fff', cursor: text.trim() ? 'pointer' : 'not-allowed',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0, transition: 'background 0.15s',
-              }}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-              </svg>
-            </button>
+          <div style={{ borderTop: '1px solid #f0f0f0', background: '#fff' }}>
+            {/* Emoji picker */}
+            {emojiOpen && (
+              <div ref={emojiRef} style={{
+                padding: '8px 10px', borderBottom: '1px solid #f0f0f0',
+                background: '#fafafa',
+              }}>
+                {/* Category tabs */}
+                <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
+                  {EMOJI_CATEGORIES.map((cat, i) => (
+                    <button key={i} onClick={() => setEmojiCat(i)} style={{
+                      padding: '3px 8px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                      background: emojiCat === i ? '#fc4c02' : 'transparent',
+                      fontSize: 16, lineHeight: 1,
+                    }}>{cat.label}</button>
+                  ))}
+                </div>
+                {/* Emoji grid */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                  {EMOJI_CATEGORIES[emojiCat].emojis.map(emoji => (
+                    <button key={emoji} onClick={() => insertEmoji(emoji)} style={{
+                      width: 34, height: 34, borderRadius: 6, border: 'none', background: 'none',
+                      cursor: 'pointer', fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'background 0.1s',
+                    }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#f0f0f0'; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
+                    >{emoji}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 6, padding: '10px 12px', alignItems: 'center' }}>
+              {/* Emoji button */}
+              <button
+                onClick={() => setEmojiOpen(o => !o)}
+                style={{
+                  width: 34, height: 34, borderRadius: '50%', border: 'none', flexShrink: 0,
+                  background: emojiOpen ? '#fff4ef' : 'transparent',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 20, transition: 'background 0.15s',
+                }}
+              >😊</button>
+              <input
+                ref={inputRef}
+                value={text}
+                onChange={e => setText(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+                placeholder="Написать сообщение..."
+                style={{
+                  flex: 1, padding: '9px 14px', borderRadius: 20, border: '1px solid #e0e0e0',
+                  fontSize: 14, outline: 'none', background: '#f9f9f9',
+                }}
+              />
+              <button
+                onClick={handleSend}
+                disabled={!text.trim() || sending}
+                style={{
+                  width: 38, height: 38, borderRadius: '50%', border: 'none',
+                  background: text.trim() ? '#fc4c02' : '#e0e0e0',
+                  color: '#fff', cursor: text.trim() ? 'pointer' : 'not-allowed',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0, transition: 'background 0.15s',
+                }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       ) : !isMobile ? (
