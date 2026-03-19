@@ -175,7 +175,7 @@ export function Sidebar({ activeTab, onTabChange, onLoginClick, onAddActivity, u
           </div>
         ) : (
           <button onClick={onLoginClick} style={{
-            width: '100%', padding: '9px 0', borderRadius: 10, border: '1.5px solid #fc4c02',
+            width: '100%', padding: '9px 0', borderRadius: 10, border: `1.5px solid ${primary}`,
             background: '#fff', color: primary, fontSize: 13, fontWeight: 700, cursor: 'pointer',
           }}>
             Войти / Регистрация

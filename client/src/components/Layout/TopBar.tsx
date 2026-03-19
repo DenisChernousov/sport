@@ -148,8 +148,8 @@ export function TopBar({ onTabChange, onLoginClick, onRegisterClick }: Props) {
   return (
     <header style={{
       position: 'fixed', top: 0, left: 0, right: 0, height: 52,
-      background: '#fff',
-      borderBottom: '1px solid #e8e8e8',
+      background: preset.dark,
+      borderBottom: `1px solid ${preset.secondary}66`,
       zIndex: 200,
       display: 'flex', alignItems: 'center',
     }}>
@@ -177,7 +177,7 @@ export function TopBar({ onTabChange, onLoginClick, onRegisterClick }: Props) {
             </svg>
           </div>
         )}
-        <span style={{ fontSize: 15, fontWeight: 900, color: '#1a1a1a', letterSpacing: -0.3, lineHeight: 1.1 }}>
+        <span style={{ fontSize: 15, fontWeight: 900, color: preset.light, letterSpacing: -0.3, lineHeight: 1.1 }}>
           Четыре <span style={{ color: primary }}>стихии</span>
         </span>
       </button>
@@ -195,13 +195,13 @@ export function TopBar({ onTabChange, onLoginClick, onRegisterClick }: Props) {
             placeholder="Поиск людей, событий..."
             style={{
               width: '100%', height: 34, padding: '0 12px 0 32px',
-              borderRadius: 20, border: '1px solid #e8e8e8',
-              background: '#f5f5f5', fontSize: 13, outline: 'none',
-              boxSizing: 'border-box', color: '#1a1a1a',
+              borderRadius: 20, border: '1px solid rgba(255,255,255,0.12)',
+              background: 'rgba(255,255,255,0.08)', fontSize: 13, outline: 'none',
+              boxSizing: 'border-box', color: preset.light,
               transition: 'border-color 0.15s, background 0.15s',
             }}
-            onMouseEnter={e => { (e.currentTarget as HTMLInputElement).style.borderColor = '#ccc'; }}
-            onMouseLeave={e => { if (document.activeElement !== e.currentTarget) (e.currentTarget as HTMLInputElement).style.borderColor = '#e8e8e8'; }}
+            onMouseEnter={e => { (e.currentTarget as HTMLInputElement).style.borderColor = 'rgba(255,255,255,0.25)'; }}
+            onMouseLeave={e => { if (document.activeElement !== e.currentTarget) (e.currentTarget as HTMLInputElement).style.borderColor = 'rgba(255,255,255,0.12)'; }}
           />
         </div>
 
@@ -257,11 +257,11 @@ export function TopBar({ onTabChange, onLoginClick, onRegisterClick }: Props) {
             <div ref={notifRef} style={{ position: 'relative' }}>
               <button onClick={handleNotifOpen} title="Уведомления" style={{
                 width: 36, height: 36, borderRadius: 10, border: 'none',
-                background: notifOpen ? '#fff4ef' : 'transparent',
+                background: notifOpen ? 'rgba(204,43,43,0.15)' : 'transparent',
                 cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 position: 'relative', transition: 'background 0.15s',
               }}
-                onMouseEnter={e => { if (!notifOpen) (e.currentTarget as HTMLButtonElement).style.background = '#f5f5f5'; }}
+                onMouseEnter={e => { if (!notifOpen) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.08)'; }}
                 onMouseLeave={e => { if (!notifOpen) (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
               >
                 <svg style={{ width: 19, height: 19, color: '#555' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -340,8 +340,8 @@ export function TopBar({ onTabChange, onLoginClick, onRegisterClick }: Props) {
         ) : (
           <>
             <button onClick={onLoginClick} style={{
-              padding: '6px 14px', borderRadius: 8, border: '1px solid #e0e0e0',
-              background: '#fff', color: '#555', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              padding: '6px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)',
+              background: 'rgba(255,255,255,0.08)', color: preset.light, fontSize: 13, fontWeight: 600, cursor: 'pointer',
             }}>Войти</button>
             <button onClick={onRegisterClick} style={{
               padding: '6px 14px', borderRadius: 8, border: 'none',

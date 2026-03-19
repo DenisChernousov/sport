@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
-import { ThemeProvider } from '@/context/ThemeContext';
+import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import type { TabId } from '@/components/Layout/Header';
 import { TopBar } from '@/components/Layout/TopBar';
 import { Sidebar } from '@/components/Layout/Sidebar';
@@ -25,7 +25,7 @@ const FriendsPanel = lazy(() => import('@/components/Friends/FriendsPanel'));
 function LoadingSpinner() {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '80px 0' }}>
-      <div style={{ width: 34, height: 34, border: '3px solid rgba(252,76,2,0.15)', borderTopColor: '#fc4c02', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      <div style={{ width: 34, height: 34, border: '3px solid rgba(204,43,43,0.15)', borderTopColor: '#CC2B2B', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
     </div>
   );
 }
@@ -42,6 +42,7 @@ function useWidth() {
 
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
+  const { preset } = useTheme();
   const [activeTab, setActiveTab] = useState<TabId>('feed');
   const w = useWidth();
   const isMobile = w < 768;
@@ -103,10 +104,10 @@ function AppContent() {
 
   if (isLoading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f2f5' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: preset.dark }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>🏃</div>
-          <div style={{ width: 38, height: 38, margin: '0 auto', border: '3px solid rgba(252,76,2,0.15)', borderTopColor: '#fc4c02', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          <div style={{ width: 38, height: 38, margin: '0 auto', border: `3px solid ${preset.primary}26`, borderTopColor: preset.primary, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
         </div>
       </div>
     );
@@ -136,7 +137,7 @@ function AppContent() {
   );
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f0f2f5' }}>
+    <div style={{ minHeight: '100vh', background: preset.light }}>
       {/* TopBar — always visible */}
       <TopBar
         activeTab={activeTab}
