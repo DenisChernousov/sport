@@ -14,7 +14,7 @@ interface Props {
 export function BottomNav({ activeTab, onTabChange, onAddActivity, unreadMessages = 0 }: Props) {
   const { isAuthenticated } = useAuth();
   const { preset } = useTheme();
-  const { canInstall, install } = usePwaInstall();
+  const { canInstall, isInstalled, isIos, install } = usePwaInstall();
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
   const ITEMS = [
@@ -43,7 +43,7 @@ export function BottomNav({ activeTab, onTabChange, onAddActivity, unreadMessage
 
   return (
     <>
-      {canInstall && !bannerDismissed && (
+      {!bannerDismissed && !isInstalled && (
         <div style={{
           position: 'fixed', bottom: 60, left: 0, right: 0, zIndex: 99,
           background: preset.secondary,
@@ -54,15 +54,19 @@ export function BottomNav({ activeTab, onTabChange, onAddActivity, unreadMessage
           <div style={{ fontSize: 22, flexShrink: 0 }}>📱</div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: preset.light }}>Установить приложение</div>
-            <div style={{ fontSize: 11, color: '#8aadcc' }}>Работает без интернета, быстрее</div>
+            <div style={{ fontSize: 11, color: '#8aadcc' }}>
+              {isIos ? 'Нажмите  и «На экран домой»' : 'Работает без интернета, быстрее'}
+            </div>
           </div>
-          <button onClick={install} style={{
-            padding: '7px 14px', borderRadius: 10, border: 'none',
-            background: preset.primary, color: '#fff',
-            fontSize: 13, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
-          }}>
-            Установить
-          </button>
+          {canInstall && (
+            <button onClick={install} style={{
+              padding: '7px 14px', borderRadius: 10, border: 'none',
+              background: preset.primary, color: '#fff',
+              fontSize: 13, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
+            }}>
+              Установить
+            </button>
+          )}
           <button onClick={() => setBannerDismissed(true)} style={{
             width: 28, height: 28, borderRadius: 8, border: 'none',
             background: 'rgba(255,255,255,0.1)', color: '#8aadcc',
