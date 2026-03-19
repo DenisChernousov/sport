@@ -111,7 +111,9 @@ function AppContent() {
     );
   }
 
-  const panels = (
+  const isFullscreenTab = activeTab === 'admin' || activeTab === 'mod';
+
+  const regularPanels = (
     <Suspense fallback={<LoadingSpinner />}>
       {activeTab === 'feed' && <FeedPanel />}
       {activeTab === 'events' && <EventsPanel />}
@@ -122,6 +124,11 @@ function AppContent() {
       {activeTab === 'friends' && <FriendsPanel />}
       {activeTab === 'messages' && <MessagesPanel />}
       {activeTab === 'profile' && <ProfilePanel />}
+    </Suspense>
+  );
+
+  const fullscreenPanels = (
+    <Suspense fallback={<LoadingSpinner />}>
       {activeTab === 'admin' && <AdminPanel />}
       {activeTab === 'mod' && <ModeratorPanel />}
     </Suspense>
@@ -137,10 +144,15 @@ function AppContent() {
         onRegisterClick={openRegister}
       />
 
-      {isMobile ? (
+      {isFullscreenTab ? (
+        /* Full-width panels (Admin, Mod) — no sidebar, no max-width constraint */
+        <main style={{ paddingTop: 52 }}>
+          {fullscreenPanels}
+        </main>
+      ) : isMobile ? (
         <>
           <main style={{ paddingTop: 52, paddingBottom: 68 }}>
-            <div style={{ padding: '10px 10px' }}>{panels}</div>
+            <div style={{ padding: '10px 10px' }}>{regularPanels}</div>
           </main>
           <BottomNav
             activeTab={activeTab}
@@ -162,7 +174,7 @@ function AppContent() {
 
             {/* Main content */}
             <main style={{ flex: 1, minWidth: 0 }}>
-              {panels}
+              {regularPanels}
             </main>
           </div>
         </div>
