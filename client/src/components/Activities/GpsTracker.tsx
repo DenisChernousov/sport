@@ -89,7 +89,7 @@ export default function GpsTracker({ onClose, onSaved }: Props) {
     setSaving(true); setSaveError('');
     try {
       await api.activities.create({
-        sport,
+        sport: sport.toUpperCase(),
         title: title || `${SPORTS.find(s => s.id === sport)?.label} ${new Date().toLocaleDateString('ru-RU')}`,
         distance: fs.distance,
         duration: Math.round(fs.duration),
