@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, lazy, Suspense } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import type { Activity, SportType } from '@/types';
 import { api } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 import Tesseract from 'tesseract.js';
+
+const GpsTracker = lazy(() => import('./GpsTracker'));
 
 const SPORT_ICONS: Record<SportType, string> = {
   RUNNING: '🏃',
@@ -1086,6 +1089,8 @@ export default function ActivitiesPanel() {
   const [monthlyDist, setMonthlyDist] = useState(0);
 
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [trackerOpen, setTrackerOpen] = useState(false);
+  const { primary } = useTheme();
 
   // Detail modal state
   const [detailActivity, setDetailActivity] = useState<Activity | null>(null);
@@ -1252,19 +1257,41 @@ export default function ActivitiesPanel() {
         />
       )}
 
-      {/* Кнопка добавления */}
-      <div style={{ marginBottom: 16 }}>
+      {/* GPS Tracker */}
+      {trackerOpen && (
+        <Suspense fallback={null}>
+          <GpsTracker
+            onClose={() => setTrackerOpen(false)}
+            onSaved={() => { setTrackerOpen(false); setPage(1); refreshAll(); }}
+          />
+        </Suspense>
+      )}
+
+      {/* Кнопки добавления */}
+      <div style={{ marginBottom: 16, display: 'flex', gap: 10 }}>
+        <button
+          type="button"
+          onClick={() => setTrackerOpen(true)}
+          style={{
+            padding: '10px 20px', borderRadius: 10, border: 'none',
+            background: `linear-gradient(135deg, ${primary}, ${primary}cc)`,
+            color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+            boxShadow: `0 2px 10px ${primary}44`,
+            display: 'flex', alignItems: 'center', gap: 7,
+          }}
+        >
+          📍 GPS-тренировка
+        </button>
         <button
           type="button"
           onClick={() => setWizardOpen(true)}
           style={{
-            padding: '10px 24px', borderRadius: 10, border: 'none',
-            background: 'linear-gradient(135deg, #fc4c02, #ff6b2b)',
-            color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
-            boxShadow: '0 2px 10px rgba(252,76,2,0.25)',
+            padding: '10px 20px', borderRadius: 10, border: `1.5px solid ${primary}44`,
+            background: 'transparent',
+            color: primary, fontSize: 14, fontWeight: 700, cursor: 'pointer',
           }}
         >
-          + Добавить активность
+          + Вручную
         </button>
       </div>
 
