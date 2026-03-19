@@ -89,6 +89,9 @@ export default function ProfilePanel() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [referralCount, setReferralCount] = useState(0);
   const [referredUsers, setReferredUsers] = useState<{ id: string; username: string; avatarUrl?: string; totalDistance: number; level: number; createdAt: string }[]>([]);
+  const [followModal, setFollowModal] = useState<'followers' | 'following' | null>(null);
+  const [followModalUsers, setFollowModalUsers] = useState<{ id: string; username: string; avatarUrl?: string; city?: string; level: number; totalDistance: number }[]>([]);
+  const [followModalLoading, setFollowModalLoading] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -200,6 +203,22 @@ export default function ProfilePanel() {
     },
     [user, updateUser],
   );
+
+  const openFollowModal = useCallback(async (type: 'followers' | 'following') => {
+    if (!user) return;
+    setFollowModal(type);
+    setFollowModalLoading(true);
+    try {
+      const list = type === 'followers'
+        ? await api.social.followers(user.id)
+        : await api.social.following(user.id);
+      setFollowModalUsers(list);
+    } catch {
+      setFollowModalUsers([]);
+    } finally {
+      setFollowModalLoading(false);
+    }
+  }, [user]);
 
   if (!user) {
     return (
@@ -400,15 +419,16 @@ export default function ProfilePanel() {
         }}
       >
         {[
-          { label: 'Общая дистанция', value: `${(user.totalDistance ?? 0).toFixed(1)} км` },
-          { label: 'Общее время', value: formatDuration(user.totalTime ?? 0) },
-          { label: 'Всего тренировок', value: String(user.totalActivities ?? 0) },
-          { label: 'Текущий стрик', value: `${user.currentStreak ?? 0} дн.` },
-          { label: 'Подписчики', value: String(followersCount) },
-          { label: 'Подписки', value: String(followingCount) },
+          { label: 'Общая дистанция', value: `${(user.totalDistance ?? 0).toFixed(1)} км`, onClick: () => window.dispatchEvent(new CustomEvent('switch-tab', { detail: { tab: 'activities' } })) },
+          { label: 'Общее время', value: formatDuration(user.totalTime ?? 0), onClick: () => window.dispatchEvent(new CustomEvent('switch-tab', { detail: { tab: 'activities' } })) },
+          { label: 'Всего тренировок', value: String(user.totalActivities ?? 0), onClick: () => window.dispatchEvent(new CustomEvent('switch-tab', { detail: { tab: 'activities' } })) },
+          { label: 'Текущий стрик', value: `${user.currentStreak ?? 0} дн.`, onClick: () => window.dispatchEvent(new CustomEvent('switch-tab', { detail: { tab: 'activities' } })) },
+          { label: 'Подписчики', value: String(followersCount), onClick: () => openFollowModal('followers') },
+          { label: 'Подписки', value: String(followingCount), onClick: () => openFollowModal('following') },
         ].map((stat) => (
           <div
             key={stat.label}
+            onClick={stat.onClick}
             style={{
               background: '#fff',
               borderRadius: 16,
@@ -416,6 +436,16 @@ export default function ProfilePanel() {
               boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
               border: '1px solid #e0e0e0',
               textAlign: 'center',
+              cursor: 'pointer',
+              transition: 'transform 0.15s, box-shadow 0.15s',
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)';
+              (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
+              (e.currentTarget as HTMLDivElement).style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)';
             }}
           >
             <div style={{ fontSize: 22, fontWeight: 700, color: '#242424' }}>{stat.value}</div>
@@ -438,13 +468,31 @@ export default function ProfilePanel() {
           return (
             <div
               key={sport}
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('switch-tab', { detail: { tab: 'activities' } }));
+                setTimeout(() => window.dispatchEvent(new CustomEvent('filter-by-sport', { detail: { sport } })), 100);
+              }}
               style={{
                 background: '#fff',
                 borderRadius: 16,
                 padding: 12,
                 boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                border: '1px solid #e0e0e0',
+                border: `1px solid #e0e0e0`,
                 textAlign: 'center',
+                cursor: 'pointer',
+                transition: 'transform 0.15s, box-shadow 0.15s, border-color 0.15s',
+              }}
+              onMouseEnter={(e) => {
+                const el = e.currentTarget as HTMLDivElement;
+                el.style.transform = 'translateY(-2px)';
+                el.style.boxShadow = `0 4px 12px ${SPORT_COLORS[sport]}33`;
+                el.style.borderColor = SPORT_COLORS[sport];
+              }}
+              onMouseLeave={(e) => {
+                const el = e.currentTarget as HTMLDivElement;
+                el.style.transform = 'translateY(0)';
+                el.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)';
+                el.style.borderColor = '#e0e0e0';
               }}
             >
               <div style={{ fontSize: 28 }}>{SPORT_ICONS[sport]}</div>
@@ -898,6 +946,112 @@ export default function ProfilePanel() {
       <div style={{ textAlign: 'center', color: '#999', fontSize: 13, marginBottom: 20 }}>
         Участник с {formatDate(user.createdAt ?? '')}
       </div>
+
+      {/* Модалка подписчиков/подписок */}
+      {followModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.45)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+          onClick={() => setFollowModal(null)}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 20,
+              width: '100%',
+              maxWidth: 440,
+              maxHeight: '70vh',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              boxShadow: '0 8px 40px rgba(0,0,0,0.2)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '18px 20px',
+              borderBottom: '1px solid #f0f0f0',
+            }}>
+              <div style={{ fontSize: 17, fontWeight: 700, color: '#242424' }}>
+                {followModal === 'followers' ? 'Подписчики' : 'Подписки'}
+              </div>
+              <button
+                type="button"
+                onClick={() => setFollowModal(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#999', padding: 4, lineHeight: 1 }}
+              >
+                ✕
+              </button>
+            </div>
+            <div style={{ overflowY: 'auto', flex: 1 }}>
+              {followModalLoading ? (
+                <div style={{ padding: 32, textAlign: 'center', color: '#999' }}>Загрузка...</div>
+              ) : followModalUsers.length === 0 ? (
+                <div style={{ padding: 32, textAlign: 'center', color: '#999', fontSize: 14 }}>
+                  {followModal === 'followers' ? 'Нет подписчиков' : 'Нет подписок'}
+                </div>
+              ) : (
+                followModalUsers.map((u) => (
+                  <div
+                    key={u.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      padding: '12px 20px',
+                      borderBottom: '1px solid #f5f5f5',
+                      cursor: 'pointer',
+                      transition: 'background 0.15s',
+                    }}
+                    onClick={() => {
+                      setFollowModal(null);
+                      window.dispatchEvent(new CustomEvent('open-profile', { detail: { userId: u.id } }));
+                    }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = '#f8f8f8'; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
+                  >
+                    {u.avatarUrl ? (
+                      <img src={u.avatarUrl} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                    ) : (
+                      <div style={{
+                        width: 44, height: 44, borderRadius: '50%', background: '#fc4c02',
+                        color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 18, fontWeight: 700, flexShrink: 0,
+                      }}>
+                        {(u.username ?? '?')[0].toUpperCase()}
+                      </div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#242424' }}>{u.username}</div>
+                      {u.city && <div style={{ fontSize: 12, color: '#888', marginTop: 1 }}>{u.city}</div>}
+                      <div style={{ fontSize: 12, color: '#999', marginTop: 1 }}>
+                        {(u.totalDistance ?? 0).toFixed(1)} км
+                      </div>
+                    </div>
+                    <div style={{
+                      background: '#eef0f4', borderRadius: 8, padding: '3px 10px',
+                      fontSize: 12, fontWeight: 600, color: '#666', flexShrink: 0,
+                    }}>
+                      Ур. {u.level ?? 1}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -36,9 +36,8 @@ router.get('/users', async (req: AuthRequest, res: Response) => {
         where: {
           startedAt: { gte: periodStart },
         },
-        _sum: {
-          distance: true,
-        },
+        _sum: { distance: true },
+        _count: { _all: true },
         orderBy: {
           _sum: { distance: 'desc' },
         },
@@ -65,6 +64,7 @@ router.get('/users', async (req: AuthRequest, res: Response) => {
         userId: r.userId,
         user: userMap.get(r.userId) || null,
         periodDistance: r._sum.distance || 0,
+        periodActivities: r._count._all,
       }));
 
       res.json(leaderboard);
@@ -138,6 +138,7 @@ router.get('/sport/:sport', async (req: AuthRequest, res: Response) => {
       by: ['userId'],
       where: { sport: sport as any },
       _sum: { distance: true },
+      _count: { _all: true },
       orderBy: { _sum: { distance: 'desc' } },
       take: limit,
     });
@@ -151,6 +152,7 @@ router.get('/sport/:sport', async (req: AuthRequest, res: Response) => {
         avatarUrl: true,
         level: true,
         totalDistance: true,
+        totalActivities: true,
       },
     });
 
@@ -161,6 +163,7 @@ router.get('/sport/:sport', async (req: AuthRequest, res: Response) => {
       userId: r.userId,
       user: userMap.get(r.userId) || null,
       sportDistance: r._sum.distance || 0,
+      sportActivities: r._count._all,
     }));
 
     res.json(leaderboard);

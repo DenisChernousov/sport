@@ -1138,6 +1138,16 @@ export default function ActivitiesPanel() {
     return () => window.removeEventListener('open-add-activity', h);
   }, []);
 
+  useEffect(() => {
+    const h = (e: Event) => {
+      const sport = (e as CustomEvent).detail?.sport as SportType | null;
+      setFilterSport(sport ?? null);
+      setPage(1);
+    };
+    window.addEventListener('filter-by-sport', h);
+    return () => window.removeEventListener('filter-by-sport', h);
+  }, []);
+
   // Load likes for visible activities
   useEffect(() => {
     if (activities.length === 0) return;
