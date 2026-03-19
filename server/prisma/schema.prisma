@@ -135,6 +135,7 @@ model Activity {
   startLng    Float?
 
   // Source
+  imageUrl    String?
   stravaId    String?   @unique
   isManual    Boolean   @default(false)
 
