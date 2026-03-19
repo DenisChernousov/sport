@@ -27,29 +27,6 @@ const SPORT_COLORS: Record<SportType, string> = {
 
 const ALL_SPORTS: SportType[] = ['RUNNING', 'CYCLING', 'SKIING', 'WALKING'];
 
-type Section = 'feed' | 'search' | 'planned';
-
-interface FeedItem {
-  id: string;
-  sport: SportType;
-  title?: string;
-  distance: number;
-  duration: number;
-  startedAt: string;
-  user: { id: string; username: string; avatarUrl?: string; level: number };
-  _count: { likes: number };
-}
-
-interface SearchUser {
-  id: string;
-  username: string;
-  avatarUrl?: string;
-  city?: string;
-  level: number;
-  totalDistance: number;
-  _count: { followers: number; following: number };
-}
-
 interface PlannedItem {
   id: string;
   userId: string;
@@ -62,438 +39,59 @@ interface PlannedItem {
   user: { id: string; username: string; avatarUrl?: string; level: number };
 }
 
-function formatDuration(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  if (h > 0) return `${h}ч ${m}м`;
-  return `${m}м`;
-}
-
-function formatDate(dateStr: string): string {
-  try {
-    return new Intl.DateTimeFormat('ru-RU', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    }).format(new Date(dateStr));
-  } catch {
-    return dateStr;
+function Avatar({ url, username, size = 40 }: { url?: string; username: string; size?: number }) {
+  if (url) {
+    return (
+      <img src={url} alt={username} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+    );
   }
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: '50%', background: '#fc4c02',
+      color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: size * 0.4, fontWeight: 700, flexShrink: 0,
+    }}>
+      {(username ?? '?')[0].toUpperCase()}
+    </div>
+  );
 }
 
 function formatDateTime(dateStr: string, time: string): string {
   try {
-    const d = new Intl.DateTimeFormat('ru-RU', {
-      day: 'numeric',
-      month: 'short',
-    }).format(new Date(dateStr));
+    const d = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' }).format(new Date(dateStr));
     return `${d}, ${time}`;
   } catch {
     return `${dateStr}, ${time}`;
   }
 }
 
-// ─── Shared styles ──────────────────────────────────────
-
-const cardStyle: React.CSSProperties = {
-  background: '#fff',
-  borderRadius: 16,
-  padding: 20,
-  boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-  border: '1px solid #e0e0e0',
-  marginBottom: 16,
-};
-
-const sectionTitleStyle: React.CSSProperties = {
-  fontSize: 18,
-  fontWeight: 700,
-  color: '#242424',
-  marginBottom: 16,
-  marginTop: 0,
-};
+function getDaysUntil(dateStr: string): number {
+  const now = new Date();
+  const target = new Date(dateStr);
+  return Math.ceil((target.getTime() - now.getTime()) / 86400000);
+}
 
 const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '8px 12px',
-  borderRadius: 8,
-  border: '1px solid #e0e0e0',
-  fontSize: 14,
-  outline: 'none',
-  boxSizing: 'border-box' as const,
+  width: '100%', padding: '9px 12px', borderRadius: 8,
+  border: '1px solid #e0e0e0', fontSize: 14, outline: 'none', boxSizing: 'border-box',
 };
 
-const btnPrimary: React.CSSProperties = {
-  padding: '8px 20px',
-  borderRadius: 8,
-  border: 'none',
-  background: '#fc4c02',
-  color: '#fff',
-  fontSize: 14,
-  fontWeight: 600,
-  cursor: 'pointer',
-};
-
-const btnOutline: React.CSSProperties = {
-  padding: '6px 16px',
-  borderRadius: 8,
-  border: '1px solid #e0e0e0',
-  background: '#fff',
-  color: '#666',
-  fontSize: 13,
-  fontWeight: 600,
-  cursor: 'pointer',
-};
-
-function Avatar({ url, username, size = 40 }: { url?: string; username: string; size?: number }) {
-  if (url) {
-    return (
-      <img
-        src={url}
-        alt={username}
-        style={{
-          width: size,
-          height: size,
-          borderRadius: '50%',
-          objectFit: 'cover',
-          flexShrink: 0,
-        }}
-      />
-    );
-  }
-  return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        background: '#fc4c02',
-        color: '#fff',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: size * 0.45,
-        fontWeight: 700,
-        flexShrink: 0,
-      }}
-    >
-      {(username ?? '?')[0].toUpperCase()}
-    </div>
-  );
-}
-
-// ─── Feed Section ───────────────────────────────────────
-
-function FeedSection() {
-  const { isAuthenticated } = useAuth();
-  const [items, setItems] = useState<FeedItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(0);
-
-  const loadFeed = useCallback(
-    async (p: number) => {
-      if (!isAuthenticated) return;
-      setLoading(true);
-      try {
-        const res = await api.social.feed({ page: p, limit: 15 });
-        setItems(res.items as FeedItem[]);
-        setTotalPages(res.pagination.totalPages);
-        setPage(res.pagination.page);
-      } catch {
-        // ignore
-      } finally {
-        setLoading(false);
-      }
-    },
-    [isAuthenticated],
-  );
-
-  useEffect(() => {
-    loadFeed(1);
-  }, [loadFeed]);
-
-  if (!isAuthenticated) {
-    return (
-      <div style={cardStyle}>
-        <h3 style={sectionTitleStyle}>Лента активностей</h3>
-        <div style={{ color: '#999', fontSize: 14, textAlign: 'center', padding: '24px 0' }}>
-          Войдите, чтобы видеть ленту подписок
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div style={cardStyle}>
-      <h3 style={sectionTitleStyle}>Лента активностей</h3>
-      {loading && items.length === 0 ? (
-        <div style={{ color: '#999', fontSize: 14, textAlign: 'center', padding: '24px 0' }}>
-          Загрузка...
-        </div>
-      ) : items.length === 0 ? (
-        <div style={{ color: '#999', fontSize: 14, textAlign: 'center', padding: '24px 0' }}>
-          Лента пуста. Подпишитесь на других спортсменов, чтобы видеть их тренировки.
-        </div>
-      ) : (
-        <>
-          {items.map((item) => (
-            <div
-              key={item.id}
-              style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: 12,
-                padding: '12px 0',
-                borderBottom: '1px solid #f0f0f0',
-              }}
-            >
-              <div onClick={() => window.dispatchEvent(new CustomEvent('open-profile', { detail: { userId: item.user.id } }))} style={{ cursor: 'pointer', flexShrink: 0 }}>
-                <Avatar url={item.user.avatarUrl} username={item.user.username} size={40} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <span onClick={() => window.dispatchEvent(new CustomEvent('open-profile', { detail: { userId: item.user.id } }))} style={{ fontWeight: 700, fontSize: 14, color: '#242424', cursor: 'pointer' }}>
-                    {item.user.username}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: 11,
-                      color: '#fff',
-                      background: '#fc4c02',
-                      borderRadius: 4,
-                      padding: '1px 6px',
-                      fontWeight: 600,
-                    }}
-                  >
-                    Ур. {item.user.level}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <span
-                    style={{
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: SPORT_COLORS[item.sport] ?? '#666',
-                    }}
-                  >
-                    {SPORT_ICONS[item.sport]} {SPORT_LABELS[item.sport]}
-                  </span>
-                  <span style={{ fontSize: 13, color: '#242424', fontWeight: 700 }}>
-                    {item.distance.toFixed(2)} км
-                  </span>
-                  <span style={{ fontSize: 13, color: '#666' }}>
-                    {formatDuration(item.duration)}
-                  </span>
-                  {item.title && (
-                    <span style={{ fontSize: 13, color: '#999' }}>— {item.title}</span>
-                  )}
-                </div>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 12,
-                    marginTop: 4,
-                    fontSize: 12,
-                    color: '#aaa',
-                  }}
-                >
-                  <span>{formatDate(item.startedAt)}</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                    ❤️ {item._count?.likes ?? 0}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {totalPages > 1 && (
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'center',
-                gap: 8,
-                marginTop: 16,
-              }}
-            >
-              <button
-                disabled={page <= 1}
-                onClick={() => loadFeed(page - 1)}
-                style={{
-                  ...btnOutline,
-                  opacity: page <= 1 ? 0.5 : 1,
-                  cursor: page <= 1 ? 'not-allowed' : 'pointer',
-                }}
-              >
-                Назад
-              </button>
-              <span style={{ fontSize: 13, color: '#999', lineHeight: '32px' }}>
-                {page} / {totalPages}
-              </span>
-              <button
-                disabled={page >= totalPages}
-                onClick={() => loadFeed(page + 1)}
-                style={{
-                  ...btnOutline,
-                  opacity: page >= totalPages ? 0.5 : 1,
-                  cursor: page >= totalPages ? 'not-allowed' : 'pointer',
-                }}
-              >
-                Далее
-              </button>
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
-
-// ─── People Search Section ──────────────────────────────
-
-function SearchSection() {
+export default function CommunityPanel() {
   const { isAuthenticated, user: currentUser } = useAuth();
-  const [query, setQuery] = useState('');
-  const [cityFilter, setCityFilter] = useState('');
-  const [results, setResults] = useState<SearchUser[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [followingSet, setFollowingSet] = useState<Set<string>>(new Set());
-
-  const doSearch = useCallback(async () => {
-    if (!query && !cityFilter) return;
-    setLoading(true);
-    try {
-      const users = await api.social.searchUsers({
-        q: query || undefined,
-        city: cityFilter || undefined,
-      });
-      setResults(users);
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false);
-    }
-  }, [query, cityFilter]);
-
-  // Load following set on mount
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   useEffect(() => {
-    if (!isAuthenticated || !currentUser) return;
-    api.social
-      .following(currentUser.id)
-      .then((list) => {
-        setFollowingSet(new Set(list.map((u) => u.id)));
-      })
-      .catch(() => {});
-  }, [isAuthenticated, currentUser]);
+    const h = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
 
-  const handleFollow = useCallback(
-    async (userId: string) => {
-      if (!isAuthenticated) return;
-      try {
-        const res = await api.social.follow(userId);
-        setFollowingSet((prev) => {
-          const next = new Set(prev);
-          if (res.isFollowing) next.add(userId);
-          else next.delete(userId);
-          return next;
-        });
-      } catch {
-        // ignore
-      }
-    },
-    [isAuthenticated],
-  );
-
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    doSearch();
-  };
-
-  return (
-    <div style={cardStyle}>
-      <h3 style={sectionTitleStyle}>Поиск людей</h3>
-      <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-        <input
-          placeholder="Имя пользователя"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          style={{ ...inputStyle, flex: 1, minWidth: 140 }}
-        />
-        <input
-          placeholder="Город"
-          value={cityFilter}
-          onChange={(e) => setCityFilter(e.target.value)}
-          style={{ ...inputStyle, flex: 1, minWidth: 120 }}
-        />
-        <button type="submit" disabled={loading} style={btnPrimary}>
-          {loading ? '...' : 'Найти'}
-        </button>
-      </form>
-
-      {results.length === 0 && !loading && (
-        <div style={{ color: '#999', fontSize: 14, textAlign: 'center', padding: '12px 0' }}>
-          Введите имя или город для поиска
-        </div>
-      )}
-
-      {results.map((u) => {
-        const isSelf = currentUser?.id === u.id;
-        const isFollowing = followingSet.has(u.id);
-        const openProfile = () => window.dispatchEvent(new CustomEvent('open-profile', { detail: { userId: u.id } }));
-        return (
-          <div
-            key={u.id}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              padding: '10px 0',
-              borderBottom: '1px solid #f0f0f0',
-            }}
-          >
-            <div onClick={openProfile} style={{ cursor: 'pointer' }}>
-              <Avatar url={u.avatarUrl} username={u.username} size={44} />
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div onClick={openProfile} style={{ fontWeight: 700, fontSize: 14, color: '#242424', cursor: 'pointer', display: 'inline-block' }}>{u.username}</div>
-              <div style={{ fontSize: 12, color: '#999', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {u.city && <span>{u.city}</span>}
-                <span>Ур. {u.level}</span>
-                <span>{u.totalDistance.toFixed(1)} км</span>
-                <span>{u._count?.followers ?? 0} подп.</span>
-              </div>
-            </div>
-            {!isSelf && isAuthenticated && (
-              <button
-                onClick={() => handleFollow(u.id)}
-                style={{
-                  ...btnOutline,
-                  background: isFollowing ? '#fff4ef' : '#fff',
-                  color: isFollowing ? '#fc4c02' : '#666',
-                  borderColor: isFollowing ? '#fc4c02' : '#e0e0e0',
-                }}
-              >
-                {isFollowing ? 'Отписаться' : 'Подписаться'}
-              </button>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ─── Planned Activities Section ─────────────────────────
-
-function PlannedSection() {
-  const { isAuthenticated, user: currentUser } = useAuth();
   const [items, setItems] = useState<PlannedItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [cityFilter, setCityFilter] = useState('');
   const [sportFilter, setSportFilter] = useState('');
 
-  // Form state
+  // Form
   const [formSport, setFormSport] = useState<SportType>('RUNNING');
   const [formCity, setFormCity] = useState('');
   const [formDate, setFormDate] = useState('');
@@ -502,7 +100,7 @@ function PlannedSection() {
   const [formMax, setFormMax] = useState(5);
   const [submitting, setSubmitting] = useState(false);
 
-  const loadPlanned = useCallback(async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const data = await api.social.listPlanned({
@@ -510,359 +108,302 @@ function PlannedSection() {
         sport: sportFilter || undefined,
       });
       setItems(data);
-    } catch {
-      // ignore
-    } finally {
+    } catch { /* ignore */ } finally {
       setLoading(false);
     }
   }, [cityFilter, sportFilter]);
 
-  useEffect(() => {
-    loadPlanned();
-  }, [loadPlanned]);
+  useEffect(() => { load(); }, [load]);
 
-  const handleCreate = useCallback(
-    async (e: FormEvent) => {
-      e.preventDefault();
-      if (!formCity || !formDate || !formTime) return;
-      setSubmitting(true);
-      try {
-        await api.social.createPlanned({
-          sport: formSport,
-          city: formCity,
-          date: formDate,
-          time: formTime,
-          description: formDesc || undefined,
-          maxPeople: formMax,
-        });
-        setShowForm(false);
-        setFormCity('');
-        setFormDate('');
-        setFormTime('07:00');
-        setFormDesc('');
-        setFormMax(5);
-        loadPlanned();
-      } catch {
-        // ignore
-      } finally {
-        setSubmitting(false);
-      }
-    },
-    [formSport, formCity, formDate, formTime, formDesc, formMax, loadPlanned],
-  );
+  const handleCreate = useCallback(async (e: FormEvent) => {
+    e.preventDefault();
+    if (!formCity || !formDate || !formTime) return;
+    setSubmitting(true);
+    try {
+      await api.social.createPlanned({ sport: formSport, city: formCity, date: formDate, time: formTime, description: formDesc || undefined, maxPeople: formMax });
+      setShowForm(false);
+      setFormCity(''); setFormDate(''); setFormDesc(''); setFormTime('07:00'); setFormMax(5);
+      load();
+    } catch { /* ignore */ } finally { setSubmitting(false); }
+  }, [formSport, formCity, formDate, formTime, formDesc, formMax, load]);
 
-  const handleDelete = useCallback(
-    async (id: string) => {
-      try {
-        await api.social.deletePlanned(id);
-        setItems((prev) => prev.filter((p) => p.id !== id));
-      } catch {
-        // ignore
-      }
-    },
-    [],
-  );
+  const handleDelete = useCallback(async (id: string) => {
+    try {
+      await api.social.deletePlanned(id);
+      setItems(prev => prev.filter(p => p.id !== id));
+    } catch { /* ignore */ }
+  }, []);
 
   return (
-    <div style={cardStyle}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h3 style={{ ...sectionTitleStyle, marginBottom: 0 }}>Планирую активность</h3>
-        {isAuthenticated && (
-          <button onClick={() => setShowForm(!showForm)} style={btnPrimary}>
-            {showForm ? 'Отмена' : 'Создать план'}
+    <div style={{ maxWidth: 800, margin: '0 auto', padding: isMobile ? '0 0 24px' : '0 0 32px' }}>
+
+      {/* Hero */}
+      <div style={{
+        background: 'linear-gradient(135deg, #fc4c02 0%, #ff7c3a 100%)',
+        borderRadius: 20, padding: isMobile ? '24px 20px' : '32px 36px',
+        marginBottom: 24, color: '#fff', position: 'relative', overflow: 'hidden',
+      }}>
+        <div style={{ position: 'absolute', right: -20, top: -20, width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,255,255,0.08)' }} />
+        <div style={{ position: 'absolute', right: 40, bottom: -40, width: 100, height: 100, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
+        <div style={{ fontSize: isMobile ? 26 : 32, fontWeight: 800, lineHeight: 1.1, marginBottom: 8 }}>
+          Найди напарника
+        </div>
+        <div style={{ fontSize: 14, opacity: 0.85, marginBottom: 20, maxWidth: 400 }}>
+          Публикуй свои планы на тренировку — другие спортсмены из твоего города смогут присоединиться
+        </div>
+        {isAuthenticated ? (
+          <button
+            onClick={() => setShowForm(v => !v)}
+            style={{
+              padding: '10px 22px', borderRadius: 10, border: '2px solid rgba(255,255,255,0.6)',
+              background: showForm ? 'rgba(255,255,255,0.2)' : '#fff',
+              color: showForm ? '#fff' : '#fc4c02', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+              transition: 'all 0.15s',
+            }}
+          >
+            {showForm ? '✕ Отмена' : '+ Создать план'}
           </button>
+        ) : (
+          <div style={{ fontSize: 13, opacity: 0.8 }}>Войдите, чтобы создавать планы</div>
         )}
       </div>
 
       {/* Create form */}
       {showForm && (
-        <form
-          onSubmit={handleCreate}
-          style={{
-            background: '#f9f9f9',
-            borderRadius: 12,
-            padding: 16,
-            marginBottom: 16,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 10,
-          }}
-        >
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: 120 }}>
-              <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 4 }}>
-                Вид спорта
-              </label>
-              <select
-                value={formSport}
-                onChange={(e) => setFormSport(e.target.value as SportType)}
-                style={{ ...inputStyle, cursor: 'pointer' }}
-              >
-                {ALL_SPORTS.map((s) => (
-                  <option key={s} value={s}>
+        <div style={{
+          background: '#fff', borderRadius: 16, padding: 20,
+          border: '1px solid #e0e0e0', boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
+          marginBottom: 20,
+        }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: '#242424', marginBottom: 16 }}>Новый план</div>
+          <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {/* Sport pills */}
+            <div>
+              <div style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>Вид спорта</div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {ALL_SPORTS.map(s => (
+                  <button
+                    key={s} type="button"
+                    onClick={() => setFormSport(s)}
+                    style={{
+                      padding: '6px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                      border: `2px solid ${formSport === s ? SPORT_COLORS[s] : '#e0e0e0'}`,
+                      background: formSport === s ? SPORT_COLORS[s] + '15' : '#fff',
+                      color: formSport === s ? SPORT_COLORS[s] : '#888',
+                    }}
+                  >
                     {SPORT_ICONS[s]} {SPORT_LABELS[s]}
-                  </option>
+                  </button>
                 ))}
-              </select>
+              </div>
             </div>
-            <div style={{ flex: 1, minWidth: 120 }}>
-              <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 4 }}>
-                Город *
-              </label>
-              <input
-                required
-                value={formCity}
-                onChange={(e) => setFormCity(e.target.value)}
-                placeholder="Москва"
-                style={inputStyle}
-              />
+
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 10 }}>
+              <div>
+                <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 4 }}>Город *</label>
+                <input required value={formCity} onChange={e => setFormCity(e.target.value)} placeholder="Барнаул" style={inputStyle} />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 4 }}>Макс. участников</label>
+                <input type="number" min={2} max={50} value={formMax} onChange={e => setFormMax(Number(e.target.value))} style={inputStyle} />
+              </div>
             </div>
-          </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: 120 }}>
-              <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 4 }}>
-                Дата *
-              </label>
-              <input
-                required
-                type="date"
-                value={formDate}
-                onChange={(e) => setFormDate(e.target.value)}
-                style={inputStyle}
-              />
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div>
+                <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 4 }}>Дата *</label>
+                <input required type="date" value={formDate} onChange={e => setFormDate(e.target.value)} style={inputStyle} />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 4 }}>Время *</label>
+                <input required type="time" value={formTime} onChange={e => setFormTime(e.target.value)} style={inputStyle} />
+              </div>
             </div>
-            <div style={{ flex: 1, minWidth: 100 }}>
-              <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 4 }}>
-                Время *
-              </label>
-              <input
-                required
-                type="time"
-                value={formTime}
-                onChange={(e) => setFormTime(e.target.value)}
-                style={inputStyle}
-              />
+
+            <div>
+              <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 4 }}>Описание (необязательно)</label>
+              <textarea value={formDesc} onChange={e => setFormDesc(e.target.value)} rows={2} placeholder="Пробежка по набережной, темп 5:30..." style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }} />
             </div>
-            <div style={{ flex: 1, minWidth: 80 }}>
-              <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 4 }}>
-                Макс. людей
-              </label>
-              <input
-                type="number"
-                min={2}
-                max={50}
-                value={formMax}
-                onChange={(e) => setFormMax(Number(e.target.value))}
-                style={inputStyle}
-              />
-            </div>
-          </div>
-          <div>
-            <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 4 }}>
-              Описание
-            </label>
-            <textarea
-              value={formDesc}
-              onChange={(e) => setFormDesc(e.target.value)}
-              rows={2}
-              placeholder="Бежим вместе в парке..."
-              style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
-            />
-          </div>
-          <button type="submit" disabled={submitting} style={{ ...btnPrimary, alignSelf: 'flex-start' }}>
-            {submitting ? 'Создание...' : 'Опубликовать'}
-          </button>
-        </form>
+
+            <button type="submit" disabled={submitting} style={{
+              padding: '10px 24px', borderRadius: 8, border: 'none', background: '#fc4c02',
+              color: '#fff', fontSize: 14, fontWeight: 700, cursor: submitting ? 'not-allowed' : 'pointer',
+              opacity: submitting ? 0.7 : 1, alignSelf: 'flex-start',
+            }}>
+              {submitting ? 'Публикация...' : 'Опубликовать'}
+            </button>
+          </form>
+        </div>
       )}
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-        <input
-          placeholder="Фильтр по городу"
-          value={cityFilter}
-          onChange={(e) => setCityFilter(e.target.value)}
-          style={{ ...inputStyle, flex: 1, minWidth: 120 }}
-        />
-        <select
-          value={sportFilter}
-          onChange={(e) => setSportFilter(e.target.value)}
-          style={{ ...inputStyle, width: 'auto', minWidth: 140, cursor: 'pointer' }}
-        >
-          <option value="">Все виды</option>
-          {ALL_SPORTS.map((s) => (
-            <option key={s} value={s}>
-              {SPORT_ICONS[s]} {SPORT_LABELS[s]}
-            </option>
+        <div style={{ position: 'relative', flex: 1, minWidth: 130 }}>
+          <svg style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 14, height: 14, color: '#aaa', pointerEvents: 'none' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <input
+            placeholder="Город"
+            value={cityFilter}
+            onChange={e => setCityFilter(e.target.value)}
+            style={{ ...inputStyle, paddingLeft: 30, width: '100%' }}
+          />
+        </div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setSportFilter('')}
+            style={{
+              padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              border: `2px solid ${!sportFilter ? '#fc4c02' : '#e0e0e0'}`,
+              background: !sportFilter ? '#fff4ef' : '#fff',
+              color: !sportFilter ? '#fc4c02' : '#888',
+            }}
+          >Все</button>
+          {ALL_SPORTS.map(s => (
+            <button
+              key={s}
+              onClick={() => setSportFilter(sportFilter === s ? '' : s)}
+              style={{
+                padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                border: `2px solid ${sportFilter === s ? SPORT_COLORS[s] : '#e0e0e0'}`,
+                background: sportFilter === s ? SPORT_COLORS[s] + '15' : '#fff',
+                color: sportFilter === s ? SPORT_COLORS[s] : '#888',
+              }}
+            >
+              {SPORT_ICONS[s]}
+            </button>
           ))}
-        </select>
+        </div>
       </div>
 
       {/* List */}
       {loading ? (
-        <div style={{ color: '#999', fontSize: 14, textAlign: 'center', padding: '16px 0' }}>
-          Загрузка...
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {[1, 2, 3].map(i => (
+            <div key={i} style={{ height: 120, borderRadius: 16, background: '#f0f0f0', animation: 'pulse 1.5s infinite' }} />
+          ))}
         </div>
       ) : items.length === 0 ? (
-        <div style={{ color: '#999', fontSize: 14, textAlign: 'center', padding: '16px 0' }}>
-          Нет запланированных активностей
+        <div style={{
+          background: '#fff', borderRadius: 16, padding: '48px 24px', textAlign: 'center',
+          border: '1px solid #e0e0e0',
+        }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>🏃</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: '#242424', marginBottom: 6 }}>Пока никого нет</div>
+          <div style={{ fontSize: 14, color: '#999' }}>
+            Будь первым — создай план тренировки и найди напарника!
+          </div>
         </div>
       ) : (
-        items.map((item) => {
-          const isMine = currentUser?.id === item.userId;
-          return (
-            <div
-              key={item.id}
-              style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: 12,
-                padding: '12px 0',
-                borderBottom: '1px solid #f0f0f0',
-              }}
-            >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {items.map(item => {
+            const isMine = currentUser?.id === item.userId;
+            const days = getDaysUntil(item.date);
+            const color = SPORT_COLORS[item.sport] ?? '#fc4c02';
+
+            return (
               <div
+                key={item.id}
                 style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 12,
-                  background: (SPORT_COLORS[item.sport] ?? '#fc4c02') + '18',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 22,
-                  flexShrink: 0,
+                  background: '#fff', borderRadius: 16,
+                  border: '1px solid #e0e0e0',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+                  overflow: 'hidden', display: 'flex',
+                  transition: 'box-shadow 0.15s',
                 }}
+                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 1px 4px rgba(0,0,0,0.05)'; }}
               >
-                {SPORT_ICONS[item.sport]}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <span
-                    style={{
-                      fontWeight: 700,
-                      fontSize: 14,
-                      color: SPORT_COLORS[item.sport] ?? '#242424',
-                    }}
-                  >
-                    {SPORT_LABELS[item.sport]}
-                  </span>
-                  <span style={{ fontSize: 13, color: '#666' }}>{item.city}</span>
+                {/* Sport stripe */}
+                <div style={{ width: 5, background: color, flexShrink: 0 }} />
+
+                <div style={{ flex: 1, padding: isMobile ? '14px 14px' : '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      {/* Sport icon */}
+                      <div style={{
+                        width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+                        background: color + '15',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
+                      }}>
+                        {SPORT_ICONS[item.sport]}
+                      </div>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 15, fontWeight: 700, color }}>
+                            {SPORT_LABELS[item.sport]}
+                          </span>
+                          <span style={{ fontSize: 12, color: '#888' }}>· {item.city}</span>
+                        </div>
+                        <div style={{ fontSize: 13, color: '#555', marginTop: 2, fontWeight: 600 }}>
+                          {formatDateTime(item.date, item.time)}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Days badge */}
+                    <div style={{
+                      flexShrink: 0, padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+                      background: days <= 1 ? '#fff4ef' : days <= 3 ? '#fef3c7' : '#f0f7ff',
+                      color: days <= 1 ? '#fc4c02' : days <= 3 ? '#d97706' : '#0061ff',
+                    }}>
+                      {days <= 0 ? 'Сегодня' : days === 1 ? 'Завтра' : `через ${days} дн.`}
+                    </div>
+                  </div>
+
+                  {item.description && (
+                    <div style={{ fontSize: 13, color: '#666', lineHeight: 1.5 }}>{item.description}</div>
+                  )}
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    {/* Author */}
+                    <div
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+                      onClick={() => window.dispatchEvent(new CustomEvent('open-profile', { detail: { userId: item.user.id } }))}
+                    >
+                      <Avatar url={item.user.avatarUrl} username={item.user.username} size={26} />
+                      <div>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: '#242424' }}>{item.user.username}</span>
+                        <span style={{ fontSize: 11, color: '#aaa', marginLeft: 6 }}>Ур. {item.user.level}</span>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 12, color: '#aaa' }}>до {item.maxPeople} чел.</span>
+
+                      {isMine ? (
+                        <button
+                          onClick={() => handleDelete(item.id)}
+                          style={{
+                            padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                            border: '1px solid #fecaca', background: '#fff5f5', color: '#d93025',
+                          }}
+                        >
+                          Удалить
+                        </button>
+                      ) : isAuthenticated ? (
+                        <button
+                          onClick={() => window.dispatchEvent(new CustomEvent('open-messages-with', { detail: { userId: item.user.id, username: item.user.username, avatarUrl: item.user.avatarUrl, level: item.user.level } }))}
+                          style={{
+                            padding: '5px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                            border: `1px solid ${color}`, background: color + '12', color,
+                            transition: 'all 0.15s',
+                          }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = color; (e.currentTarget as HTMLButtonElement).style.color = '#fff'; }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = color + '12'; (e.currentTarget as HTMLButtonElement).style.color = color; }}
+                        >
+                          Написать
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
                 </div>
-                <div style={{ fontSize: 13, color: '#242424', marginBottom: 4 }}>
-                  {formatDateTime(item.date, item.time)} · до {item.maxPeople} чел.
-                </div>
-                {item.description && (
-                  <div style={{ fontSize: 13, color: '#888', marginBottom: 4 }}>{item.description}</div>
-                )}
-                <div
-                  onClick={() => window.dispatchEvent(new CustomEvent('open-profile', { detail: { userId: item.user.id } }))}
-                  style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', width: 'fit-content' }}
-                >
-                  <Avatar url={item.user.avatarUrl} username={item.user.username} size={20} />
-                  <span style={{ fontSize: 12, color: '#999' }}>{item.user.username}</span>
-                </div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
-                {isMine ? (
-                  <button
-                    onClick={() => handleDelete(item.id)}
-                    style={{
-                      ...btnOutline,
-                      fontSize: 12,
-                      padding: '4px 12px',
-                      color: '#d93025',
-                      borderColor: '#fecaca',
-                    }}
-                  >
-                    Удалить
-                  </button>
-                ) : (
-                  <span
-                    style={{
-                      fontSize: 12,
-                      color: '#fc4c02',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      padding: '4px 12px',
-                      borderRadius: 8,
-                      border: '1px solid #fc4c02',
-                      background: '#fff4ef',
-                    }}
-                  >
-                    Хочу присоединиться
-                  </span>
-                )}
-              </div>
-            </div>
-          );
-        })
+            );
+          })}
+        </div>
       )}
-    </div>
-  );
-}
-
-// ─── Main Community Panel ───────────────────────────────
-
-export default function CommunityPanel() {
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  useEffect(() => {
-    const h = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', h);
-    return () => window.removeEventListener('resize', h);
-  }, []);
-  const [section, setSection] = useState<Section>('feed');
-
-  const tabs: { id: Section; label: string; icon: string }[] = [
-    { id: 'feed', label: 'Лента', icon: '📰' },
-    { id: 'search', label: 'Поиск людей', icon: '🔍' },
-    { id: 'planned', label: 'Найти компанию', icon: '📅' },
-  ];
-
-  return (
-    <div style={{ maxWidth: 800, margin: '0 auto' }}>
-      {/* Section tabs */}
-      <div
-        style={{
-          display: 'flex',
-          gap: 8,
-          marginBottom: 20,
-          background: '#fff',
-          borderRadius: 12,
-          padding: 6,
-          boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-          border: '1px solid #e0e0e0',
-        }}
-      >
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setSection(tab.id)}
-            style={{
-              flex: 1,
-              padding: isMobile ? '8px 6px' : '10px 8px',
-              borderRadius: 8,
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: isMobile ? 12 : 14,
-              fontWeight: 600,
-              background: section === tab.id ? '#fc4c02' : 'transparent',
-              color: section === tab.id ? '#fff' : '#888',
-              transition: 'all 0.15s',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: isMobile ? 4 : 6,
-            }}
-          >
-            <span>{tab.icon}</span>
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {section === 'feed' && <FeedSection />}
-      {section === 'search' && <SearchSection />}
-      {section === 'planned' && <PlannedSection />}
     </div>
   );
 }
