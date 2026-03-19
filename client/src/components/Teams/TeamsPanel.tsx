@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Team } from '@/types';
 import { api } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
@@ -71,6 +71,9 @@ export default function TeamsPanel() {
   const [joining, setJoining] = useState(false);
 
   const [codeCopied, setCodeCopied] = useState(false);
+  const [avatarHover, setAvatarHover] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const teamAvatarRef = useRef<HTMLInputElement>(null);
 
   // Mobile responsive
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -188,6 +191,19 @@ export default function TeamsPanel() {
     setCodeCopied(true);
     setTimeout(() => setCodeCopied(false), 2000);
   };
+
+  const handleTeamAvatarChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !myTeam) return;
+    setAvatarUploading(true);
+    try {
+      const { avatarUrl } = await api.teams.uploadAvatar(myTeam.id, file);
+      setMyTeam(prev => prev ? { ...prev, avatarUrl } : prev);
+    } catch { /* ignore */ } finally {
+      setAvatarUploading(false);
+      if (teamAvatarRef.current) teamAvatarRef.current.value = '';
+    }
+  }, [myTeam]);
 
   const isMember = (team: Team) => {
     if (!user) return false;
@@ -441,15 +457,64 @@ export default function TeamsPanel() {
           flexDirection: 'column',
           gap: 16,
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <span style={{ fontSize: 12, fontWeight: 600, color: '#fc4c02', textTransform: 'uppercase', letterSpacing: 1 }}>
-                Мой клуб
-              </span>
-              <h2 style={{ margin: '4px 0 0', fontSize: 20, fontWeight: 700, color: '#242424' }}>{myTeam.name}</h2>
-              {myTeam.description && (
-                <p style={{ margin: '4px 0 0', fontSize: 14, color: '#666' }}>{myTeam.description}</p>
-              )}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1, minWidth: 0 }}>
+              {/* Club avatar */}
+              {(() => {
+                const isOwner = user && myTeam.ownerId === user.id;
+                return (
+                  <div
+                    style={{
+                      width: 64, height: 64, borderRadius: 16, flexShrink: 0,
+                      background: myTeam.avatarUrl ? 'transparent' : '#fc4c02',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 28, fontWeight: 700, color: '#fff',
+                      overflow: 'hidden', position: 'relative',
+                      cursor: isOwner ? 'pointer' : 'default',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                      opacity: avatarUploading ? 0.6 : 1,
+                    }}
+                    onClick={() => isOwner && teamAvatarRef.current?.click()}
+                    onMouseEnter={() => isOwner && setAvatarHover(true)}
+                    onMouseLeave={() => setAvatarHover(false)}
+                    title={isOwner ? 'Изменить эмблему клуба' : undefined}
+                  >
+                    {myTeam.avatarUrl ? (
+                      <img src={myTeam.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      myTeam.name[0]?.toUpperCase()
+                    )}
+                    {isOwner && (avatarHover || avatarUploading) && (
+                      <div style={{
+                        position: 'absolute', inset: 0,
+                        background: 'rgba(0,0,0,0.5)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        {avatarUploading ? (
+                          <div style={{ width: 20, height: 20, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                        ) : (
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                            <circle cx="12" cy="13" r="4"/>
+                          </svg>
+                        )}
+                      </div>
+                    )}
+                    {isOwner && (
+                      <input ref={teamAvatarRef} type="file" accept="image/*" onChange={handleTeamAvatarChange} style={{ display: 'none' }} />
+                    )}
+                  </div>
+                );
+              })()}
+              <div style={{ minWidth: 0 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#fc4c02', textTransform: 'uppercase', letterSpacing: 1 }}>
+                  Мой клуб
+                </span>
+                <h2 style={{ margin: '4px 0 0', fontSize: 20, fontWeight: 700, color: '#242424' }}>{myTeam.name}</h2>
+                {myTeam.description && (
+                  <p style={{ margin: '4px 0 0', fontSize: 14, color: '#666' }}>{myTeam.description}</p>
+                )}
+              </div>
             </div>
             <button
               onClick={() => handleLeave(myTeam.id)}
@@ -461,6 +526,7 @@ export default function TeamsPanel() {
                 borderRadius: 8,
                 fontSize: 12,
                 cursor: 'pointer',
+                flexShrink: 0,
               }}
             >
               Покинуть
@@ -848,20 +914,32 @@ export default function TeamsPanel() {
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = '#fc4c02'; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = '#e0e0e0'; }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <h3 style={{ margin: 0, fontWeight: 700, color: '#242424', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {team.name}
-                  </h3>
-                  {team.description && (
-                    <p style={{ margin: '4px 0 0', fontSize: 14, color: '#666', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                      {team.description}
-                    </p>
-                  )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    width: 44, height: 44, borderRadius: 10, flexShrink: 0,
+                    background: team.avatarUrl ? 'transparent' : '#fc4c02',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 20, fontWeight: 700, color: '#fff', overflow: 'hidden',
+                  }}>
+                    {team.avatarUrl
+                      ? <img src={team.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : team.name[0]?.toUpperCase()}
+                  </div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <h3 style={{ margin: 0, fontWeight: 700, color: '#242424', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {team.name}
+                    </h3>
+                    {team.description && (
+                      <p style={{ margin: '2px 0 0', fontSize: 13, color: '#666', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>
+                        {team.description}
+                      </p>
+                    )}
+                  </div>
                 </div>
                 {!team.isPublic && (
                   <span style={{
-                    marginLeft: 8,
+                    flexShrink: 0,
                     backgroundColor: '#eef0f4',
                     padding: '2px 8px',
                     borderRadius: 4,

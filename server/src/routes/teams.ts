@@ -1,8 +1,32 @@
 import { Router, Response } from 'express';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 import { prisma } from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
 import { AuthRequest } from '../types';
 import { checkAndGrant } from '../services/AchievementService';
+
+const teamAvatarStorage = multer.diskStorage({
+  destination(_req, _file, cb) {
+    const dir = path.join(__dirname, '..', '..', 'uploads', 'team-avatars');
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename(_req, file, cb) {
+    const ext = path.extname(file.originalname) || '.jpg';
+    cb(null, `team-${Date.now()}${ext}`);
+  },
+});
+
+const teamAvatarUpload = multer({
+  storage: teamAvatarStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter(_req, file, cb) {
+    if (file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('Допустимы только изображения'));
+  },
+});
 
 const router = Router();
 
@@ -182,6 +206,29 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
     console.error('Update team error:', error);
     res.status(500).json({ error: 'Failed to update team' });
   }
+});
+
+// POST /api/teams/:id/avatar — upload team avatar (owner only)
+router.post('/:id/avatar', authMiddleware, (req: AuthRequest, res: Response) => {
+  teamAvatarUpload.single('avatar')(req, res, async (err) => {
+    if (err) {
+      res.status(400).json({ error: err.message || 'Ошибка загрузки файла' });
+      return;
+    }
+    if (!req.file) {
+      res.status(400).json({ error: 'Файл не выбран' });
+      return;
+    }
+    const id = req.params.id as string;
+    const userId = req.userId!;
+    const team = await prisma.team.findUnique({ where: { id } });
+    if (!team) { res.status(404).json({ error: 'Team not found' }); return; }
+    if (team.ownerId !== userId) { res.status(403).json({ error: 'Only owner can change avatar' }); return; }
+
+    const avatarUrl = `/uploads/team-avatars/${req.file.filename}`;
+    const updated = await prisma.team.update({ where: { id }, data: { avatarUrl } });
+    res.json({ avatarUrl: updated.avatarUrl });
+  });
 });
 
 // POST /api/teams/:id/join — join public team or by invite code

@@ -307,6 +307,11 @@ export const api = {
         `/teams/${teamId}/stats`
       );
     },
+    uploadAvatar(teamId: string, file: File) {
+      const form = new FormData();
+      form.append('avatar', file);
+      return request<{ avatarUrl: string }>(`/teams/${teamId}/avatar`, { method: 'POST', body: form });
+    },
   },
 
   battles: {
