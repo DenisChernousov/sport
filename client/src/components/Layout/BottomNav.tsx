@@ -16,6 +16,7 @@ export function BottomNav({ activeTab, onTabChange, onAddActivity, unreadMessage
   const { preset } = useTheme();
   const { canInstall, isInstalled, isIos, install } = usePwaInstall();
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [showInstallHint, setShowInstallHint] = useState(false);
 
   const ITEMS = [
     { id: 'feed' as TabId, icon: (active: boolean, primary: string) => (
@@ -58,15 +59,13 @@ export function BottomNav({ activeTab, onTabChange, onAddActivity, unreadMessage
               {isIos ? 'Нажмите  и «На экран домой»' : 'Работает без интернета, быстрее'}
             </div>
           </div>
-          {canInstall && (
-            <button onClick={install} style={{
-              padding: '7px 14px', borderRadius: 10, border: 'none',
-              background: preset.primary, color: '#fff',
-              fontSize: 13, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
-            }}>
-              Установить
-            </button>
-          )}
+          <button onClick={canInstall ? install : () => setShowInstallHint(true)} style={{
+            padding: '7px 14px', borderRadius: 10, border: 'none',
+            background: preset.primary, color: '#fff',
+            fontSize: 13, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
+          }}>
+            Установить
+          </button>
           <button onClick={() => setBannerDismissed(true)} style={{
             width: 28, height: 28, borderRadius: 8, border: 'none',
             background: 'rgba(255,255,255,0.1)', color: '#8aadcc',
@@ -138,6 +137,55 @@ export function BottomNav({ activeTab, onTabChange, onAddActivity, unreadMessage
         );
       })}
     </nav>
+
+      {showInstallHint && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+          zIndex: 1000, display: 'flex', alignItems: 'flex-end',
+        }} onClick={() => setShowInstallHint(false)}>
+          <div style={{
+            width: '100%', background: preset.dark, borderRadius: '20px 20px 0 0',
+            padding: '20px 20px 36px',
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)', margin: '0 auto 20px' }} />
+            <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', marginBottom: 16 }}>
+              Как установить приложение
+            </div>
+            {isIos ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <Step n={1} text='Нажмите кнопку «Поделиться» (⬆️) в нижней панели Safari' />
+                <Step n={2} text='Прокрутите вниз и выберите «На экран домой»' />
+                <Step n={3} text='Нажмите «Добавить» в правом верхнем углу' />
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <Step n={1} text='Нажмите ⋮ (три точки) в правом верхнем углу Chrome' />
+                <Step n={2} text='Выберите «Добавить на главный экран» или «Установить приложение»' />
+                <Step n={3} text='Нажмите «Добавить»' />
+              </div>
+            )}
+            <button onClick={() => setShowInstallHint(false)} style={{
+              marginTop: 24, width: '100%', padding: '13px 0', borderRadius: 12,
+              border: 'none', background: preset.primary, color: '#fff',
+              fontSize: 15, fontWeight: 700, cursor: 'pointer',
+            }}>Понятно</button>
+          </div>
+        </div>
+      )}
     </>
+  );
+}
+
+function Step({ n, text }: { n: number; text: string }) {
+  return (
+    <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+      <div style={{
+        width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+        background: 'rgba(255,255,255,0.12)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 13, fontWeight: 700, color: '#fff',
+      }}>{n}</div>
+      <div style={{ fontSize: 14, color: '#c8d8e8', lineHeight: 1.5, paddingTop: 4 }}>{text}</div>
+    </div>
   );
 }
