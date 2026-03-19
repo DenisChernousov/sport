@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Event, DiplomaSettings } from '@/types';
 import { api } from '@/services/api';
 import { DiplomaEditor } from './DiplomaEditor';
@@ -48,6 +48,8 @@ const STATUS_COLORS: Record<string, string> = {
 const BRAND = '#fc4c02';
 const TEXT = '#242424';
 const BORDER = '#e0e0e0';
+const BRAND_BG = '#fff4ef';
+const SIDEBAR_W = 220;
 
 function formatDate(d: string | Date): string {
   return new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -59,24 +61,55 @@ function toInputDate(d: string | Date | null | undefined): string {
   return date.toISOString().slice(0, 16);
 }
 
+// ─── SVG Icons ───────────────────────────────────────────
+
+function IconStats() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" />
+    </svg>
+  );
+}
+function IconUsers() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+function IconEvents() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  );
+}
+function IconPackages() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /><polyline points="3.27 6.96 12 12.01 20.73 6.96" /><line x1="12" y1="22.08" x2="12" y2="12" />
+    </svg>
+  );
+}
+function IconAchievements() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="8" r="6" /><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11" />
+    </svg>
+  );
+}
+function IconSettings() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
+  );
+}
+
 // ─── Styles ──────────────────────────────────────────────
 
 const styles = {
-  container: { maxWidth: 1200, margin: '0 auto', padding: 24 } as React.CSSProperties,
-  heading: { fontSize: 28, fontWeight: 900, color: TEXT, marginBottom: 24 } as React.CSSProperties,
-  tabBar: { display: 'flex', gap: 0, marginBottom: 24, borderBottom: `2px solid ${BORDER}` } as React.CSSProperties,
-  tab: (active: boolean): React.CSSProperties => ({
-    padding: '12px 24px',
-    fontSize: 15,
-    fontWeight: 700,
-    color: active ? BRAND : '#888',
-    background: 'none',
-    border: 'none',
-    borderBottom: active ? `3px solid ${BRAND}` : '3px solid transparent',
-    cursor: 'pointer',
-    marginBottom: -2,
-    transition: 'all 0.15s',
-  }),
+  container: { maxWidth: 1280, margin: '0 auto', padding: '24px 24px 48px' } as React.CSSProperties,
   card: { background: '#fff', borderRadius: 14, border: `1px solid ${BORDER}`, padding: 24, marginBottom: 16 } as React.CSSProperties,
   btn: (variant: 'primary' | 'secondary' | 'danger' = 'primary'): React.CSSProperties => ({
     padding: '10px 20px',
@@ -104,10 +137,8 @@ const styles = {
   select: { width: '100%', padding: '10px 14px', borderRadius: 8, border: `1.5px solid ${BORDER}`, fontSize: 14, outline: 'none', boxSizing: 'border-box' as const, color: TEXT, background: '#fff' } as React.CSSProperties,
   label: { display: 'block', fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 6 } as React.CSSProperties,
   fieldGroup: { marginBottom: 16 } as React.CSSProperties,
-  grid2: { display: 'grid', gridTemplateColumns: window.innerWidth < 768 ? '1fr' : '1fr 1fr', gap: 16 } as React.CSSProperties,
-  grid3: { display: 'grid', gridTemplateColumns: window.innerWidth < 768 ? '1fr' : '1fr 1fr 1fr', gap: 16 } as React.CSSProperties,
-  error: { padding: '10px 14px', background: '#fff0f0', color: '#c00', borderRadius: 8, fontSize: 13, fontWeight: 600, marginBottom: 16 } as React.CSSProperties,
-  success: { padding: '10px 14px', background: '#f0fff0', color: '#16a34a', borderRadius: 8, fontSize: 13, fontWeight: 600, marginBottom: 16 } as React.CSSProperties,
+  grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 } as React.CSSProperties,
+  grid3: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 } as React.CSSProperties,
   overlay: { position: 'fixed' as const, top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 16 },
   modal: { background: '#fff', borderRadius: 20, maxWidth: 720, width: '100%', maxHeight: '90vh', overflow: 'auto', padding: 32 } as React.CSSProperties,
   badge: (color: string): React.CSSProperties => ({
@@ -123,6 +154,175 @@ const styles = {
   th: { textAlign: 'left' as const, padding: '10px 12px', fontSize: 12, fontWeight: 700, color: '#888', borderBottom: `2px solid ${BORDER}` } as React.CSSProperties,
   td: { padding: '12px', fontSize: 14, color: TEXT, borderBottom: `1px solid ${BORDER}` } as React.CSSProperties,
 };
+
+// ─── Toast Notification ──────────────────────────────────
+
+interface Toast {
+  id: number;
+  message: string;
+  type: 'success' | 'error';
+}
+
+function ToastContainer({ toasts, onRemove }: { toasts: Toast[]; onRemove: (id: number) => void }) {
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 24,
+      right: 24,
+      zIndex: 10000,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 10,
+      pointerEvents: 'none',
+    }}>
+      {toasts.map((t) => (
+        <div key={t.id} style={{
+          background: t.type === 'success' ? '#16a34a' : '#dc2626',
+          color: '#fff',
+          padding: '12px 20px',
+          borderRadius: 12,
+          fontSize: 14,
+          fontWeight: 700,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.18)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          minWidth: 260,
+          animation: 'slideIn 0.2s ease',
+          pointerEvents: 'all',
+        }}>
+          <span style={{ flex: 1 }}>{t.message}</span>
+          <button onClick={() => onRemove(t.id)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.8)', cursor: 'pointer', fontSize: 16, padding: 0, lineHeight: 1 }}>×</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function useToast() {
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const counter = useRef(0);
+
+  const addToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
+    const id = ++counter.current;
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3000);
+  }, []);
+
+  const removeToast = useCallback((id: number) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  return { toasts, addToast, removeToast };
+}
+
+// ─── Sidebar Nav ─────────────────────────────────────────
+
+type TabKey = 'stats' | 'users' | 'events' | 'packages' | 'achievements' | 'settings';
+
+const NAV_ITEMS: { key: TabKey; label: string; Icon: () => React.ReactElement }[] = [
+  { key: 'stats', label: 'Статистика', Icon: IconStats },
+  { key: 'users', label: 'Пользователи', Icon: IconUsers },
+  { key: 'events', label: 'События', Icon: IconEvents },
+  { key: 'packages', label: 'Пакеты', Icon: IconPackages },
+  { key: 'achievements', label: 'Достижения', Icon: IconAchievements },
+  { key: 'settings', label: 'Настройки', Icon: IconSettings },
+];
+
+const TAB_LABELS: Record<TabKey, string> = {
+  stats: 'Статистика',
+  users: 'Пользователи',
+  events: 'События',
+  packages: 'Пакеты',
+  achievements: 'Достижения',
+  settings: 'Настройки',
+};
+
+function SidebarNav({ active, onChange, isMobile }: { active: TabKey; onChange: (t: TabKey) => void; isMobile: boolean }) {
+  if (isMobile) {
+    return (
+      <div style={{
+        display: 'flex',
+        gap: 8,
+        overflowX: 'auto',
+        padding: '0 0 16px 0',
+        scrollbarWidth: 'none',
+        WebkitOverflowScrolling: 'touch',
+      } as React.CSSProperties}>
+        {NAV_ITEMS.map(({ key, label, Icon }) => {
+          const isActive = active === key;
+          return (
+            <button key={key} onClick={() => onChange(key)} style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '8px 16px',
+              borderRadius: 24,
+              border: isActive ? 'none' : `1.5px solid ${BORDER}`,
+              background: isActive ? BRAND : '#fff',
+              color: isActive ? '#fff' : '#666',
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+              transition: 'all 0.15s',
+            }}>
+              <Icon />
+              {label}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
+  return (
+    <aside style={{
+      width: SIDEBAR_W,
+      flexShrink: 0,
+      position: 'sticky',
+      top: 24,
+      alignSelf: 'flex-start',
+      background: '#fff',
+      borderRadius: 16,
+      border: `1px solid ${BORDER}`,
+      padding: '12px 0',
+      height: 'fit-content',
+    }}>
+      <div style={{ padding: '8px 16px 16px', borderBottom: `1px solid ${BORDER}`, marginBottom: 8 }}>
+        <div style={{ fontSize: 11, fontWeight: 800, color: '#aaa', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          Навигация
+        </div>
+      </div>
+      {NAV_ITEMS.map(({ key, label, Icon }) => {
+        const isActive = active === key;
+        return (
+          <button key={key} onClick={() => onChange(key)} style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            width: '100%',
+            padding: '11px 16px',
+            border: 'none',
+            borderLeft: isActive ? `3px solid ${BRAND}` : '3px solid transparent',
+            background: isActive ? BRAND_BG : 'transparent',
+            color: isActive ? BRAND : '#555',
+            fontSize: 14,
+            fontWeight: isActive ? 700 : 500,
+            cursor: 'pointer',
+            textAlign: 'left',
+            transition: 'all 0.12s',
+            boxSizing: 'border-box',
+          } as React.CSSProperties}>
+            <Icon />
+            {label}
+          </button>
+        );
+      })}
+    </aside>
+  );
+}
 
 // ─── Event Form ──────────────────────────────────────────
 
@@ -722,8 +922,6 @@ function ConfirmDialog({ message, onConfirm, onCancel }: {
   );
 }
 
-// ─── Main Admin Panel ────────────────────────────────────
-
 // ─── Admin Stats Types ──────────────────────────────────
 
 interface AdminStats {
@@ -767,6 +965,389 @@ function formatDurationShort(seconds: number): string {
   const m = Math.floor((seconds % 3600) / 60);
   if (h > 0) return `${h}ч ${m}м`;
   return `${m}м`;
+}
+
+// ─── Stats Tab ──────────────────────────────────────────
+
+const STAT_CARD_META: { label: string; key: keyof AdminStats; color: string; bgColor: string; icon: string; note?: string }[] = [
+  { label: 'Пользователи', key: 'totalUsers', color: '#2563eb', bgColor: '#eff6ff', icon: '👥' },
+  { label: 'События', key: 'totalEvents', color: '#7c3aed', bgColor: '#f5f3ff', icon: '🏆' },
+  { label: 'Активности', key: 'totalActivities', color: '#16a34a', bgColor: '#f0fdf4', icon: '⚡' },
+  { label: 'Команды', key: 'totalTeams', color: '#ea580c', bgColor: '#fff7ed', icon: '🤝' },
+  { label: 'Новых за неделю', key: 'newUsersThisWeek', color: '#0891b2', bgColor: '#ecfeff', icon: '📈' },
+  { label: 'За месяц', key: 'newUsersThisMonth', color: '#9333ea', bgColor: '#faf5ff', icon: '📅' },
+];
+
+function UserAvatar({ username, avatarUrl, size = 32 }: { username: string; avatarUrl?: string; size?: number }) {
+  if (avatarUrl) {
+    return <img src={avatarUrl} alt="" style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />;
+  }
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: '50%', background: BRAND, color: '#fff',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: size * 0.4, fontWeight: 700, flexShrink: 0,
+    }}>
+      {(username ?? '?')[0].toUpperCase()}
+    </div>
+  );
+}
+
+function StatsTab() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const h = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    setLoading(true);
+    api.admin.stats()
+      .then(setStats)
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Ошибка загрузки'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div style={{ textAlign: 'center', padding: 60, color: '#888', fontSize: 15 }}>Загрузка...</div>;
+  if (error) return <div style={{ padding: '12px 16px', background: '#fff0f0', color: '#c00', borderRadius: 10, fontSize: 14 }}>{error}</div>;
+  if (!stats) return null;
+
+  const totalDistanceVal = `${(stats.totalDistance ?? 0).toFixed(1)} км`;
+
+  return (
+    <div>
+      {/* Summary stat cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
+        {STAT_CARD_META.map((card) => {
+          const rawVal = stats[card.key];
+          const value = typeof rawVal === 'number' ? rawVal : 0;
+          return (
+            <div key={card.label} style={{
+              background: '#fff',
+              borderRadius: 14,
+              border: `1px solid ${BORDER}`,
+              padding: '20px 20px 18px',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 14,
+            }}>
+              <div style={{
+                width: 46, height: 46, borderRadius: 12, background: card.bgColor,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 22, flexShrink: 0,
+              }}>
+                {card.icon}
+              </div>
+              <div>
+                <div style={{ fontSize: 26, fontWeight: 900, color: card.color, lineHeight: 1 }}>{value.toLocaleString('ru-RU')}</div>
+                <div style={{ fontSize: 12, color: '#888', marginTop: 5, fontWeight: 600 }}>{card.label}</div>
+              </div>
+            </div>
+          );
+        })}
+        {/* Total distance card */}
+        <div style={{
+          background: '#fff',
+          borderRadius: 14,
+          border: `1px solid ${BORDER}`,
+          padding: '20px 20px 18px',
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 14,
+        }}>
+          <div style={{
+            width: 46, height: 46, borderRadius: 12, background: '#fff8f5',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 22, flexShrink: 0,
+          }}>
+            🏃
+          </div>
+          <div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: BRAND, lineHeight: 1 }}>{totalDistanceVal}</div>
+            <div style={{ fontSize: 12, color: '#888', marginTop: 5, fontWeight: 600 }}>Общая дистанция</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Top 5 users */}
+      <div style={{ background: '#fff', borderRadius: 14, border: `1px solid ${BORDER}`, padding: 24, marginBottom: 16, overflowX: isMobile ? 'auto' : undefined }}>
+        <div style={{ fontSize: 17, fontWeight: 800, color: TEXT, marginBottom: 16 }}>
+          Топ-5 пользователей по дистанции
+        </div>
+        <table style={{ ...styles.table, minWidth: isMobile ? 500 : undefined }}>
+          <thead>
+            <tr>
+              <th style={styles.th}>#</th>
+              <th style={styles.th}>Пользователь</th>
+              <th style={styles.th}>Город</th>
+              <th style={styles.th}>Уровень</th>
+              <th style={styles.th}>Дистанция</th>
+            </tr>
+          </thead>
+          <tbody>
+            {stats.topUsers.map((u, idx) => (
+              <tr key={u.id} style={{ background: idx % 2 === 0 ? '#fff' : '#fafafa' }}>
+                <td style={{ ...styles.td, fontWeight: 800, color: idx === 0 ? '#f59e0b' : idx === 1 ? '#94a3b8' : idx === 2 ? '#d97706' : '#aaa', width: 36 }}>
+                  {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}
+                </td>
+                <td style={{ ...styles.td, fontWeight: 700 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <UserAvatar username={u.username} avatarUrl={u.avatarUrl} size={34} />
+                    <span>{u.username}</span>
+                  </div>
+                </td>
+                <td style={{ ...styles.td, color: '#666' }}>{u.city ?? '—'}</td>
+                <td style={styles.td}>
+                  <span style={{ padding: '2px 10px', background: '#f5f5f5', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
+                    Ур. {u.level}
+                  </span>
+                </td>
+                <td style={{ ...styles.td, fontWeight: 800, color: BRAND }}>{(u.totalDistance ?? 0).toFixed(1)} км</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Recent activities */}
+      <div style={{ background: '#fff', borderRadius: 14, border: `1px solid ${BORDER}`, padding: 24 }}>
+        <div style={{ fontSize: 17, fontWeight: 800, color: TEXT, marginBottom: 16 }}>
+          Последние активности
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          {stats.recentActivities.map((a, idx) => (
+            <div key={a.id} style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 14,
+              padding: '12px 0',
+              borderBottom: idx < stats.recentActivities.length - 1 ? `1px solid ${BORDER}` : 'none',
+            }}>
+              <UserAvatar username={a.user.username} avatarUrl={a.user.avatarUrl} size={36} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>
+                  {a.user.username} — {a.title ?? a.sport}
+                </div>
+                <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>
+                  {(a.distance ?? 0).toFixed(1)} км · {formatDurationShort(a.duration ?? 0)}
+                </div>
+              </div>
+              <div style={{ fontSize: 11, color: '#aaa', flexShrink: 0 }}>
+                {new Date(a.createdAt).toLocaleDateString('ru-RU')}
+              </div>
+            </div>
+          ))}
+          {stats.recentActivities.length === 0 && (
+            <div style={{ textAlign: 'center', color: '#888', padding: 32, fontSize: 14 }}>Нет активностей</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Users Tab ──────────────────────────────────────────
+
+function UsersTab() {
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [search, setSearch] = useState('');
+  const [localFilter, setLocalFilter] = useState('');
+  const [roleEdits, setRoleEdits] = useState<Record<string, string>>({});
+  const [savingRole, setSavingRole] = useState<string | null>(null);
+  const [hoveredRow, setHoveredRow] = useState<string | null>(null);
+
+  const loadUsers = useCallback(async (searchVal?: string) => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await api.admin.users(searchVal ? { search: searchVal } : undefined);
+      setUsers(res);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Ошибка загрузки');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
+
+  const handleSearch = useCallback(() => {
+    loadUsers(search);
+  }, [search, loadUsers]);
+
+  const handleRoleChange = useCallback(async (userId: string) => {
+    const newRole = roleEdits[userId];
+    if (!newRole) return;
+    setSavingRole(userId);
+    setError('');
+    try {
+      await api.admin.setRole(userId, newRole);
+      setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, role: newRole } : u));
+      setRoleEdits((prev) => {
+        const next = { ...prev };
+        delete next[userId];
+        return next;
+      });
+      setSuccess('Роль обновлена');
+      setTimeout(() => setSuccess(''), 2000);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Ошибка обновления роли');
+    } finally {
+      setSavingRole(null);
+    }
+  }, [roleEdits]);
+
+  const filteredUsers = localFilter.trim()
+    ? users.filter((u) => {
+        const q = localFilter.toLowerCase();
+        return (
+          u.username.toLowerCase().includes(q) ||
+          u.email.toLowerCase().includes(q) ||
+          (u.city ?? '').toLowerCase().includes(q)
+        );
+      })
+    : users;
+
+  return (
+    <div>
+      {error && <div style={{ padding: '10px 14px', background: '#fff0f0', color: '#c00', borderRadius: 8, fontSize: 13, fontWeight: 600, marginBottom: 16 }}>{error}</div>}
+      {success && <div style={{ padding: '10px 14px', background: '#f0fff0', color: '#16a34a', borderRadius: 8, fontSize: 13, fontWeight: 600, marginBottom: 16 }}>{success}</div>}
+
+      {/* Search bar */}
+      <div style={{ background: '#fff', borderRadius: 14, border: `1px solid ${BORDER}`, padding: 16, marginBottom: 16 }}>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ flex: 1, position: 'relative' as const }}>
+            <input
+              style={{ ...styles.input, paddingLeft: 40 }}
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setLocalFilter(e.target.value); }}
+              placeholder="Поиск по имени, email или городу..."
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
+            />
+            <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#aaa', fontSize: 16, pointerEvents: 'none' }}>
+              🔍
+            </span>
+          </div>
+          <button style={styles.btn('primary')} onClick={handleSearch}>Найти</button>
+        </div>
+        {filteredUsers.length !== users.length && (
+          <div style={{ fontSize: 12, color: '#888', marginTop: 8 }}>
+            Показано: {filteredUsers.length} из {users.length}
+          </div>
+        )}
+      </div>
+
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 60, color: '#888', fontSize: 15 }}>Загрузка...</div>
+      ) : (
+        <div style={{ background: '#fff', borderRadius: 14, border: `1px solid ${BORDER}`, overflow: 'hidden' }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={styles.table}>
+              <thead>
+                <tr style={{ background: '#fafafa' }}>
+                  <th style={styles.th}>Пользователь</th>
+                  <th style={styles.th}>Email</th>
+                  <th style={styles.th}>Роль</th>
+                  <th style={styles.th}>Город</th>
+                  <th style={styles.th}>Уровень</th>
+                  <th style={styles.th}>Дистанция</th>
+                  <th style={styles.th}>Рефералы</th>
+                  <th style={styles.th}>Дата рег.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUsers.map((u, idx) => {
+                  const currentEditRole = roleEdits[u.id];
+                  const displayRole = currentEditRole ?? u.role;
+                  const isDirty = currentEditRole != null && currentEditRole !== u.role;
+                  const isHovered = hoveredRow === u.id;
+                  return (
+                    <tr
+                      key={u.id}
+                      onMouseEnter={() => setHoveredRow(u.id)}
+                      onMouseLeave={() => setHoveredRow(null)}
+                      style={{ background: isHovered ? '#fff8f5' : idx % 2 === 0 ? '#fff' : '#fafafa', transition: 'background 0.1s' }}
+                    >
+                      <td style={{ ...styles.td, fontWeight: 700 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <UserAvatar username={u.username} size={28} />
+                          {u.username}
+                        </div>
+                      </td>
+                      <td style={{ ...styles.td, fontSize: 12, color: '#666' }}>{u.email}</td>
+                      <td style={styles.td}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <select
+                            value={displayRole}
+                            onChange={(e) => setRoleEdits((prev) => ({ ...prev, [u.id]: e.target.value }))}
+                            style={{
+                              padding: '4px 8px',
+                              borderRadius: 6,
+                              border: `1.5px solid ${ROLE_COLORS[displayRole] ?? '#888'}`,
+                              fontSize: 12,
+                              fontWeight: 700,
+                              color: ROLE_COLORS[displayRole] ?? '#888',
+                              background: '#fff',
+                              outline: 'none',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <option value="USER">USER</option>
+                            <option value="MODERATOR">MODERATOR</option>
+                            <option value="ADMIN">ADMIN</option>
+                          </select>
+                          {isDirty && (
+                            <button
+                              style={{
+                                ...styles.smallBtn('primary'),
+                                opacity: savingRole === u.id ? 0.6 : 1,
+                                fontSize: 11,
+                              }}
+                              disabled={savingRole === u.id}
+                              onClick={() => handleRoleChange(u.id)}
+                            >
+                              {savingRole === u.id ? '...' : 'Сохр.'}
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                      <td style={{ ...styles.td, color: '#666' }}>{u.city ?? '—'}</td>
+                      <td style={styles.td}>
+                        <span style={{ padding: '2px 8px', background: '#f5f5f5', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
+                          {u.level}
+                        </span>
+                      </td>
+                      <td style={{ ...styles.td, fontWeight: 600, color: BRAND }}>{(u.totalDistance ?? 0).toFixed(1)} км</td>
+                      <td style={{ ...styles.td, textAlign: 'center' }}>{u._count?.referrals ?? 0}</td>
+                      <td style={{ ...styles.td, fontSize: 12, color: '#888', whiteSpace: 'nowrap' }}>
+                        {new Date(u.createdAt).toLocaleDateString('ru-RU')}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {filteredUsers.length === 0 && (
+                  <tr>
+                    <td colSpan={8} style={{ ...styles.td, textAlign: 'center', color: '#888', padding: 48 }}>
+                      Пользователи не найдены
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ─── Settings Tab ───────────────────────────────────────
@@ -958,305 +1539,6 @@ function SettingsTab() {
   );
 }
 
-// ─── Stats Tab ──────────────────────────────────────────
-
-function StatsTab() {
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  useEffect(() => {
-    const h = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', h);
-    return () => window.removeEventListener('resize', h);
-  }, []);
-  const [stats, setStats] = useState<AdminStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    setLoading(true);
-    api.admin.stats()
-      .then(setStats)
-      .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Ошибка загрузки'))
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) return <div style={{ textAlign: 'center', padding: 40, color: '#888', fontSize: 15 }}>Загрузка...</div>;
-  if (error) return <div style={styles.error}>{error}</div>;
-  if (!stats) return null;
-
-  const summaryCards = [
-    { label: 'Пользователи', value: stats.totalUsers, color: '#2563eb' },
-    { label: 'События', value: stats.totalEvents, color: '#7c3aed' },
-    { label: 'Активности', value: stats.totalActivities, color: '#16a34a' },
-    { label: 'Команды', value: stats.totalTeams, color: '#ea580c' },
-    { label: 'Новых за неделю', value: stats.newUsersThisWeek, color: '#0891b2' },
-    { label: 'Общая дистанция', value: `${(stats.totalDistance ?? 0).toFixed(1)} км`, color: '#fc4c02' },
-  ];
-
-  return (
-    <div>
-      {/* Summary cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
-        {summaryCards.map((card) => (
-          <div key={card.label} style={{
-            background: '#fff',
-            borderRadius: 14,
-            border: `1px solid ${BORDER}`,
-            padding: 20,
-            textAlign: 'center',
-          }}>
-            <div style={{ fontSize: 28, fontWeight: 900, color: card.color }}>{card.value}</div>
-            <div style={{ fontSize: 13, color: '#888', marginTop: 6, fontWeight: 600 }}>{card.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Top 5 users */}
-      <div style={{ ...styles.card, overflowX: isMobile ? 'auto' : undefined }}>
-        <div style={{ fontSize: 18, fontWeight: 800, color: TEXT, marginBottom: 16 }}>
-          Топ-5 пользователей по дистанции
-        </div>
-        <table style={{ ...styles.table, minWidth: isMobile ? 500 : undefined }}>
-          <thead>
-            <tr>
-              <th style={styles.th}>#</th>
-              <th style={styles.th}>Пользователь</th>
-              <th style={styles.th}>Город</th>
-              <th style={styles.th}>Уровень</th>
-              <th style={styles.th}>Дистанция</th>
-            </tr>
-          </thead>
-          <tbody>
-            {stats.topUsers.map((u, idx) => (
-              <tr key={u.id}>
-                <td style={styles.td}>{idx + 1}</td>
-                <td style={{ ...styles.td, fontWeight: 700 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {u.avatarUrl ? (
-                      <img src={u.avatarUrl} alt="" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} />
-                    ) : (
-                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: BRAND, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>
-                        {(u.username ?? '?')[0].toUpperCase()}
-                      </div>
-                    )}
-                    {u.username}
-                  </div>
-                </td>
-                <td style={styles.td}>{u.city ?? '—'}</td>
-                <td style={styles.td}>{u.level}</td>
-                <td style={{ ...styles.td, fontWeight: 700, color: BRAND }}>{(u.totalDistance ?? 0).toFixed(1)} км</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Recent activities */}
-      <div style={{ ...styles.card, marginTop: 16 }}>
-        <div style={{ fontSize: 18, fontWeight: 800, color: TEXT, marginBottom: 16 }}>
-          Последние активности
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {stats.recentActivities.map((a) => (
-            <div key={a.id} style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              padding: '10px 0',
-              borderBottom: `1px solid ${BORDER}`,
-            }}>
-              {a.user.avatarUrl ? (
-                <img src={a.user.avatarUrl} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-              ) : (
-                <div style={{ width: 32, height: 32, borderRadius: '50%', background: BRAND, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, flexShrink: 0 }}>
-                  {(a.user.username ?? '?')[0].toUpperCase()}
-                </div>
-              )}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>
-                  {a.user.username} — {a.title ?? a.sport}
-                </div>
-                <div style={{ fontSize: 12, color: '#888' }}>
-                  {(a.distance ?? 0).toFixed(1)} км, {formatDurationShort(a.duration ?? 0)}
-                </div>
-              </div>
-              <div style={{ fontSize: 11, color: '#aaa', flexShrink: 0 }}>
-                {new Date(a.createdAt).toLocaleDateString('ru-RU')}
-              </div>
-            </div>
-          ))}
-          {stats.recentActivities.length === 0 && (
-            <div style={{ textAlign: 'center', color: '#888', padding: 20 }}>Нет активностей</div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Users Tab ──────────────────────────────────────────
-
-function UsersTab() {
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  useEffect(() => {
-    const h = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', h);
-    return () => window.removeEventListener('resize', h);
-  }, []);
-  const [users, setUsers] = useState<AdminUser[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [search, setSearch] = useState('');
-  const [roleEdits, setRoleEdits] = useState<Record<string, string>>({});
-  const [savingRole, setSavingRole] = useState<string | null>(null);
-
-  const loadUsers = useCallback(async (searchVal?: string) => {
-    setLoading(true);
-    setError('');
-    try {
-      const res = await api.admin.users(searchVal ? { search: searchVal } : undefined);
-      setUsers(res);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Ошибка загрузки');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadUsers();
-  }, [loadUsers]);
-
-  const handleSearch = useCallback(() => {
-    loadUsers(search);
-  }, [search, loadUsers]);
-
-  const handleRoleChange = useCallback(async (userId: string) => {
-    const newRole = roleEdits[userId];
-    if (!newRole) return;
-    setSavingRole(userId);
-    setError('');
-    try {
-      await api.admin.setRole(userId, newRole);
-      setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, role: newRole } : u));
-      setRoleEdits((prev) => {
-        const next = { ...prev };
-        delete next[userId];
-        return next;
-      });
-      setSuccess('Роль обновлена');
-      setTimeout(() => setSuccess(''), 2000);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Ошибка обновления роли');
-    } finally {
-      setSavingRole(null);
-    }
-  }, [roleEdits]);
-
-  return (
-    <div>
-      {error && <div style={styles.error}>{error}</div>}
-      {success && <div style={styles.success}>{success}</div>}
-
-      {/* Search */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-        <input
-          style={{ ...styles.input, flex: 1 }}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Поиск по имени, email или городу..."
-          onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
-        />
-        <button style={styles.btn('primary')} onClick={handleSearch}>Поиск</button>
-      </div>
-
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: 40, color: '#888', fontSize: 15 }}>Загрузка...</div>
-      ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                <th style={styles.th}>Пользователь</th>
-                <th style={styles.th}>Email</th>
-                <th style={styles.th}>Роль</th>
-                <th style={styles.th}>Город</th>
-                <th style={styles.th}>Уровень</th>
-                <th style={styles.th}>Дистанция</th>
-                <th style={styles.th}>Рефералы</th>
-                <th style={styles.th}>Дата рег.</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u) => {
-                const currentEditRole = roleEdits[u.id];
-                const displayRole = currentEditRole ?? u.role;
-                const isDirty = currentEditRole != null && currentEditRole !== u.role;
-                return (
-                  <tr key={u.id}>
-                    <td style={{ ...styles.td, fontWeight: 700 }}>{u.username}</td>
-                    <td style={{ ...styles.td, fontSize: 12 }}>{u.email}</td>
-                    <td style={styles.td}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <select
-                          value={displayRole}
-                          onChange={(e) => setRoleEdits((prev) => ({ ...prev, [u.id]: e.target.value }))}
-                          style={{
-                            padding: '4px 8px',
-                            borderRadius: 6,
-                            border: `1.5px solid ${ROLE_COLORS[displayRole] ?? '#888'}`,
-                            fontSize: 12,
-                            fontWeight: 700,
-                            color: ROLE_COLORS[displayRole] ?? '#888',
-                            background: '#fff',
-                            outline: 'none',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          <option value="USER">USER</option>
-                          <option value="MODERATOR">MODERATOR</option>
-                          <option value="ADMIN">ADMIN</option>
-                        </select>
-                        {isDirty && (
-                          <button
-                            style={{
-                              ...styles.smallBtn('primary'),
-                              opacity: savingRole === u.id ? 0.6 : 1,
-                              fontSize: 11,
-                            }}
-                            disabled={savingRole === u.id}
-                            onClick={() => handleRoleChange(u.id)}
-                          >
-                            {savingRole === u.id ? '...' : 'Сохр.'}
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                    <td style={styles.td}>{u.city ?? '—'}</td>
-                    <td style={styles.td}>{u.level}</td>
-                    <td style={{ ...styles.td, fontWeight: 600 }}>{(u.totalDistance ?? 0).toFixed(1)} км</td>
-                    <td style={{ ...styles.td, textAlign: 'center' }}>{u._count?.referrals ?? 0}</td>
-                    <td style={{ ...styles.td, fontSize: 12, whiteSpace: 'nowrap' }}>
-                      {new Date(u.createdAt).toLocaleDateString('ru-RU')}
-                    </td>
-                  </tr>
-                );
-              })}
-              {users.length === 0 && (
-                <tr>
-                  <td colSpan={8} style={{ ...styles.td, textAlign: 'center', color: '#888', padding: 40 }}>
-                    Пользователи не найдены
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ─── Main Admin Panel ────────────────────────────────────
 
 export default function AdminPanel() {
@@ -1267,12 +1549,13 @@ export default function AdminPanel() {
     return () => window.removeEventListener('resize', h);
   }, []);
 
-  const [tab, setTab] = useState<'stats' | 'users' | 'events' | 'packages' | 'achievements' | 'settings'>('stats');
+  const { toasts, addToast, removeToast } = useToast();
+
+  const [tab, setTab] = useState<TabKey>('stats');
   const [events, setEvents] = useState<Event[]>([]);
   const [packages, setPackages] = useState<MerchPackage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
 
   // Event form
   const [showEventForm, setShowEventForm] = useState(false);
@@ -1296,9 +1579,12 @@ export default function AdminPanel() {
   // Diploma editor
   const [diplomaEvent, setDiplomaEvent] = useState<Event | null>(null);
 
-  const flash = (msg: string) => {
-    setSuccess(msg);
-    setTimeout(() => setSuccess(''), 3000);
+  // Events table hover
+  const [hoveredEventRow, setHoveredEventRow] = useState<string | null>(null);
+  const [hoveredAchRow, setHoveredAchRow] = useState<string | null>(null);
+
+  const flash = (msg: string, type: 'success' | 'error' = 'success') => {
+    addToast(msg, type);
   };
 
   // ─── Load events ────────────────────────────────────────
@@ -1356,7 +1642,7 @@ export default function AdminPanel() {
 
   const handleSaveEvent = async (form: EventFormData) => {
     if (!form.title || !form.sport || !form.type || !form.startDate || !form.endDate) {
-      setError('Заполните обязательные поля: Название, Вид спорта, Тип, Даты');
+      flash('Заполните обязательные поля: Название, Вид спорта, Тип, Даты', 'error');
       return;
     }
 
@@ -1394,7 +1680,7 @@ export default function AdminPanel() {
       setEditingEvent(null);
       loadEvents();
     } catch (err: any) {
-      setError(err.message || 'Ошибка сохранения');
+      flash(err.message || 'Ошибка сохранения', 'error');
     } finally {
       setSavingEvent(false);
     }
@@ -1407,7 +1693,7 @@ export default function AdminPanel() {
       flash('Статус обновлён');
       loadEvents();
     } catch (err: any) {
-      setError(err.message || 'Ошибка обновления статуса');
+      flash(err.message || 'Ошибка обновления статуса', 'error');
     }
   };
 
@@ -1419,7 +1705,7 @@ export default function AdminPanel() {
       setConfirmDelete(null);
       loadEvents();
     } catch (err: any) {
-      setError(err.message || 'Ошибка удаления');
+      flash(err.message || 'Ошибка удаления', 'error');
       setConfirmDelete(null);
     }
   };
@@ -1428,7 +1714,7 @@ export default function AdminPanel() {
 
   const handleSavePkg = async (form: PackageFormData) => {
     if (!form.name) {
-      setError('Укажите название пакета');
+      flash('Укажите название пакета', 'error');
       return;
     }
 
@@ -1462,7 +1748,7 @@ export default function AdminPanel() {
       setEditingPkg(null);
       loadPackages();
     } catch (err: any) {
-      setError(err.message || 'Ошибка сохранения');
+      flash(err.message || 'Ошибка сохранения', 'error');
     } finally {
       setSavingPkg(false);
     }
@@ -1476,7 +1762,7 @@ export default function AdminPanel() {
       setConfirmDelete(null);
       loadPackages();
     } catch (err: any) {
-      setError(err.message || 'Ошибка удаления');
+      flash(err.message || 'Ошибка удаления', 'error');
       setConfirmDelete(null);
     }
   };
@@ -1485,7 +1771,7 @@ export default function AdminPanel() {
 
   const handleSaveAch = async (form: AchFormData) => {
     if (!form.name || !form.description || !form.category) {
-      setError('Заполните обязательные поля: Название, Описание, Категория');
+      flash('Заполните обязательные поля: Название, Описание, Категория', 'error');
       return;
     }
 
@@ -1521,7 +1807,7 @@ export default function AdminPanel() {
       setEditingAch(null);
       loadAchievements();
     } catch (err: any) {
-      setError(err.message ?? 'Ошибка сохранения достижения');
+      flash(err.message ?? 'Ошибка сохранения достижения', 'error');
     } finally {
       setSavingAch(false);
     }
@@ -1535,7 +1821,7 @@ export default function AdminPanel() {
       setConfirmDelete(null);
       loadAchievements();
     } catch (err: any) {
-      setError(err.message || 'Ошибка удаления достижения');
+      flash(err.message || 'Ошибка удаления достижения', 'error');
       setConfirmDelete(null);
     }
   };
@@ -1544,330 +1830,366 @@ export default function AdminPanel() {
 
   return (
     <div style={styles.container}>
-      <h1 style={styles.heading}>Панель администратора</h1>
+      <style>{`
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateX(20px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+      `}</style>
 
-      {/* Tabs */}
-      <div style={{ ...styles.tabBar, overflowX: isMobile ? 'auto' : undefined, flexWrap: isMobile ? 'nowrap' : undefined }}>
-        <button style={{ ...styles.tab(tab === 'stats'), flexShrink: 0, fontSize: isMobile ? 12 : undefined, padding: isMobile ? '10px 14px' : undefined }} onClick={() => setTab('stats')}>
-          Статистика
-        </button>
-        <button style={{ ...styles.tab(tab === 'users'), flexShrink: 0, fontSize: isMobile ? 12 : undefined, padding: isMobile ? '10px 14px' : undefined }} onClick={() => setTab('users')}>
-          Пользователи
-        </button>
-        <button style={{ ...styles.tab(tab === 'events'), flexShrink: 0, fontSize: isMobile ? 12 : undefined, padding: isMobile ? '10px 14px' : undefined }} onClick={() => setTab('events')}>
-          События
-        </button>
-        <button style={{ ...styles.tab(tab === 'packages'), flexShrink: 0, fontSize: isMobile ? 12 : undefined, padding: isMobile ? '10px 14px' : undefined }} onClick={() => setTab('packages')}>
-          Пакеты
-        </button>
-        <button style={{ ...styles.tab(tab === 'achievements'), flexShrink: 0, fontSize: isMobile ? 12 : undefined, padding: isMobile ? '10px 14px' : undefined }} onClick={() => setTab('achievements')}>
-          Достижения
-        </button>
-        <button style={{ ...styles.tab(tab === 'settings'), flexShrink: 0, fontSize: isMobile ? 12 : undefined, padding: isMobile ? '10px 14px' : undefined }} onClick={() => setTab('settings')}>
-          Настройки
-        </button>
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+
+      {/* Page header */}
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+          <span style={{ fontSize: 13, color: '#aaa', fontWeight: 500 }}>Администрирование</span>
+          <span style={{ color: '#ddd' }}>›</span>
+          <span style={{ fontSize: 13, color: BRAND, fontWeight: 700 }}>{TAB_LABELS[tab]}</span>
+        </div>
+        <h1 style={{ fontSize: 28, fontWeight: 900, color: TEXT, margin: 0 }}>Панель администратора</h1>
       </div>
 
-      {/* Messages */}
-      {error && <div style={styles.error}>{error}</div>}
-      {success && <div style={styles.success}>{success}</div>}
-
-      {loading && (
-        <div style={{ textAlign: 'center', padding: 40, color: '#888', fontSize: 15 }}>
-          Загрузка...
-        </div>
+      {/* Mobile: pill tabs at top */}
+      {isMobile && (
+        <SidebarNav active={tab} onChange={setTab} isMobile={true} />
       )}
 
-      {/* ─── Stats Tab ───────────────────────────────────── */}
-      {tab === 'stats' && <StatsTab />}
+      {/* Main layout: sidebar + content */}
+      <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
+        {/* Desktop sidebar */}
+        {!isMobile && (
+          <SidebarNav active={tab} onChange={setTab} isMobile={false} />
+        )}
 
-      {/* ─── Users Tab ───────────────────────────────────── */}
-      {tab === 'users' && <UsersTab />}
+        {/* Content area */}
+        <main style={{ flex: 1, minWidth: 0 }}>
+          {/* Inline error (non-toast fallback) */}
+          {error && (
+            <div style={{ padding: '10px 14px', background: '#fff0f0', color: '#c00', borderRadius: 10, fontSize: 13, fontWeight: 600, marginBottom: 16 }}>
+              {error}
+            </div>
+          )}
 
-      {/* ─── Events Tab ──────────────────────────────────── */}
-      {tab === 'events' && !loading && (
-        <>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            <span style={{ fontSize: 14, color: '#888' }}>
-              Всего событий: {events.length}
-            </span>
-            <button
-              style={styles.btn('primary')}
-              onClick={() => { setEditingEvent(null); setShowEventForm(true); }}
-            >
-              + Создать событие
-            </button>
-          </div>
+          {/* ─── Stats Tab ─────────────────────────────────── */}
+          {tab === 'stats' && <StatsTab />}
 
-          <div style={{ overflowX: 'auto' }}>
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>Название</th>
-                  <th style={styles.th}>Спорт</th>
-                  <th style={styles.th}>Тип</th>
-                  <th style={styles.th}>Статус</th>
-                  <th style={styles.th}>Даты</th>
-                  <th style={styles.th}>Участники</th>
-                  <th style={styles.th}>Действия</th>
-                </tr>
-              </thead>
-              <tbody>
-                {events.map(ev => (
-                  <tr key={ev.id}>
-                    <td style={{ ...styles.td, fontWeight: 700, maxWidth: 200 }}>{ev.title}</td>
-                    <td style={styles.td}>
-                      {SPORT_OPTIONS.find(s => s.value === ev.sport)?.label || ev.sport}
-                    </td>
-                    <td style={styles.td}>
-                      {TYPE_OPTIONS.find(t => t.value === ev.type)?.label || ev.type}
-                    </td>
-                    <td style={styles.td}>
-                      <span style={styles.badge(STATUS_COLORS[ev.status] || '#888')}>
-                        {STATUS_OPTIONS.find(s => s.value === ev.status)?.label || ev.status}
-                      </span>
-                    </td>
-                    <td style={{ ...styles.td, fontSize: 12, whiteSpace: 'nowrap' }}>
-                      {formatDate(ev.startDate)} — {formatDate(ev.endDate)}
-                    </td>
-                    <td style={{ ...styles.td, textAlign: 'center' }}>
-                      {(ev as any).participantCount ?? '—'}
-                    </td>
-                    <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                        <button
-                          style={styles.smallBtn('secondary')}
-                          onClick={() => { setEditingEvent(ev); setShowEventForm(true); }}
-                        >
-                          Изм.
-                        </button>
-                        <button
-                          style={styles.smallBtn('danger')}
-                          onClick={() => setConfirmDelete({ type: 'event', id: ev.id, name: ev.title })}
-                        >
-                          Удал.
-                        </button>
-                        <button
-                          style={{ ...styles.smallBtn('secondary'), fontSize: 11 }}
-                          onClick={() => setDiplomaEvent(ev)}
-                        >
-                          Диплом
-                        </button>
+          {/* ─── Users Tab ─────────────────────────────────── */}
+          {tab === 'users' && <UsersTab />}
 
-                        {/* Quick status buttons */}
-                        {ev.status === 'DRAFT' && (
-                          <button
-                            style={{ ...styles.smallBtn('primary'), background: '#2563eb', fontSize: 11 }}
-                            onClick={() => handleQuickStatus(ev.id, 'REGISTRATION')}
+          {/* ─── Events Tab ────────────────────────────────── */}
+          {tab === 'events' && !loading && (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: TEXT }}>События</div>
+                  <div style={{ fontSize: 13, color: '#888', marginTop: 2 }}>Всего: {events.length}</div>
+                </div>
+                <button
+                  style={styles.btn('primary')}
+                  onClick={() => { setEditingEvent(null); setShowEventForm(true); }}
+                >
+                  + Создать событие
+                </button>
+              </div>
+
+              <div style={{ background: '#fff', borderRadius: 14, border: `1px solid ${BORDER}`, overflow: 'hidden' }}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={styles.table}>
+                    <thead>
+                      <tr style={{ background: '#fafafa' }}>
+                        <th style={styles.th}>Название</th>
+                        <th style={styles.th}>Спорт</th>
+                        <th style={styles.th}>Тип</th>
+                        <th style={styles.th}>Статус</th>
+                        <th style={styles.th}>Даты</th>
+                        <th style={styles.th}>Участники</th>
+                        <th style={styles.th}>Действия</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {events.map((ev, idx) => {
+                        const isHovered = hoveredEventRow === ev.id;
+                        return (
+                          <tr
+                            key={ev.id}
+                            onMouseEnter={() => setHoveredEventRow(ev.id)}
+                            onMouseLeave={() => setHoveredEventRow(null)}
+                            style={{ background: isHovered ? '#fff8f5' : idx % 2 === 0 ? '#fff' : '#fafafa', transition: 'background 0.1s' }}
                           >
-                            Открыть рег.
-                          </button>
-                        )}
-                        {ev.status === 'REGISTRATION' && (
-                          <button
-                            style={{ ...styles.smallBtn('primary'), background: '#16a34a', fontSize: 11 }}
-                            onClick={() => handleQuickStatus(ev.id, 'ACTIVE')}
-                          >
-                            Старт
-                          </button>
-                        )}
-                        {ev.status === 'ACTIVE' && (
-                          <button
-                            style={{ ...styles.smallBtn('primary'), background: '#7c3aed', fontSize: 11 }}
-                            onClick={() => handleQuickStatus(ev.id, 'FINISHED')}
-                          >
-                            Завершить
-                          </button>
+                            <td style={{ ...styles.td, fontWeight: 700, maxWidth: 200 }}>{ev.title}</td>
+                            <td style={styles.td}>
+                              {SPORT_OPTIONS.find(s => s.value === ev.sport)?.label || ev.sport}
+                            </td>
+                            <td style={styles.td}>
+                              {TYPE_OPTIONS.find(t => t.value === ev.type)?.label || ev.type}
+                            </td>
+                            <td style={styles.td}>
+                              <span style={styles.badge(STATUS_COLORS[ev.status] || '#888')}>
+                                {STATUS_OPTIONS.find(s => s.value === ev.status)?.label || ev.status}
+                              </span>
+                            </td>
+                            <td style={{ ...styles.td, fontSize: 12, color: '#666', whiteSpace: 'nowrap' }}>
+                              {formatDate(ev.startDate)} — {formatDate(ev.endDate)}
+                            </td>
+                            <td style={{ ...styles.td, textAlign: 'center' }}>
+                              {(ev as any).participantCount ?? '—'}
+                            </td>
+                            <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>
+                              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                                <button
+                                  style={styles.smallBtn('secondary')}
+                                  onClick={() => { setEditingEvent(ev); setShowEventForm(true); }}
+                                >
+                                  Изм.
+                                </button>
+                                <button
+                                  style={styles.smallBtn('danger')}
+                                  onClick={() => setConfirmDelete({ type: 'event', id: ev.id, name: ev.title })}
+                                >
+                                  Удал.
+                                </button>
+                                <button
+                                  style={{ ...styles.smallBtn('secondary'), fontSize: 11 }}
+                                  onClick={() => setDiplomaEvent(ev)}
+                                >
+                                  Диплом
+                                </button>
+
+                                {/* Quick status buttons */}
+                                {ev.status === 'DRAFT' && (
+                                  <button
+                                    style={{ ...styles.smallBtn('primary'), background: '#2563eb', fontSize: 11 }}
+                                    onClick={() => handleQuickStatus(ev.id, 'REGISTRATION')}
+                                  >
+                                    Открыть рег.
+                                  </button>
+                                )}
+                                {ev.status === 'REGISTRATION' && (
+                                  <button
+                                    style={{ ...styles.smallBtn('primary'), background: '#16a34a', fontSize: 11 }}
+                                    onClick={() => handleQuickStatus(ev.id, 'ACTIVE')}
+                                  >
+                                    Старт
+                                  </button>
+                                )}
+                                {ev.status === 'ACTIVE' && (
+                                  <button
+                                    style={{ ...styles.smallBtn('primary'), background: '#7c3aed', fontSize: 11 }}
+                                    onClick={() => handleQuickStatus(ev.id, 'FINISHED')}
+                                  >
+                                    Завершить
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {events.length === 0 && (
+                        <tr>
+                          <td colSpan={7} style={{ ...styles.td, textAlign: 'center', color: '#888', padding: 48 }}>
+                            Нет событий
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ─── Packages Tab ──────────────────────────────── */}
+          {tab === 'packages' && !loading && (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: TEXT }}>Пакеты</div>
+                  <div style={{ fontSize: 13, color: '#888', marginTop: 2 }}>Всего: {packages.length}</div>
+                </div>
+                <button
+                  style={styles.btn('primary')}
+                  onClick={() => { setEditingPkg(null); setShowPkgForm(true); }}
+                >
+                  + Добавить пакет
+                </button>
+              </div>
+
+              <div style={{ display: 'grid', gap: 16 }}>
+                {packages.map(pkg => (
+                  <div key={pkg.id} style={{ background: '#fff', borderRadius: 14, border: `1px solid ${BORDER}`, padding: 24, display: 'flex', gap: 20, alignItems: 'flex-start', opacity: pkg.isActive ? 1 : 0.5 }}>
+                    {pkg.imageUrl ? (
+                      <img src={pkg.imageUrl} alt={pkg.name} style={{ width: 80, height: 80, borderRadius: 12, objectFit: 'cover', flexShrink: 0 }} />
+                    ) : (
+                      <div style={{ fontSize: 40, flexShrink: 0, width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f9f9f9', borderRadius: 12 }}>{pkg.icon}</div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                        <span style={{ fontSize: 17, fontWeight: 800, color: TEXT }}>{pkg.name}</span>
+                        {!pkg.isActive && (
+                          <span style={{ ...styles.badge('#888'), fontSize: 10 }}>Неактивен</span>
                         )}
                       </div>
-                    </td>
-                  </tr>
+                      {pkg.description && (
+                        <p style={{ fontSize: 13, color: '#888', margin: '0 0 6px 0', lineHeight: 1.4 }}>{pkg.description}</p>
+                      )}
+                      <div style={{ fontSize: 20, fontWeight: 900, color: pkg.price === 0 ? '#16a34a' : BRAND, marginBottom: 8 }}>
+                        {pkg.price === 0 ? 'Бесплатно' : `${pkg.price.toLocaleString('ru-RU')} \u20BD`}
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {pkg.features.map((f, i) => (
+                          <span key={i} style={{ padding: '3px 10px', background: '#f0f0f0', borderRadius: 6, fontSize: 12, color: '#555' }}>
+                            {f}
+                          </span>
+                        ))}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#aaa', marginTop: 8 }}>
+                        Порядок: {pkg.sortOrder}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                      <button
+                        style={styles.smallBtn('secondary')}
+                        onClick={() => { setEditingPkg(pkg); setShowPkgForm(true); }}
+                      >
+                        Изм.
+                      </button>
+                      <button
+                        style={styles.smallBtn('danger')}
+                        onClick={() => setConfirmDelete({ type: 'package', id: pkg.id, name: pkg.name })}
+                      >
+                        Удал.
+                      </button>
+                    </div>
+                  </div>
                 ))}
-                {events.length === 0 && (
-                  <tr>
-                    <td colSpan={7} style={{ ...styles.td, textAlign: 'center', color: '#888', padding: 40 }}>
-                      Нет событий
-                    </td>
-                  </tr>
+                {packages.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: 48, color: '#888', fontSize: 15, background: '#fff', borderRadius: 14, border: `1px solid ${BORDER}` }}>
+                    Нет пакетов
+                  </div>
                 )}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
+              </div>
+            </>
+          )}
 
-      {/* ─── Packages Tab ────────────────────────────────── */}
-      {tab === 'packages' && !loading && (
-        <>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            <span style={{ fontSize: 14, color: '#888' }}>
-              Всего пакетов: {packages.length}
-            </span>
-            <button
-              style={styles.btn('primary')}
-              onClick={() => { setEditingPkg(null); setShowPkgForm(true); }}
-            >
-              + Добавить пакет
-            </button>
-          </div>
-
-          <div style={{ display: 'grid', gap: 16 }}>
-            {packages.map(pkg => (
-              <div key={pkg.id} style={{ ...styles.card, display: 'flex', gap: 20, alignItems: 'flex-start', opacity: pkg.isActive ? 1 : 0.5 }}>
-                {pkg.imageUrl ? (
-                  <img src={pkg.imageUrl} alt={pkg.name} style={{ width: 80, height: 80, borderRadius: 12, objectFit: 'cover', flexShrink: 0 }} />
-                ) : (
-                  <div style={{ fontSize: 40, flexShrink: 0 }}>{pkg.icon}</div>
-                )}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                    <span style={{ fontSize: 17, fontWeight: 800, color: TEXT }}>{pkg.name}</span>
-                    {!pkg.isActive && (
-                      <span style={{ ...styles.badge('#888'), fontSize: 10 }}>Неактивен</span>
-                    )}
-                  </div>
-                  {pkg.description && (
-                    <p style={{ fontSize: 13, color: '#888', margin: '0 0 6px 0', lineHeight: 1.4 }}>{pkg.description}</p>
-                  )}
-                  <div style={{ fontSize: 20, fontWeight: 900, color: pkg.price === 0 ? '#16a34a' : BRAND, marginBottom: 8 }}>
-                    {pkg.price === 0 ? 'Бесплатно' : `${pkg.price.toLocaleString('ru-RU')} \u20BD`}
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {pkg.features.map((f, i) => (
-                      <span key={i} style={{ padding: '3px 10px', background: '#f0f0f0', borderRadius: 6, fontSize: 12, color: '#555' }}>
-                        {f}
-                      </span>
-                    ))}
-                  </div>
-                  <div style={{ fontSize: 11, color: '#aaa', marginTop: 8 }}>
-                    Порядок: {pkg.sortOrder}
-                  </div>
+          {/* ─── Achievements Tab ───────────────────────────── */}
+          {tab === 'achievements' && !loading && (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: TEXT }}>Достижения</div>
+                  <div style={{ fontSize: 13, color: '#888', marginTop: 2 }}>Всего: {adminAchievements.length}</div>
                 </div>
-                <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                  <button
-                    style={styles.smallBtn('secondary')}
-                    onClick={() => { setEditingPkg(pkg); setShowPkgForm(true); }}
-                  >
-                    Изм.
-                  </button>
-                  <button
-                    style={styles.smallBtn('danger')}
-                    onClick={() => setConfirmDelete({ type: 'package', id: pkg.id, name: pkg.name })}
-                  >
-                    Удал.
-                  </button>
+                <button
+                  style={styles.btn('primary')}
+                  onClick={() => { setEditingAch(null); setShowAchForm(true); }}
+                >
+                  + Добавить достижение
+                </button>
+              </div>
+
+              <div style={{ background: '#fff', borderRadius: 14, border: `1px solid ${BORDER}`, overflow: 'hidden' }}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={styles.table}>
+                    <thead>
+                      <tr style={{ background: '#fafafa' }}>
+                        <th style={styles.th}>Иконка</th>
+                        <th style={styles.th}>Код</th>
+                        <th style={styles.th}>Название</th>
+                        <th style={styles.th}>Описание</th>
+                        <th style={styles.th}>Категория</th>
+                        <th style={styles.th}>XP</th>
+                        <th style={styles.th}>Порог</th>
+                        <th style={styles.th}>Получили</th>
+                        <th style={styles.th}>Действия</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {adminAchievements.map((ach, idx) => {
+                        const catLabels: Record<string, string> = {
+                          distance: 'Дистанция',
+                          streak: 'Стрик',
+                          events: 'События',
+                          social: 'Социальные',
+                          speed: 'Скорость',
+                        };
+                        const catColors: Record<string, string> = {
+                          distance: '#16a34a',
+                          streak: '#dc6a00',
+                          events: '#2563eb',
+                          social: '#c026d3',
+                          speed: '#dc2626',
+                        };
+                        const isHovered = hoveredAchRow === ach.id;
+                        return (
+                          <tr
+                            key={ach.id}
+                            onMouseEnter={() => setHoveredAchRow(ach.id)}
+                            onMouseLeave={() => setHoveredAchRow(null)}
+                            style={{ background: isHovered ? '#fff8f5' : idx % 2 === 0 ? '#fff' : '#fafafa', transition: 'background 0.1s' }}
+                          >
+                            <td style={{ ...styles.td, fontSize: 28, textAlign: 'center' }}>
+                              {ach.iconUrl ? (
+                                <img src={ach.iconUrl} alt={ach.name} style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover' }} />
+                              ) : (
+                                ach.icon ?? '🏅'
+                              )}
+                            </td>
+                            <td style={{ ...styles.td, fontFamily: 'monospace', fontSize: 12, color: '#888' }}>{ach.code}</td>
+                            <td style={{ ...styles.td, fontWeight: 700 }}>{ach.name}</td>
+                            <td style={{ ...styles.td, fontSize: 12, color: '#666', maxWidth: 200 }}>{ach.description}</td>
+                            <td style={styles.td}>
+                              <span style={styles.badge(catColors[ach.category] ?? '#888')}>
+                                {catLabels[ach.category] ?? ach.category}
+                              </span>
+                            </td>
+                            <td style={{ ...styles.td, fontWeight: 700, color: BRAND }}>{ach.xpReward}</td>
+                            <td style={{ ...styles.td, textAlign: 'center', color: '#666' }}>{ach.threshold ?? '—'}</td>
+                            <td style={{ ...styles.td, textAlign: 'center', fontWeight: 700 }}>{ach.userCount}</td>
+                            <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>
+                              <div style={{ display: 'flex', gap: 6 }}>
+                                <button
+                                  style={styles.smallBtn('secondary')}
+                                  onClick={() => { setEditingAch(ach); setShowAchForm(true); }}
+                                >
+                                  Изм.
+                                </button>
+                                <button
+                                  style={styles.smallBtn('danger')}
+                                  onClick={() => setConfirmDelete({ type: 'achievement', id: ach.id, name: ach.name })}
+                                >
+                                  Удал.
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {adminAchievements.length === 0 && (
+                        <tr>
+                          <td colSpan={9} style={{ ...styles.td, textAlign: 'center', color: '#888', padding: 48 }}>
+                            Нет достижений
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-            ))}
-            {packages.length === 0 && (
-              <div style={{ textAlign: 'center', padding: 40, color: '#888', fontSize: 15 }}>
-                Нет пакетов
-              </div>
-            )}
-          </div>
-        </>
-      )}
+            </>
+          )}
 
-      {/* ─── Achievements Tab ─────────────────────────────── */}
-      {tab === 'achievements' && !loading && (
-        <>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            <span style={{ fontSize: 14, color: '#888' }}>
-              Всего достижений: {adminAchievements.length}
-            </span>
-            <button
-              style={styles.btn('primary')}
-              onClick={() => { setEditingAch(null); setShowAchForm(true); }}
-            >
-              + Добавить достижение
-            </button>
-          </div>
+          {/* ─── Settings Tab ──────────────────────────────── */}
+          {tab === 'settings' && <SettingsTab />}
 
-          <div style={{ overflowX: 'auto' }}>
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>Иконка</th>
-                  <th style={styles.th}>Код</th>
-                  <th style={styles.th}>Название</th>
-                  <th style={styles.th}>Описание</th>
-                  <th style={styles.th}>Категория</th>
-                  <th style={styles.th}>XP</th>
-                  <th style={styles.th}>Порог</th>
-                  <th style={styles.th}>Получили</th>
-                  <th style={styles.th}>Действия</th>
-                </tr>
-              </thead>
-              <tbody>
-                {adminAchievements.map(ach => {
-                  const catLabels: Record<string, string> = {
-                    distance: 'Дистанция',
-                    streak: 'Стрик',
-                    events: 'События',
-                    social: 'Социальные',
-                    speed: 'Скорость',
-                  };
-                  const catColors: Record<string, string> = {
-                    distance: '#16a34a',
-                    streak: '#dc6a00',
-                    events: '#2563eb',
-                    social: '#c026d3',
-                    speed: '#dc2626',
-                  };
-                  return (
-                    <tr key={ach.id}>
-                      <td style={{ ...styles.td, fontSize: 28, textAlign: 'center' }}>
-                        {ach.iconUrl ? (
-                          <img src={ach.iconUrl} alt={ach.name} style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover' }} />
-                        ) : (
-                          ach.icon ?? '🏅'
-                        )}
-                      </td>
-                      <td style={{ ...styles.td, fontFamily: 'monospace', fontSize: 12 }}>{ach.code}</td>
-                      <td style={{ ...styles.td, fontWeight: 700 }}>{ach.name}</td>
-                      <td style={{ ...styles.td, fontSize: 12, color: '#666', maxWidth: 200 }}>{ach.description}</td>
-                      <td style={styles.td}>
-                        <span style={styles.badge(catColors[ach.category] ?? '#888')}>
-                          {catLabels[ach.category] ?? ach.category}
-                        </span>
-                      </td>
-                      <td style={{ ...styles.td, fontWeight: 700, color: BRAND }}>{ach.xpReward}</td>
-                      <td style={{ ...styles.td, textAlign: 'center' }}>{ach.threshold ?? '—'}</td>
-                      <td style={{ ...styles.td, textAlign: 'center', fontWeight: 700 }}>{ach.userCount}</td>
-                      <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <button
-                            style={styles.smallBtn('secondary')}
-                            onClick={() => { setEditingAch(ach); setShowAchForm(true); }}
-                          >
-                            Изм.
-                          </button>
-                          <button
-                            style={styles.smallBtn('danger')}
-                            onClick={() => setConfirmDelete({ type: 'achievement', id: ach.id, name: ach.name })}
-                          >
-                            Удал.
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {adminAchievements.length === 0 && (
-                  <tr>
-                    <td colSpan={9} style={{ ...styles.td, textAlign: 'center', color: '#888', padding: 40 }}>
-                      Нет достижений
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
-
-      {/* ─── Settings Tab ─────────────────────────────────── */}
-      {tab === 'settings' && <SettingsTab />}
+          {/* Loading spinner for events/packages/achievements tabs */}
+          {loading && (tab === 'events' || tab === 'packages' || tab === 'achievements') && (
+            <div style={{ textAlign: 'center', padding: 60, color: '#888', fontSize: 15 }}>
+              Загрузка...
+            </div>
+          )}
+        </main>
+      </div>
 
       {/* ─── Modals ──────────────────────────────────────── */}
 
@@ -1954,7 +2276,7 @@ export default function AdminPanel() {
                   setDiplomaEvent(null);
                   loadEvents();
                 } catch (err: any) {
-                  setError(err.message || 'Ошибка сохранения настроек диплома');
+                  flash(err.message || 'Ошибка сохранения настроек диплома', 'error');
                 }
               }}
             />
