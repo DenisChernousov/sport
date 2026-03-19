@@ -93,16 +93,16 @@ export function Sidebar({ activeTab, onTabChange, onLoginClick, onAddActivity, u
               onClick={() => onTabChange(item.id)}
               style={{
                 width: '100%', display: 'flex', alignItems: 'center', gap: 11,
-                padding: '9px 12px', borderRadius: 10, border: 'none', cursor: 'pointer',
-                marginBottom: 1,
-                background: active ? '#fff4ef' : 'transparent',
+                padding: '8px 12px', borderRadius: 10, cursor: 'pointer',
+                marginBottom: 1, background: 'transparent',
+                border: active ? '1.5px solid #fc4c02' : '1.5px solid transparent',
                 color: active ? '#fc4c02' : '#333',
                 fontSize: 14, fontWeight: active ? 700 : 500,
                 textAlign: 'left', position: 'relative',
-                transition: 'background 0.12s',
+                transition: 'border-color 0.15s, color 0.15s',
               }}
-              onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.background = '#f5f5f5'; }}
-              onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
+              onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.borderColor = '#ddd'; }}
+              onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.borderColor = 'transparent'; }}
             >
               {item.icon(active)}
               {item.label}
