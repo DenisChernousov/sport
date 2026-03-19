@@ -63,6 +63,7 @@ export default function FeedPanel() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [enlargedPhoto, setEnlargedPhoto] = useState<string | null>(null);
   const [avatarFullscreen, setAvatarFullscreen] = useState<string | null>(null);
+  const [selectedTrending, setSelectedTrending] = useState<FeedItem | null>(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   useEffect(() => {
     const h = () => setIsMobile(window.innerWidth < 768);
@@ -178,7 +179,7 @@ export default function FeedPanel() {
             {trending.map((t, idx) => {
               const sp = SPORT[t.sport] ?? SPORT.RUNNING;
               return (
-                <div key={t.id} style={{
+                <div key={t.id} onClick={() => setSelectedTrending(t)} style={{
                   minWidth: isMobile ? 140 : 160, maxWidth: isMobile ? 140 : 160,
                   background: '#fff',
                   border: `1px solid ${sp.color}22`,
@@ -186,7 +187,11 @@ export default function FeedPanel() {
                   padding: '10px 12px',
                   cursor: 'pointer',
                   flexShrink: 0,
-                }}>
+                  transition: 'box-shadow 0.15s, transform 0.15s',
+                }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-1px)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = ''; (e.currentTarget as HTMLDivElement).style.transform = ''; }}
+                >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                     <span style={{
                       fontSize: 11, fontWeight: 800, color: sp.color,
@@ -468,6 +473,84 @@ export default function FeedPanel() {
             />
           </motion.div>
         )}
+      </AnimatePresence>
+
+      {/* Trending activity detail modal */}
+      <AnimatePresence>
+        {selectedTrending && (() => {
+          const t = selectedTrending;
+          const sp = SPORT[t.sport] ?? SPORT.RUNNING;
+          const distKm = t.distance ?? 0;
+          const speedKmH = t.avgSpeed ?? (t.duration > 0 ? distKm / (t.duration / 3600) : 0);
+          return (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedTrending(null)}
+              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 9998, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+            >
+              <motion.div
+                initial={{ scale: 0.92, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.92, opacity: 0 }}
+                onClick={e => e.stopPropagation()}
+                style={{ background: '#fff', borderRadius: 20, width: '100%', maxWidth: 440, overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}
+              >
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 18px', borderBottom: '1px solid #f0f0f0' }}>
+                  <div
+                    onClick={() => { setSelectedTrending(null); window.dispatchEvent(new CustomEvent('open-profile', { detail: { userId: t.user.id } })); }}
+                    style={{ width: 42, height: 42, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, cursor: 'pointer', background: t.user.avatarUrl ? 'none' : 'linear-gradient(135deg,#fc4c02,#ff6b2b)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, color: '#fff', fontWeight: 700 }}
+                  >
+                    {t.user.avatarUrl ? <img src={t.user.avatarUrl} alt="" style={{ width: 42, height: 42, objectFit: 'cover' }} /> : t.user.username[0].toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <span onClick={() => { setSelectedTrending(null); window.dispatchEvent(new CustomEvent('open-profile', { detail: { userId: t.user.id } })); }} style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a', cursor: 'pointer' }}>{t.user.username}</span>
+                    <div style={{ fontSize: 12, color: '#aaa', marginTop: 1 }}>{formatTimeAgo(t.startedAt ?? t.createdAt)}</div>
+                  </div>
+                  <button onClick={() => setSelectedTrending(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, color: '#bbb', lineHeight: 1 }}>×</button>
+                </div>
+
+                {/* Body */}
+                <div style={{ padding: '16px 18px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                    <span style={{ fontSize: 22 }}>{sp.icon}</span>
+                    <span style={{ fontSize: 18, fontWeight: 800, color: '#1a1a1a' }}>{t.title ?? sp.label} {distKm.toFixed(1)} км</span>
+                    <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#fc4c02', fontWeight: 700 }}>❤️ {t._count.likes}</span>
+                  </div>
+
+                  {/* Stats */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: t.photos?.length ? 16 : 0 }}>
+                    {[
+                      { label: 'Дистанция', value: `${distKm.toFixed(1)} км` },
+                      { label: 'Время', value: formatDuration(t.duration ?? 0) },
+                      (t.sport === 'RUNNING' || t.sport === 'WALKING')
+                        ? { label: 'Темп', value: `${formatPace(t.avgPace)} мин/км` }
+                        : { label: 'Скорость', value: `${speedKmH.toFixed(1)} км/ч` },
+                    ].map(s => (
+                      <div key={s.label} style={{ background: '#f9f9f9', borderRadius: 12, padding: '10px 8px', textAlign: 'center' }}>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: '#1a1a1a' }}>{s.value}</div>
+                        <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Photos */}
+                  {t.photos?.length > 0 && (
+                    <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+                      {t.photos.map(p => (
+                        <div key={p.id} onClick={() => setEnlargedPhoto(p.imageUrl)} style={{ width: 90, height: 90, minWidth: 90, borderRadius: 10, overflow: 'hidden', cursor: 'pointer', flexShrink: 0 }}>
+                          <img src={p.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            </motion.div>
+          );
+        })()}
       </AnimatePresence>
     </div>
   );

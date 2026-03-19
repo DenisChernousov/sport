@@ -129,6 +129,7 @@ export function PublicProfilePanel({ userId, onClose }: PublicProfilePanelProps)
   const [followModal, setFollowModal] = useState<null | 'followers' | 'following'>(null);
   const [followModalList, setFollowModalList] = useState<{ id: string; username: string; avatarUrl?: string; city?: string; level: number }[]>([]);
   const [followModalLoading, setFollowModalLoading] = useState(false);
+  const [activitiesModal, setActivitiesModal] = useState<{ title: string; sport?: SportType } | null>(null);
 
   useEffect(() => {
     const h = () => setIsMobile(window.innerWidth < 768);
@@ -503,7 +504,7 @@ export function PublicProfilePanel({ userId, onClose }: PublicProfilePanelProps)
               {[
                 { label: 'Дистанция', value: `${(profile.totalDistance ?? 0).toFixed(1)} км`, onClick: null },
                 { label: 'Время', value: formatDuration(profile.totalTime ?? 0), onClick: null },
-                { label: 'Тренировки', value: String(profile.totalActivities ?? 0), onClick: null },
+                { label: 'Тренировки', value: String(profile.totalActivities ?? 0), onClick: () => setActivitiesModal({ title: 'Все тренировки' }) },
                 { label: 'Стрик', value: `${profile.currentStreak ?? 0} дн.`, onClick: null },
                 { label: 'Подписчики', value: String(profile._count?.followers ?? 0), onClick: () => openFollowModal('followers') },
                 { label: 'Подписки', value: String(profile._count?.following ?? 0), onClick: () => openFollowModal('following') },
@@ -540,12 +541,17 @@ export function PublicProfilePanel({ userId, onClose }: PublicProfilePanelProps)
                 return (
                   <div
                     key={sport}
+                    onClick={() => setActivitiesModal({ title: SPORT_LABELS[sport], sport })}
                     style={{
                       background: '#f9f9f9',
                       borderRadius: 12,
                       padding: 10,
                       textAlign: 'center',
+                      cursor: 'pointer',
+                      transition: 'background 0.15s',
                     }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = '#f0f0f0'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = '#f9f9f9'; }}
                   >
                     <div style={{ fontSize: 22 }}>{SPORT_ICONS[sport]}</div>
                     <div style={{ fontSize: 11, color: SPORT_COLORS[sport], fontWeight: 600, marginTop: 2 }}>
@@ -694,6 +700,51 @@ export function PublicProfilePanel({ userId, onClose }: PublicProfilePanelProps)
           </div>
         )}
       </div>
+
+      {/* Activities modal (all or by sport) */}
+      {activitiesModal && (() => {
+        const filtered = activitiesModal.sport
+          ? activities.filter(a => a.sport === activitiesModal.sport)
+          : activities;
+        return (
+          <div
+            onClick={() => setActivitiesModal(null)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+          >
+            <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 420, maxHeight: '75vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid #f0f0f0' }}>
+                <div style={{ fontSize: 15, fontWeight: 700 }}>{activitiesModal.title}</div>
+                <button onClick={() => setActivitiesModal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#aaa', lineHeight: 1 }}>×</button>
+              </div>
+              <div style={{ overflowY: 'auto', flex: 1, padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {filtered.length === 0 ? (
+                  <div style={{ padding: 32, textAlign: 'center', color: '#aaa', fontSize: 13 }}>Нет активностей</div>
+                ) : filtered.map(act => (
+                  <div
+                    key={act.id}
+                    onClick={() => { setActivitiesModal(null); setSelectedActivity(act); }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 10px', borderRadius: 12, background: '#f9f9f9', cursor: 'pointer', transition: 'background 0.1s' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = '#f0f0f0'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = '#f9f9f9'; }}
+                  >
+                    <span style={{ fontSize: 22 }}>{SPORT_ICONS[act.sport] ?? '🏃'}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {act.title ?? SPORT_LABELS[act.sport]} — {(act.distance ?? 0).toFixed(1)} км
+                      </div>
+                      <div style={{ fontSize: 11, color: '#999', marginTop: 1 }}>{formatDuration(act.duration ?? 0)} · {formatTimeAgo(act.startedAt)}</div>
+                    </div>
+                    {act.photos?.[0] && (
+                      <img src={act.photos[0].imageUrl} alt="" style={{ width: 38, height: 38, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+                    )}
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#ccc" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Followers / Following modal */}
       {followModal && (

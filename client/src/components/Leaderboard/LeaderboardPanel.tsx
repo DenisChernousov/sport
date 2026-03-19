@@ -56,7 +56,7 @@ export default function LeaderboardPanel() {
         username: entry.user?.username ?? entry.username,
         avatarUrl: entry.user?.avatarUrl ?? entry.avatarUrl,
         level: entry.user?.level ?? entry.level ?? 0,
-        totalDistance: entry.periodDistance ?? entry.user?.totalDistance ?? entry.totalDistance ?? 0,
+        totalDistance: entry.periodDistance ?? entry.sportDistance ?? entry.user?.totalDistance ?? entry.totalDistance ?? 0,
         totalActivities: entry.user?.totalActivities ?? entry.totalActivities ?? 0,
       }));
       setUsers(list);

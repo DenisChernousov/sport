@@ -108,12 +108,17 @@ router.get('/teams', async (req: AuthRequest, res: Response) => {
       take: limit,
       include: {
         owner: { select: { id: true, username: true, avatarUrl: true } },
+        _count: { select: { members: true } },
       },
     });
 
     const leaderboard = teams.map((t, idx) => ({
       rank: idx + 1,
-      team: t,
+      id: t.id,
+      name: t.name,
+      avatarUrl: t.avatarUrl,
+      totalDistance: t.totalDistance,
+      memberCount: t._count.members,
     }));
 
     res.json(leaderboard);
