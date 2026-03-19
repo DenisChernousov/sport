@@ -296,6 +296,86 @@ router.get('/feed/public', optionalAuth, async (req: AuthRequest, res: Response)
   }
 });
 
+// ─── My friends (mutual follows) ─────────────────────────
+
+router.get('/users/me/friends', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+
+    const iFollow = await prisma.follow.findMany({
+      where: { followerId: userId },
+      select: { followingId: true },
+    });
+    const iFollowIds = iFollow.map((f) => f.followingId);
+
+    if (!iFollowIds.length) { res.json([]); return; }
+
+    const alsoFollowMe = await prisma.follow.findMany({
+      where: { followerId: { in: iFollowIds }, followingId: userId },
+      select: { followerId: true },
+    });
+    const friendIds = alsoFollowMe.map((f) => f.followerId);
+
+    if (!friendIds.length) { res.json([]); return; }
+
+    const friends = await prisma.user.findMany({
+      where: { id: { in: friendIds } },
+      select: { id: true, username: true, avatarUrl: true, city: true, level: true, totalDistance: true },
+    });
+
+    res.json(friends);
+  } catch (err) {
+    console.error('Friends list error:', err);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// ─── Mutual friends between me and :id ───────────────────
+
+router.get('/users/:id/mutual-friends', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const targetId = req.params.id as string;
+
+    if (userId === targetId) { res.json([]); return; }
+
+    // My friends
+    const myFollows = await prisma.follow.findMany({ where: { followerId: userId }, select: { followingId: true } });
+    const myFollowIds = myFollows.map((f) => f.followingId);
+    if (!myFollowIds.length) { res.json([]); return; }
+
+    const myMutual = await prisma.follow.findMany({
+      where: { followerId: { in: myFollowIds }, followingId: userId },
+      select: { followerId: true },
+    });
+    const myFriendIds = new Set(myMutual.map((f) => f.followerId));
+
+    // Target's friends
+    const targetFollows = await prisma.follow.findMany({ where: { followerId: targetId }, select: { followingId: true } });
+    const targetFollowIds = targetFollows.map((f) => f.followingId);
+    if (!targetFollowIds.length) { res.json([]); return; }
+
+    const targetMutual = await prisma.follow.findMany({
+      where: { followerId: { in: targetFollowIds }, followingId: targetId },
+      select: { followerId: true },
+    });
+    const targetFriendIds = new Set(targetMutual.map((f) => f.followerId));
+
+    const mutualIds = [...myFriendIds].filter((id) => targetFriendIds.has(id) && id !== targetId && id !== userId);
+    if (!mutualIds.length) { res.json([]); return; }
+
+    const mutuals = await prisma.user.findMany({
+      where: { id: { in: mutualIds } },
+      select: { id: true, username: true, avatarUrl: true, city: true, level: true },
+    });
+
+    res.json(mutuals);
+  } catch (err) {
+    console.error('Mutual friends error:', err);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 // ─── Search users ────────────────────────────────────────
 
 router.get('/users/search', async (req: AuthRequest, res: Response) => {

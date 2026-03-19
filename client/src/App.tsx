@@ -18,6 +18,7 @@ const AdminPanel = lazy(() => import('@/components/Admin/AdminPanel'));
 const CommunityPanel = lazy(() => import('@/components/Community/CommunityPanel'));
 const FeedPanel = lazy(() => import('@/components/Feed/FeedPanel'));
 const MessagesPanel = lazy(() => import('@/components/Messages/MessagesPanel'));
+const FriendsPanel = lazy(() => import('@/components/Friends/FriendsPanel'));
 
 function LoadingSpinner() {
   return (
@@ -68,13 +69,22 @@ function AppContent() {
     return () => window.removeEventListener('open-messages-with', handler);
   }, []);
 
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const tab = (e as CustomEvent).detail?.tab as TabId | undefined;
+      if (tab) setActiveTab(tab);
+    };
+    window.addEventListener('switch-tab', handler);
+    return () => window.removeEventListener('switch-tab', handler);
+  }, []);
+
   const openLogin = useCallback(() => setAuthModal({ open: true, tab: 'login' }), []);
   const openRegister = useCallback(() => setAuthModal({ open: true, tab: 'register' }), []);
   const closeAuth = useCallback(() => setAuthModal(prev => ({ ...prev, open: false })), []);
 
   const handleTabChange = useCallback(
     (tab: TabId) => {
-      if ((tab === 'profile' || tab === 'activities') && !isAuthenticated) {
+      if ((tab === 'profile' || tab === 'activities' || tab === 'friends') && !isAuthenticated) {
         openLogin();
         return;
       }
@@ -108,6 +118,7 @@ function AppContent() {
       {activeTab === 'teams' && <TeamsPanel />}
       {activeTab === 'leaderboard' && <LeaderboardPanel />}
       {activeTab === 'community' && <CommunityPanel />}
+      {activeTab === 'friends' && <FriendsPanel />}
       {activeTab === 'messages' && <MessagesPanel />}
       {activeTab === 'profile' && <ProfilePanel />}
       {activeTab === 'admin' && <AdminPanel />}

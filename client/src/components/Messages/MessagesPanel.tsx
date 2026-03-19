@@ -47,6 +47,10 @@ export default function MessagesPanel() {
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [replyTo, setReplyTo] = useState<DM | null>(null);
+  const [forwardMsg, setForwardMsg] = useState<DM | null>(null);
+  const [forwardSearch, setForwardSearch] = useState('');
+  const [forwardResults, setForwardResults] = useState<SearchUser[]>([]);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -159,8 +163,10 @@ export default function MessagesPanel() {
 
   const handleSend = async () => {
     if (!selected || !text.trim() || sending) return;
-    const t = text.trim();
+    const rawText = text.trim();
+    const t = replyTo ? `> ${replyTo.text}\n${rawText}` : rawText;
     setText('');
+    setReplyTo(null);
     setSending(true);
     try {
       const msg = await api.messages.send(selected.id, t);
@@ -174,6 +180,25 @@ export default function MessagesPanel() {
     finally { setSending(false); }
   };
 
+  const handleForwardSend = async (toUserId: string) => {
+    if (!forwardMsg) return;
+    try {
+      await api.messages.send(toUserId, `↩ Переслано: ${forwardMsg.text}`);
+    } catch {}
+    setForwardMsg(null);
+    setForwardSearch('');
+    setForwardResults([]);
+  };
+
+  const handleForwardSearch = async (q: string) => {
+    setForwardSearch(q);
+    if (!q.trim()) { setForwardResults([]); return; }
+    try {
+      const res = await api.social.searchUsers({ q });
+      setForwardResults((Array.isArray(res) ? res : []).filter((u: SearchUser) => u.id !== (user as { id: string }).id).slice(0, 8));
+    } catch {}
+  };
+
   if (!user) return (
     <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>Войдите чтобы видеть сообщения</div>
   );
@@ -183,7 +208,7 @@ export default function MessagesPanel() {
 
   return (
     <div style={{
-      display: 'flex', height: 600,
+      display: 'flex', height: isMobile ? 'calc(100dvh - 52px - 68px - 20px)' : 600,
       background: '#fff', borderRadius: 16, overflow: 'hidden',
       boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)',
     }}>
@@ -354,11 +379,16 @@ export default function MessagesPanel() {
                 background: 'none', border: 'none', cursor: 'pointer', color: '#666', fontSize: 20, padding: '0 4px',
               }}>←</button>
             )}
-            <Avatar user={selected} size={36} />
-            <div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#242424' }}>{selected.username}</div>
-              {selected.city && <div style={{ fontSize: 12, color: '#999' }}>📍 {selected.city}</div>}
-            </div>
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent('open-profile', { detail: { userId: selected.id } }))}
+              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}
+            >
+              <Avatar user={selected} size={36} />
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#242424' }}>{selected.username}</div>
+                {selected.city && <div style={{ fontSize: 12, color: '#999' }}>📍 {selected.city}</div>}
+              </div>
+            </button>
           </div>
 
           {/* Messages */}
@@ -373,6 +403,10 @@ export default function MessagesPanel() {
             ) : messages.map((msg, i) => {
               const isMe = msg.senderId === (user as { id: string }).id;
               const showDate = i === 0 || new Date(messages[i-1].createdAt).toDateString() !== new Date(msg.createdAt).toDateString();
+              const lines = msg.text.split('\n');
+              const isQuote = lines[0].startsWith('> ');
+              const quoteLine = isQuote ? lines[0].slice(2) : null;
+              const bodyText = isQuote ? lines.slice(1).join('\n') : msg.text;
               return (
                 <div key={msg.id}>
                   {showDate && (
@@ -380,24 +414,57 @@ export default function MessagesPanel() {
                       {new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' }).format(new Date(msg.createdAt))}
                     </div>
                   )}
-                  <div style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
+                  <div
+                    style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start', alignItems: 'flex-end', gap: 6 }}
+                    className="msg-row"
+                  >
+                    {/* Action buttons — show on hover via CSS-like approach */}
+                    {!isMe && (
+                      <div style={{ display: 'flex', gap: 3, opacity: 0, transition: 'opacity 0.15s' }} className="msg-actions">
+                        <button onClick={() => setReplyTo(msg)} title="Ответить" style={{ width: 24, height: 24, borderRadius: '50%', border: 'none', background: '#f0f0f0', cursor: 'pointer', fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>↩</button>
+                        <button onClick={() => setForwardMsg(msg)} title="Переслать" style={{ width: 24, height: 24, borderRadius: '50%', border: 'none', background: '#f0f0f0', cursor: 'pointer', fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>→</button>
+                      </div>
+                    )}
                     <div style={{
                       maxWidth: '72%', padding: '8px 12px', borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
                       background: isMe ? '#fc4c02' : '#f5f5f5',
                       color: isMe ? '#fff' : '#242424',
                       fontSize: 14, lineHeight: 1.5,
                     }}>
-                      {msg.text}
+                      {isQuote && quoteLine && (
+                        <div style={{ fontSize: 12, opacity: 0.7, borderLeft: `2px solid ${isMe ? 'rgba(255,255,255,0.5)' : '#fc4c02'}`, paddingLeft: 8, marginBottom: 6, fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }}>
+                          {quoteLine}
+                        </div>
+                      )}
+                      {bodyText}
                       <div style={{ fontSize: 10, opacity: 0.6, marginTop: 3, textAlign: 'right' }}>
                         {timeAgo(msg.createdAt)}
                         {isMe && <span style={{ marginLeft: 4 }}>{msg.isRead ? '✓✓' : '✓'}</span>}
                       </div>
                     </div>
+                    {isMe && (
+                      <div style={{ display: 'flex', gap: 3, opacity: 0, transition: 'opacity 0.15s' }} className="msg-actions">
+                        <button onClick={() => setReplyTo(msg)} title="Ответить" style={{ width: 24, height: 24, borderRadius: '50%', border: 'none', background: '#f0f0f0', cursor: 'pointer', fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>↩</button>
+                        <button onClick={() => setForwardMsg(msg)} title="Переслать" style={{ width: 24, height: 24, borderRadius: '50%', border: 'none', background: '#f0f0f0', cursor: 'pointer', fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>→</button>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
             })}
           </div>
+
+          {/* Reply banner */}
+          {replyTo && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 14px', background: '#fff8f5', borderTop: '1px solid #f0f0f0' }}>
+              <div style={{ width: 2, height: 32, background: '#fc4c02', borderRadius: 2, flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11, color: '#fc4c02', fontWeight: 700, marginBottom: 1 }}>Ответ</div>
+                <div style={{ fontSize: 12, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{replyTo.text}</div>
+              </div>
+              <button onClick={() => setReplyTo(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#aaa', fontSize: 18, lineHeight: 1, flexShrink: 0 }}>×</button>
+            </div>
+          )}
 
           {/* Input */}
           <div style={{ borderTop: '1px solid #f0f0f0', background: '#fff' }}>
@@ -481,6 +548,38 @@ export default function MessagesPanel() {
           <div style={{ fontSize: 13, color: '#bbb' }}>или нажмите карандаш, чтобы написать кому-нибудь</div>
         </div>
       ) : null}
+
+      {/* Forward modal */}
+      {forwardMsg && (
+        <div onClick={() => { setForwardMsg(null); setForwardSearch(''); setForwardResults([]); }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 360, padding: 16 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Переслать сообщение</div>
+            <div style={{ fontSize: 12, color: '#888', background: '#f5f5f5', borderRadius: 8, padding: '8px 10px', marginBottom: 12, fontStyle: 'italic' }}>
+              «{forwardMsg.text.slice(0, 80)}{forwardMsg.text.length > 80 ? '…' : ''}»
+            </div>
+            <input
+              autoFocus
+              value={forwardSearch}
+              onChange={e => handleForwardSearch(e.target.value)}
+              placeholder="Найти пользователя..."
+              style={{ width: '100%', padding: '8px 12px', borderRadius: 10, border: '1px solid #e0e0e0', fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 8 }}
+            />
+            {forwardResults.map(u => (
+              <div key={u.id} onClick={() => handleForwardSend(u.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 4px', cursor: 'pointer', borderRadius: 8, transition: 'background 0.1s' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = '#f5f5f5'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = ''; }}
+              >
+                <div style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, overflow: 'hidden', background: u.avatarUrl ? 'none' : 'linear-gradient(135deg,#fc4c02,#ff6b2b)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: '#fff', fontWeight: 700 }}>
+                  {u.avatarUrl ? <img src={u.avatarUrl} alt="" style={{ width: 34, height: 34, objectFit: 'cover' }} /> : u.username[0].toUpperCase()}
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>{u.username}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <style>{`.msg-row:hover .msg-actions { opacity: 1 !important; }`}</style>
     </div>
   );
 }

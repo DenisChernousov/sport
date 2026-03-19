@@ -384,6 +384,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
           isManual: true,
           startedAt: true,
           createdAt: true,
+          photos: { select: { id: true, imageUrl: true }, take: 4, orderBy: { createdAt: 'asc' } },
         },
       }),
       prisma.activity.count({ where }),

@@ -21,7 +21,7 @@ interface Props {
 export function TopBar({ onTabChange, onLoginClick, onRegisterClick }: Props) {
   const { user, isAuthenticated } = useAuth();
   const [notifOpen, setNotifOpen] = useState(false);
-  const [notifications, setNotifications] = useState<{ id: string; text: string; isRead: boolean; createdAt: string; fromUser?: { username: string; avatarUrl?: string } }[]>([]);
+  const [notifications, setNotifications] = useState<{ id: string; type: string; text: string; isRead: boolean; createdAt: string; fromUserId?: string | null; entityId?: string | null; fromUser?: { id?: string; username: string; avatarUrl?: string } }[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const notifRef = useRef<HTMLDivElement>(null);
 
@@ -118,6 +118,22 @@ export function TopBar({ onTabChange, onLoginClick, onRegisterClick }: Props) {
       setUnreadCount(0);
     }
   };
+
+  function handleNotifClick(n: typeof notifications[0]) {
+    setNotifOpen(false);
+    if (n.type === 'message' && n.fromUserId) {
+      onTabChange('messages');
+      window.dispatchEvent(new CustomEvent('open-messages-with', {
+        detail: { userId: n.fromUserId, username: n.fromUser?.username ?? '', avatarUrl: n.fromUser?.avatarUrl, level: 1 },
+      }));
+    } else if ((n.type === 'follow' || n.type === 'like' || n.type === 'comment') && n.fromUserId) {
+      window.dispatchEvent(new CustomEvent('open-profile', { detail: { userId: n.fromUserId } }));
+    } else if (n.type === 'achievement') {
+      onTabChange('profile');
+    } else if (n.type === 'event_start' && n.entityId) {
+      onTabChange('events');
+    }
+  }
 
   function timeAgo(d: string) {
     const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000);
@@ -269,11 +285,18 @@ export function TopBar({ onTabChange, onLoginClick, onRegisterClick }: Props) {
                   {notifications.length === 0 ? (
                     <div style={{ padding: 20, textAlign: 'center', color: '#aaa', fontSize: 12 }}>Нет уведомлений</div>
                   ) : notifications.map(n => (
-                    <div key={n.id} style={{
-                      display: 'flex', gap: 8, padding: '8px 12px',
-                      background: n.isRead ? '#fff' : '#fff8f5',
-                      borderBottom: '1px solid #f8f8f8',
-                    }}>
+                    <div
+                      key={n.id}
+                      onClick={() => handleNotifClick(n)}
+                      style={{
+                        display: 'flex', gap: 8, padding: '8px 12px',
+                        background: n.isRead ? '#fff' : '#fff8f5',
+                        borderBottom: '1px solid #f8f8f8',
+                        cursor: 'pointer', transition: 'background 0.1s',
+                      }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = '#f5f5f5'; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = n.isRead ? '#fff' : '#fff8f5'; }}
+                    >
                       <div style={{
                         width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
                         background: 'linear-gradient(135deg, #fc4c02, #ff7c3a)',

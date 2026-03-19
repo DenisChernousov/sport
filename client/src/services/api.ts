@@ -411,6 +411,16 @@ export const api = {
         `/feed${toQuery(params)}`
       );
     },
+    myFriends() {
+      return request<{ id: string; username: string; avatarUrl?: string; city?: string; level: number; totalDistance: number }[]>(
+        '/users/me/friends'
+      );
+    },
+    mutualFriends(userId: string) {
+      return request<{ id: string; username: string; avatarUrl?: string; city?: string; level: number }[]>(
+        `/users/${userId}/mutual-friends`
+      );
+    },
     searchUsers(params: { q?: string; city?: string }) {
       return request<{ id: string; username: string; avatarUrl?: string; city?: string; level: number; totalDistance: number; _count: { followers: number; following: number } }[]>(
         `/users/search${toQuery(params)}`

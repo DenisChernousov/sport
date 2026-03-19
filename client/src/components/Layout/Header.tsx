@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/services/api';
 
-export type TabId = 'feed' | 'events' | 'activities' | 'teams' | 'leaderboard' | 'community' | 'messages' | 'profile' | 'admin';
+export type TabId = 'feed' | 'events' | 'activities' | 'teams' | 'leaderboard' | 'community' | 'friends' | 'messages' | 'profile' | 'admin';
 
 const tabs: { id: TabId; label: string; short: string; icon: string; adminOnly?: boolean; authOnly?: boolean }[] = [
   { id: 'feed', label: 'Лента', short: 'Лент.', icon: '📰' },
@@ -11,6 +11,7 @@ const tabs: { id: TabId; label: string; short: string; icon: string; adminOnly?:
   { id: 'teams', label: 'Клубы', short: 'Клуб.', icon: '👥' },
   { id: 'leaderboard', label: 'Рейтинг', short: 'Рейт.', icon: '📊' },
   { id: 'community', label: 'Сообщество', short: 'Сооб.', icon: '🌍' },
+  { id: 'friends', label: 'Друзья', short: 'Друз.', icon: '❤️', authOnly: true },
   { id: 'messages', label: 'Сообщения', short: 'Сообщ.', icon: '💬', authOnly: true },
   { id: 'profile', label: 'Профиль', short: 'Проф.', icon: '👤', authOnly: true },
   { id: 'admin', label: 'Админ', short: 'Адм.', icon: '⚙️', adminOnly: true },

@@ -1436,6 +1436,21 @@ export default function ActivitiesPanel() {
                     </div>
                   )}
                 </div>
+                {/* Photo thumbnails */}
+                {(act as any).photos?.length > 0 && (
+                  <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+                    {((act as any).photos as { id: string; imageUrl: string }[]).slice(0, 4).map((photo, idx) => (
+                      <div key={photo.id} style={{ position: 'relative', width: 60, height: 60, borderRadius: 8, overflow: 'hidden', flexShrink: 0 }}>
+                        <img src={photo.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        {idx === 3 && (act as any).photos.length > 4 && (
+                          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 13, fontWeight: 700 }}>
+                            +{(act as any).photos.length - 4}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })}

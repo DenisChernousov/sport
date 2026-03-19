@@ -5,9 +5,12 @@ import { useAuth } from '@/context/AuthContext';
 interface Toast {
   id: string;
   text: string;
-  type: 'follow' | 'message' | 'achievement' | 'like' | 'comment' | 'event_start' | string;
-  fromUser?: { username: string; avatarUrl?: string };
+  type: string;
+  fromUserId?: string | null;
+  entityId?: string | null;
+  fromUser?: { id?: string; username: string; avatarUrl?: string };
   createdAt: string;
+  visible: boolean;
 }
 
 function toastIcon(type: string) {
@@ -28,9 +31,30 @@ function toastColor(type: string) {
   return '#fc4c02';
 }
 
+function handleToastClick(toast: Toast) {
+  if (toast.type === 'follow' && toast.fromUserId) {
+    window.dispatchEvent(new CustomEvent('open-profile', { detail: { userId: toast.fromUserId } }));
+  } else if (toast.type === 'message' && toast.fromUserId) {
+    window.dispatchEvent(new CustomEvent('open-messages-with', {
+      detail: {
+        userId: toast.fromUserId,
+        username: toast.fromUser?.username ?? '',
+        avatarUrl: toast.fromUser?.avatarUrl,
+        level: 1,
+      },
+    }));
+  } else if (toast.type === 'achievement') {
+    window.dispatchEvent(new CustomEvent('open-tab', { detail: { tab: 'profile' } }));
+  } else if ((toast.type === 'like' || toast.type === 'comment') && toast.fromUserId) {
+    window.dispatchEvent(new CustomEvent('open-profile', { detail: { userId: toast.fromUserId } }));
+  } else if (toast.type === 'event_start' && toast.entityId) {
+    window.dispatchEvent(new CustomEvent('open-tab', { detail: { tab: 'events' } }));
+  }
+}
+
 export function ToastNotifications() {
   const { isAuthenticated } = useAuth();
-  const [toasts, setToasts] = useState<(Toast & { visible: boolean })[]>([]);
+  const [toasts, setToasts] = useState<Toast[]>([]);
   const seenIds = useRef<Set<string>>(new Set());
   const initialized = useRef(false);
 
@@ -43,71 +67,74 @@ export function ToastNotifications() {
     if (!isAuthenticated) return;
     try {
       const res = await api.notifications.list();
-      const notifs: Toast[] = res.notifications ?? [];
+      const notifs = res.notifications ?? [];
 
       if (!initialized.current) {
-        // On first load, just mark all as seen — don't show toasts for old ones
-        notifs.forEach(n => seenIds.current.add(n.id));
+        notifs.forEach((n: { id: string }) => seenIds.current.add(n.id));
         initialized.current = true;
         return;
       }
 
-      const newOnes = notifs.filter(n => !seenIds.current.has(n.id) && !n.isRead);
-      if (newOnes.length === 0) return;
+      const newOnes = notifs.filter((n: { id: string; isRead: boolean }) => !seenIds.current.has(n.id) && !n.isRead);
+      if (!newOnes.length) return;
 
-      newOnes.forEach(n => seenIds.current.add(n.id));
-
-      setToasts(prev => [
-        ...prev,
-        ...newOnes.map(n => ({ ...n, visible: true })),
-      ]);
-
-      // Auto-dismiss each after 5s
-      newOnes.forEach(n => {
-        setTimeout(() => dismissToast(n.id), 5000);
-      });
+      newOnes.forEach((n: { id: string }) => seenIds.current.add(n.id));
+      setToasts(prev => [...prev, ...newOnes.map((n: Toast) => ({ ...n, visible: true }))]);
+      newOnes.forEach((n: { id: string }) => setTimeout(() => dismissToast(n.id), 5000));
     } catch {}
   }, [isAuthenticated, dismissToast]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    checkNotifs(); // initial (marks as seen)
+    checkNotifs();
     const t = setInterval(checkNotifs, 15000);
     return () => clearInterval(t);
   }, [isAuthenticated, checkNotifs]);
 
-  if (toasts.length === 0) return null;
+  // Listen for open-tab events (dispatched from toast click)
+  useEffect(() => {
+    const h = (e: Event) => {
+      const tab = (e as CustomEvent).detail?.tab;
+      if (tab) window.dispatchEvent(new CustomEvent('switch-tab', { detail: { tab } }));
+    };
+    window.addEventListener('open-tab', h);
+    return () => window.removeEventListener('open-tab', h);
+  }, []);
+
+  if (!toasts.length) return null;
 
   return (
     <div style={{
-      position: 'fixed', bottom: 24, right: 24,
+      position: 'fixed', bottom: 24, right: 20,
       display: 'flex', flexDirection: 'column-reverse', gap: 10,
       zIndex: 9999, pointerEvents: 'none',
+      maxWidth: 'calc(100vw - 40px)',
     }}>
       {toasts.map(toast => (
         <div
           key={toast.id}
+          onClick={() => { handleToastClick(toast); dismissToast(toast.id); }}
           style={{
             display: 'flex', alignItems: 'flex-start', gap: 10,
             background: '#fff', borderRadius: 14,
             boxShadow: '0 8px 32px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.08)',
             border: '1px solid #f0f0f0',
+            borderLeft: `4px solid ${toastColor(toast.type)}`,
             padding: '12px 14px',
             width: 300,
             pointerEvents: 'all',
             opacity: toast.visible ? 1 : 0,
-            transform: toast.visible ? 'translateX(0)' : 'translateX(20px)',
-            transition: 'opacity 0.35s ease, transform 0.35s ease',
-            cursor: 'default',
-            borderLeft: `4px solid ${toastColor(toast.type)}`,
+            transform: toast.visible ? 'translateX(0)' : 'translateX(24px)',
+            transition: 'opacity 0.3s ease, transform 0.3s ease',
+            cursor: 'pointer',
           }}
         >
           {/* Avatar / Icon */}
           <div style={{
             width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-            background: toast.fromUser?.avatarUrl ? 'none' : `${toastColor(toast.type)}22`,
+            background: toast.fromUser?.avatarUrl ? 'none' : `${toastColor(toast.type)}18`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: toast.fromUser?.avatarUrl ? undefined : 18, overflow: 'hidden',
+            fontSize: 18, overflow: 'hidden',
           }}>
             {toast.fromUser?.avatarUrl
               ? <img src={toast.fromUser.avatarUrl} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: '50%' }} />
@@ -121,17 +148,17 @@ export function ToastNotifications() {
                 {toast.fromUser.username}
               </div>
             )}
-            <div style={{ fontSize: 13, color: '#444', lineHeight: 1.4 }}>{toast.text}</div>
+            <div style={{ fontSize: 13, color: '#555', lineHeight: 1.4 }}>{toast.text}</div>
           </div>
 
           {/* Close */}
           <button
-            onClick={() => dismissToast(toast.id)}
+            onClick={e => { e.stopPropagation(); dismissToast(toast.id); }}
             style={{
               width: 20, height: 20, borderRadius: '50%', border: 'none',
               background: 'none', cursor: 'pointer', color: '#bbb',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexShrink: 0, padding: 0, fontSize: 14, lineHeight: 1,
+              flexShrink: 0, padding: 0, fontSize: 16, lineHeight: 1,
             }}
           >×</button>
         </div>

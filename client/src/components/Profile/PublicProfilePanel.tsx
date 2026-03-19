@@ -125,6 +125,10 @@ export function PublicProfilePanel({ userId, onClose }: PublicProfilePanelProps)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [selectedActivity, setSelectedActivity] = useState<ActivityItem | null>(null);
   const [avatarFullscreen, setAvatarFullscreen] = useState(false);
+  const [mutualFriends, setMutualFriends] = useState<{ id: string; username: string; avatarUrl?: string }[]>([]);
+  const [followModal, setFollowModal] = useState<null | 'followers' | 'following'>(null);
+  const [followModalList, setFollowModalList] = useState<{ id: string; username: string; avatarUrl?: string; city?: string; level: number }[]>([]);
+  const [followModalLoading, setFollowModalLoading] = useState(false);
 
   useEffect(() => {
     const h = () => setIsMobile(window.innerWidth < 768);
@@ -161,6 +165,12 @@ export function PublicProfilePanel({ userId, onClose }: PublicProfilePanelProps)
         setIsFollowing(res.isFollowing);
       })
       .catch(() => {});
+  }, [userId, isAuthenticated, isOwnProfile]);
+
+  // Load mutual friends
+  useEffect(() => {
+    if (!isAuthenticated || isOwnProfile) return;
+    api.social.mutualFriends(userId).then(setMutualFriends).catch(() => {});
   }, [userId, isAuthenticated, isOwnProfile]);
 
   // Load activities
@@ -230,10 +240,23 @@ export function PublicProfilePanel({ userId, onClose }: PublicProfilePanelProps)
     }
   }, [userId, isAuthenticated, isOwnProfile]);
 
+  const openFollowModal = async (kind: 'followers' | 'following') => {
+    setFollowModal(kind);
+    setFollowModalList([]);
+    setFollowModalLoading(true);
+    try {
+      const res = kind === 'followers'
+        ? await api.social.followers(userId)
+        : await api.social.following(userId);
+      setFollowModalList(res);
+    } catch {}
+    finally { setFollowModalLoading(false); }
+  };
+
   // Close on Escape key
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') { if (followModal) { setFollowModal(null); return; } onClose(); }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
@@ -405,6 +428,34 @@ export function PublicProfilePanel({ userId, onClose }: PublicProfilePanelProps)
               )}
             </div>
 
+            {/* Mutual friends */}
+            {mutualFriends.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, padding: '8px 12px', background: '#f5f5f5', borderRadius: 10 }}>
+                <div style={{ display: 'flex' }}>
+                  {mutualFriends.slice(0, 3).map((m, i) => (
+                    <div
+                      key={m.id}
+                      onClick={() => window.dispatchEvent(new CustomEvent('open-profile', { detail: { userId: m.id } }))}
+                      style={{
+                        width: 24, height: 24, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
+                        marginLeft: i > 0 ? -8 : 0, border: '2px solid #f5f5f5', cursor: 'pointer',
+                        background: m.avatarUrl ? 'none' : 'linear-gradient(135deg, #fc4c02, #ff6b2b)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 9, color: '#fff', fontWeight: 700,
+                      }}
+                    >
+                      {m.avatarUrl ? <img src={m.avatarUrl} alt="" style={{ width: 24, height: 24, objectFit: 'cover' }} /> : m.username[0].toUpperCase()}
+                    </div>
+                  ))}
+                </div>
+                <span style={{ fontSize: 12, color: '#666' }}>
+                  {mutualFriends.length === 1
+                    ? `${mutualFriends[0].username} — общий друг`
+                    : `${mutualFriends.length} общих друга`}
+                </span>
+              </div>
+            )}
+
             {/* Bio */}
             {profile.bio && (
               <div style={{
@@ -450,23 +501,28 @@ export function PublicProfilePanel({ userId, onClose }: PublicProfilePanelProps)
               marginBottom: 16,
             }}>
               {[
-                { label: 'Дистанция', value: `${(profile.totalDistance ?? 0).toFixed(1)} км` },
-                { label: 'Время', value: formatDuration(profile.totalTime ?? 0) },
-                { label: 'Тренировки', value: String(profile.totalActivities ?? 0) },
-                { label: 'Стрик', value: `${profile.currentStreak ?? 0} дн.` },
-                { label: 'Подписчики', value: String(profile._count?.followers ?? 0) },
-                { label: 'Подписки', value: String(profile._count?.following ?? 0) },
+                { label: 'Дистанция', value: `${(profile.totalDistance ?? 0).toFixed(1)} км`, onClick: null },
+                { label: 'Время', value: formatDuration(profile.totalTime ?? 0), onClick: null },
+                { label: 'Тренировки', value: String(profile.totalActivities ?? 0), onClick: null },
+                { label: 'Стрик', value: `${profile.currentStreak ?? 0} дн.`, onClick: null },
+                { label: 'Подписчики', value: String(profile._count?.followers ?? 0), onClick: () => openFollowModal('followers') },
+                { label: 'Подписки', value: String(profile._count?.following ?? 0), onClick: () => openFollowModal('following') },
               ].map((stat) => (
                 <div
                   key={stat.label}
+                  onClick={stat.onClick ?? undefined}
                   style={{
                     background: '#f9f9f9',
                     borderRadius: 12,
                     padding: 12,
                     textAlign: 'center',
+                    cursor: stat.onClick ? 'pointer' : 'default',
+                    transition: 'background 0.15s',
                   }}
+                  onMouseEnter={e => { if (stat.onClick) (e.currentTarget as HTMLDivElement).style.background = '#f0f0f0'; }}
+                  onMouseLeave={e => { if (stat.onClick) (e.currentTarget as HTMLDivElement).style.background = '#f9f9f9'; }}
                 >
-                  <div style={{ fontSize: 18, fontWeight: 700, color: '#242424' }}>{stat.value}</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: stat.onClick ? '#fc4c02' : '#242424' }}>{stat.value}</div>
                   <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{stat.label}</div>
                 </div>
               ))}
@@ -638,6 +694,44 @@ export function PublicProfilePanel({ userId, onClose }: PublicProfilePanelProps)
           </div>
         )}
       </div>
+
+      {/* Followers / Following modal */}
+      {followModal && (
+        <div
+          onClick={() => setFollowModal(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+        >
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 380, maxHeight: '70vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid #f0f0f0' }}>
+              <div style={{ fontSize: 15, fontWeight: 700 }}>{followModal === 'followers' ? 'Подписчики' : 'Подписки'}</div>
+              <button onClick={() => setFollowModal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#aaa', lineHeight: 1 }}>×</button>
+            </div>
+            <div style={{ overflowY: 'auto', flex: 1 }}>
+              {followModalLoading ? (
+                <div style={{ padding: 32, textAlign: 'center', color: '#aaa' }}>Загрузка...</div>
+              ) : followModalList.length === 0 ? (
+                <div style={{ padding: 32, textAlign: 'center', color: '#aaa', fontSize: 13 }}>Пусто</div>
+              ) : followModalList.map(u => (
+                <div
+                  key={u.id}
+                  onClick={() => { setFollowModal(null); window.dispatchEvent(new CustomEvent('open-profile', { detail: { userId: u.id } })); }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', cursor: 'pointer', borderBottom: '1px solid #f8f8f8', transition: 'background 0.1s' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = '#f9f9f9'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = ''; }}
+                >
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0, overflow: 'hidden', background: u.avatarUrl ? 'none' : 'linear-gradient(135deg,#fc4c02,#ff6b2b)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, color: '#fff', fontWeight: 700 }}>
+                    {u.avatarUrl ? <img src={u.avatarUrl} alt="" style={{ width: 40, height: 40, objectFit: 'cover' }} /> : u.username[0].toUpperCase()}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a' }}>{u.username}</div>
+                    <div style={{ fontSize: 12, color: '#999' }}>{[u.city, `Ур. ${u.level}`].filter(Boolean).join(' · ')}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Activity detail modal with photo gallery */}
       {selectedActivity && (
