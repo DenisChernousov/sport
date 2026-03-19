@@ -46,10 +46,11 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const BRAND = '#fc4c02';
-const TEXT = '#242424';
-const BORDER = '#e0e0e0';
+const TEXT = '#1e293b';
+const BORDER = '#e2e8f0';
 const BRAND_BG = '#fff4ef';
-const SIDEBAR_W = 220;
+const SIDEBAR_W = 248;
+const SIDEBAR_BG = '#0f172a';
 
 function formatDate(d: string | Date): string {
   return new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -116,50 +117,54 @@ function IconActivities() {
 // ─── Styles ──────────────────────────────────────────────
 
 const styles = {
-  container: { maxWidth: 1280, margin: '0 auto', padding: '24px 16px 48px', minWidth: 0, overflowX: 'hidden' } as React.CSSProperties,
-  card: { background: '#fff', borderRadius: 14, border: `1px solid ${BORDER}`, padding: 24, marginBottom: 16 } as React.CSSProperties,
+  card: { background: '#fff', borderRadius: 12, border: `1px solid ${BORDER}`, padding: 24, marginBottom: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' } as React.CSSProperties,
   btn: (variant: 'primary' | 'secondary' | 'danger' = 'primary'): React.CSSProperties => ({
-    padding: '10px 20px',
-    borderRadius: 10,
-    border: variant === 'secondary' ? `1.5px solid ${BORDER}` : 'none',
-    background: variant === 'primary' ? BRAND : variant === 'danger' ? '#dc2626' : '#fff',
-    color: variant === 'secondary' ? TEXT : '#fff',
-    fontSize: 14,
-    fontWeight: 700,
-    cursor: 'pointer',
-    transition: 'all 0.15s',
-  }),
-  smallBtn: (variant: 'primary' | 'secondary' | 'danger' = 'primary'): React.CSSProperties => ({
-    padding: '6px 14px',
+    padding: '9px 20px',
     borderRadius: 8,
     border: variant === 'secondary' ? `1.5px solid ${BORDER}` : 'none',
-    background: variant === 'primary' ? BRAND : variant === 'danger' ? '#dc2626' : '#fff',
+    background: variant === 'primary' ? BRAND : variant === 'danger' ? '#ef4444' : '#fff',
     color: variant === 'secondary' ? TEXT : '#fff',
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+  }),
+  smallBtn: (variant: 'primary' | 'secondary' | 'danger' = 'primary'): React.CSSProperties => ({
+    padding: '5px 12px',
+    borderRadius: 6,
+    border: variant === 'secondary' ? `1.5px solid ${BORDER}` : 'none',
+    background: variant === 'primary' ? BRAND : variant === 'danger' ? '#ef4444' : '#fff',
+    color: variant === 'secondary' ? '#64748b' : '#fff',
     fontSize: 12,
-    fontWeight: 700,
+    fontWeight: 600,
     cursor: 'pointer',
     transition: 'all 0.15s',
   }),
-  input: { width: '100%', padding: '10px 14px', borderRadius: 8, border: `1.5px solid ${BORDER}`, fontSize: 14, outline: 'none', boxSizing: 'border-box' as const, color: TEXT } as React.CSSProperties,
-  select: { width: '100%', padding: '10px 14px', borderRadius: 8, border: `1.5px solid ${BORDER}`, fontSize: 14, outline: 'none', boxSizing: 'border-box' as const, color: TEXT, background: '#fff' } as React.CSSProperties,
-  label: { display: 'block', fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 6 } as React.CSSProperties,
+  iconBtn: (color = '#64748b', bg = '#f1f5f9'): React.CSSProperties => ({
+    width: 30, height: 30, borderRadius: 6, border: 'none',
+    background: bg, color, fontSize: 13, cursor: 'pointer',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+    transition: 'all 0.15s',
+  }),
+  input: { width: '100%', padding: '9px 12px', borderRadius: 8, border: `1.5px solid ${BORDER}`, fontSize: 14, outline: 'none', boxSizing: 'border-box' as const, color: TEXT, background: '#fff' } as React.CSSProperties,
+  select: { width: '100%', padding: '9px 12px', borderRadius: 8, border: `1.5px solid ${BORDER}`, fontSize: 14, outline: 'none', boxSizing: 'border-box' as const, color: TEXT, background: '#fff' } as React.CSSProperties,
+  label: { display: 'block', fontSize: 12, fontWeight: 600, color: '#64748b', marginBottom: 5, textTransform: 'uppercase' as const, letterSpacing: '0.04em' } as React.CSSProperties,
   fieldGroup: { marginBottom: 16 } as React.CSSProperties,
   grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 } as React.CSSProperties,
   grid3: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 } as React.CSSProperties,
-  overlay: { position: 'fixed' as const, top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 16 },
-  modal: { background: '#fff', borderRadius: 20, maxWidth: 720, width: '100%', maxHeight: '90vh', overflow: 'auto', padding: 32 } as React.CSSProperties,
+  overlay: { position: 'fixed' as const, top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 16, backdropFilter: 'blur(4px)' },
+  modal: { background: '#fff', borderRadius: 16, maxWidth: 720, width: '100%', maxHeight: '90vh', overflow: 'auto', padding: 32, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' } as React.CSSProperties,
   badge: (color: string): React.CSSProperties => ({
-    display: 'inline-block',
-    padding: '3px 10px',
-    borderRadius: 6,
-    fontSize: 11,
-    fontWeight: 700,
-    color: '#fff',
-    background: color,
+    display: 'inline-flex', alignItems: 'center',
+    padding: '3px 10px', borderRadius: 20,
+    fontSize: 11, fontWeight: 700, color: '#fff', background: color,
   }),
   table: { width: '100%', borderCollapse: 'collapse' as const } as React.CSSProperties,
-  th: { textAlign: 'left' as const, padding: '10px 12px', fontSize: 12, fontWeight: 700, color: '#888', borderBottom: `2px solid ${BORDER}` } as React.CSSProperties,
-  td: { padding: '12px', fontSize: 14, color: TEXT, borderBottom: `1px solid ${BORDER}` } as React.CSSProperties,
+  th: { textAlign: 'left' as const, padding: '11px 16px', fontSize: 11, fontWeight: 700, color: '#94a3b8', borderBottom: `1px solid ${BORDER}`, background: '#f8fafc', textTransform: 'uppercase' as const, letterSpacing: '0.06em' } as React.CSSProperties,
+  td: { padding: '13px 16px', fontSize: 14, color: TEXT, borderBottom: `1px solid ${BORDER}` } as React.CSSProperties,
 };
 
 // ─── Toast Notification ──────────────────────────────────
@@ -250,35 +255,20 @@ const TAB_LABELS: Record<TabKey, string> = {
 function SidebarNav({ active, onChange, isMobile }: { active: TabKey; onChange: (t: TabKey) => void; isMobile: boolean }) {
   if (isMobile) {
     return (
-      <div style={{
-        display: 'flex',
-        gap: 8,
-        overflowX: 'auto',
-        padding: '0 0 16px 0',
-        scrollbarWidth: 'none',
-        WebkitOverflowScrolling: 'touch',
-      } as React.CSSProperties}>
+      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', padding: '0 0 12px 0', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
         {NAV_ITEMS.map(({ key, label, Icon }) => {
           const isActive = active === key;
           return (
             <button key={key} onClick={() => onChange(key)} style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '8px 16px',
-              borderRadius: 24,
-              border: isActive ? 'none' : `1.5px solid ${BORDER}`,
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '7px 14px', borderRadius: 20,
+              border: isActive ? 'none' : `1px solid ${BORDER}`,
               background: isActive ? BRAND : '#fff',
-              color: isActive ? '#fff' : '#666',
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              flexShrink: 0,
-              transition: 'all 0.15s',
+              color: isActive ? '#fff' : '#64748b',
+              fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              whiteSpace: 'nowrap', flexShrink: 0, transition: 'all 0.15s',
             }}>
-              <Icon />
-              {label}
+              <Icon />{label}
             </button>
           );
         })}
@@ -288,47 +278,52 @@ function SidebarNav({ active, onChange, isMobile }: { active: TabKey; onChange: 
 
   return (
     <aside style={{
-      width: SIDEBAR_W,
-      flexShrink: 0,
-      position: 'sticky',
-      top: 24,
-      alignSelf: 'flex-start',
-      background: '#fff',
-      borderRadius: 16,
-      border: `1px solid ${BORDER}`,
-      padding: '12px 0',
-      height: 'fit-content',
+      position: 'fixed', top: 52, left: 0,
+      width: SIDEBAR_W, height: 'calc(100vh - 52px)',
+      background: SIDEBAR_BG, overflowY: 'auto',
+      display: 'flex', flexDirection: 'column', zIndex: 50,
+      boxShadow: '2px 0 12px rgba(0,0,0,0.15)',
     }}>
-      <div style={{ padding: '8px 16px 16px', borderBottom: `1px solid ${BORDER}`, marginBottom: 8 }}>
-        <div style={{ fontSize: 11, fontWeight: 800, color: '#aaa', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-          Навигация
+      {/* Brand */}
+      <div style={{ padding: '18px 16px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 34, height: 34, borderRadius: 9, background: BRAND, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, flexShrink: 0 }}>⚙️</div>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: '#f1f5f9', letterSpacing: '-0.01em' }}>Admin Panel</div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 1 }}>SportRun</div>
+          </div>
         </div>
       </div>
-      {NAV_ITEMS.map(({ key, label, Icon }) => {
-        const isActive = active === key;
-        return (
-          <button key={key} onClick={() => onChange(key)} style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            width: '100%',
-            padding: '11px 16px',
-            border: 'none',
-            borderLeft: isActive ? `3px solid ${BRAND}` : '3px solid transparent',
-            background: isActive ? BRAND_BG : 'transparent',
-            color: isActive ? BRAND : '#555',
-            fontSize: 14,
-            fontWeight: isActive ? 700 : 500,
-            cursor: 'pointer',
-            textAlign: 'left',
-            transition: 'all 0.12s',
-            boxSizing: 'border-box',
-          } as React.CSSProperties}>
-            <Icon />
-            {label}
-          </button>
-        );
-      })}
+
+      {/* Nav */}
+      <nav style={{ flex: 1, padding: '8px 10px' }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.22)', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '10px 6px 6px' }}>Разделы</div>
+        {NAV_ITEMS.map(({ key, label, Icon }) => {
+          const isActive = active === key;
+          return (
+            <button key={key} onClick={() => onChange(key)} style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              width: '100%', padding: '9px 10px', borderRadius: 8,
+              border: 'none', marginBottom: 2,
+              background: isActive ? 'rgba(252,76,2,0.16)' : 'transparent',
+              color: isActive ? '#fc6d2f' : 'rgba(255,255,255,0.5)',
+              fontSize: 13, fontWeight: isActive ? 700 : 400,
+              cursor: 'pointer', textAlign: 'left', transition: 'all 0.12s',
+              boxSizing: 'border-box',
+            } as React.CSSProperties}>
+              <div style={{ width: 30, height: 30, borderRadius: 8, background: isActive ? 'rgba(252,76,2,0.22)' : 'rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.12s' }}>
+                <Icon />
+              </div>
+              <span style={{ flex: 1 }}>{label}</span>
+              {isActive && <div style={{ width: 5, height: 5, borderRadius: '50%', background: BRAND, flexShrink: 0 }} />}
+            </button>
+          );
+        })}
+      </nav>
+
+      <div style={{ padding: '10px 16px 14px', borderTop: '1px solid rgba(255,255,255,0.05)', fontSize: 11, color: 'rgba(255,255,255,0.18)', flexShrink: 0 }}>
+        SportRun Admin v1.0
+      </div>
     </aside>
   );
 }
@@ -1358,15 +1353,12 @@ function UsersTab() {
                           </select>
                           {isDirty && (
                             <button
-                              style={{
-                                ...styles.smallBtn('primary'),
-                                opacity: savingRole === u.id ? 0.6 : 1,
-                                fontSize: 11,
-                              }}
+                              title="Сохранить роль"
+                              style={{ ...styles.iconBtn('#fff', BRAND), opacity: savingRole === u.id ? 0.6 : 1, fontSize: 11 }}
                               disabled={savingRole === u.id}
                               onClick={() => handleRoleChange(u.id)}
                             >
-                              {savingRole === u.id ? '...' : 'Сохр.'}
+                              {savingRole === u.id ? '…' : '✓'}
                             </button>
                           )}
                         </div>
@@ -1386,19 +1378,16 @@ function UsersTab() {
                       <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>
                         <div style={{ display: 'flex', gap: 6 }}>
                           <button
-                            style={{ ...styles.smallBtn('secondary'), fontSize: 11, padding: '5px 10px' }}
                             title="Начислить / списать XP"
+                            style={styles.iconBtn('#475569', '#f1f5f9')}
                             onClick={() => { setXpModal(u); setXpAmount(''); setXpReason(''); }}
-                          >
-                            ⚡ XP
-                          </button>
+                          >⚡</button>
                           <button
-                            style={{ ...styles.smallBtn('danger'), fontSize: 11, padding: '5px 10px', opacity: deletingUser === u.id ? 0.6 : 1 }}
+                            title="Удалить пользователя"
+                            style={{ ...styles.iconBtn('#fff', '#ef4444'), opacity: deletingUser === u.id ? 0.6 : 1 }}
                             disabled={deletingUser === u.id}
                             onClick={() => setConfirmDeleteUser(u)}
-                          >
-                            🗑
-                          </button>
+                          >🗑</button>
                         </div>
                       </td>
                     </tr>
@@ -1670,18 +1659,16 @@ function ActivitiesTab() {
                       <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>
                         <div style={{ display: 'flex', gap: 6 }}>
                           <button
-                            style={{ ...styles.smallBtn('secondary'), fontSize: 11 }}
+                            title="Редактировать"
+                            style={styles.iconBtn('#475569', '#f1f5f9')}
                             onClick={() => openEdit(a)}
-                          >
-                            ✏️
-                          </button>
+                          >✏️</button>
                           <button
-                            style={{ ...styles.smallBtn('danger'), fontSize: 11, opacity: deletingId === a.id ? 0.6 : 1 }}
+                            title="Удалить"
+                            style={{ ...styles.iconBtn('#fff', '#ef4444'), opacity: deletingId === a.id ? 0.6 : 1 }}
                             disabled={deletingId === a.id}
                             onClick={() => setConfirmDelete(a)}
-                          >
-                            🗑
-                          </button>
+                          >🗑</button>
                         </div>
                       </td>
                     </tr>
@@ -2248,43 +2235,48 @@ export default function AdminPanel() {
   // ─── Render ─────────────────────────────────────────────
 
   return (
-    <div style={styles.container}>
+    <div style={{ minHeight: 'calc(100vh - 52px)', background: '#f1f5f9' }}>
       <style>{`
-        @keyframes slideIn {
-          from { opacity: 0; transform: translateX(20px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+        .admin-tr:hover td { background: #f8fafc !important; }
       `}</style>
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
 
-      {/* Page header */}
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-          <span style={{ fontSize: 13, color: '#aaa', fontWeight: 500 }}>Администрирование</span>
-          <span style={{ color: '#ddd' }}>›</span>
-          <span style={{ fontSize: 13, color: BRAND, fontWeight: 700 }}>{TAB_LABELS[tab]}</span>
+      {/* Fixed desktop sidebar */}
+      {!isMobile && <SidebarNav active={tab} onChange={setTab} isMobile={false} />}
+
+      {/* Main content pushed right of fixed sidebar */}
+      <div style={{ marginLeft: isMobile ? 0 : SIDEBAR_W, minHeight: 'calc(100vh - 52px)', display: 'flex', flexDirection: 'column' }}>
+        {/* Top bar inside admin */}
+        <div style={{ background: '#fff', borderBottom: `1px solid ${BORDER}`, padding: '0 32px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 52, zIndex: 40 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 12, color: '#94a3b8' }}>Администрирование</span>
+            <span style={{ color: '#cbd5e1', fontSize: 14 }}>›</span>
+            <span style={{ fontSize: 13, color: TEXT, fontWeight: 700 }}>{TAB_LABELS[tab]}</span>
+          </div>
+          {isMobile && (
+            <SidebarNav active={tab} onChange={setTab} isMobile={true} />
+          )}
         </div>
-        <h1 style={{ fontSize: 28, fontWeight: 900, color: TEXT, margin: 0 }}>Панель администратора</h1>
-      </div>
-
-      {/* Mobile: pill tabs at top */}
-      {isMobile && (
-        <SidebarNav active={tab} onChange={setTab} isMobile={true} />
-      )}
-
-      {/* Main layout: sidebar + content */}
-      <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
-        {/* Desktop sidebar */}
-        {!isMobile && (
-          <SidebarNav active={tab} onChange={setTab} isMobile={false} />
-        )}
 
         {/* Content area */}
-        <main style={{ flex: 1, minWidth: 0 }}>
-          {/* Inline error (non-toast fallback) */}
+        <main style={{ flex: 1, padding: '28px 32px 60px', minWidth: 0 }}>
+          {/* Mobile nav */}
+          {isMobile && (
+            <div style={{ marginBottom: 16 }}>
+              <SidebarNav active={tab} onChange={setTab} isMobile={true} />
+            </div>
+          )}
+
+          {/* Page title */}
+          <div style={{ marginBottom: 24 }}>
+            <h1 style={{ fontSize: 24, fontWeight: 800, color: TEXT, margin: 0 }}>{TAB_LABELS[tab]}</h1>
+          </div>
+
+          {/* Inline error */}
           {error && (
-            <div style={{ padding: '10px 14px', background: '#fff0f0', color: '#c00', borderRadius: 10, fontSize: 13, fontWeight: 600, marginBottom: 16 }}>
+            <div style={{ padding: '10px 14px', background: '#fef2f2', color: '#dc2626', borderRadius: 8, fontSize: 13, fontWeight: 600, marginBottom: 16, border: '1px solid #fecaca' }}>
               {error}
             </div>
           )}
@@ -2301,15 +2293,9 @@ export default function AdminPanel() {
           {/* ─── Events Tab ────────────────────────────────── */}
           {tab === 'events' && !loading && (
             <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: TEXT }}>События</div>
-                  <div style={{ fontSize: 13, color: '#888', marginTop: 2 }}>Всего: {events.length}</div>
-                </div>
-                <button
-                  style={styles.btn('primary')}
-                  onClick={() => { setEditingEvent(null); setShowEventForm(true); }}
-                >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <div style={{ fontSize: 13, color: '#64748b' }}>Всего событий: <strong style={{ color: TEXT }}>{events.length}</strong></div>
+                <button style={styles.btn('primary')} onClick={() => { setEditingEvent(null); setShowEventForm(true); }}>
                   + Создать событие
                 </button>
               </div>
@@ -2357,51 +2343,19 @@ export default function AdminPanel() {
                               {(ev as any).participantCount ?? '—'}
                             </td>
                             <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>
-                              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                                <button
-                                  style={styles.smallBtn('secondary')}
-                                  onClick={() => { setEditingEvent(ev); setShowEventForm(true); }}
-                                >
-                                  Изм.
-                                </button>
-                                <button
-                                  style={styles.smallBtn('danger')}
-                                  onClick={() => setConfirmDelete({ type: 'event', id: ev.id, name: ev.title })}
-                                >
-                                  Удал.
-                                </button>
-                                <button
-                                  style={{ ...styles.smallBtn('secondary'), fontSize: 11 }}
-                                  onClick={() => setDiplomaEvent(ev)}
-                                >
-                                  Диплом
-                                </button>
-
-                                {/* Quick status buttons */}
+                              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                                <button title="Редактировать" style={styles.iconBtn('#475569', '#f1f5f9')} onClick={() => { setEditingEvent(ev); setShowEventForm(true); }}>✏️</button>
+                                <button title="Диплом" style={styles.iconBtn('#475569', '#f1f5f9')} onClick={() => setDiplomaEvent(ev)}>🏅</button>
                                 {ev.status === 'DRAFT' && (
-                                  <button
-                                    style={{ ...styles.smallBtn('primary'), background: '#2563eb', fontSize: 11 }}
-                                    onClick={() => handleQuickStatus(ev.id, 'REGISTRATION')}
-                                  >
-                                    Открыть рег.
-                                  </button>
+                                  <button title="Открыть регистрацию" style={{ ...styles.iconBtn('#fff', '#2563eb'), fontSize: 11, width: 'auto', padding: '0 8px' }} onClick={() => handleQuickStatus(ev.id, 'REGISTRATION')}>Рег.</button>
                                 )}
                                 {ev.status === 'REGISTRATION' && (
-                                  <button
-                                    style={{ ...styles.smallBtn('primary'), background: '#16a34a', fontSize: 11 }}
-                                    onClick={() => handleQuickStatus(ev.id, 'ACTIVE')}
-                                  >
-                                    Старт
-                                  </button>
+                                  <button title="Запустить" style={{ ...styles.iconBtn('#fff', '#16a34a'), fontSize: 11, width: 'auto', padding: '0 8px' }} onClick={() => handleQuickStatus(ev.id, 'ACTIVE')}>Старт</button>
                                 )}
                                 {ev.status === 'ACTIVE' && (
-                                  <button
-                                    style={{ ...styles.smallBtn('primary'), background: '#7c3aed', fontSize: 11 }}
-                                    onClick={() => handleQuickStatus(ev.id, 'FINISHED')}
-                                  >
-                                    Завершить
-                                  </button>
+                                  <button title="Завершить" style={{ ...styles.iconBtn('#fff', '#7c3aed'), fontSize: 11, width: 'auto', padding: '0 8px' }} onClick={() => handleQuickStatus(ev.id, 'FINISHED')}>Финиш</button>
                                 )}
+                                <button title="Удалить" style={styles.iconBtn('#fff', '#ef4444')} onClick={() => setConfirmDelete({ type: 'event', id: ev.id, name: ev.title })}>🗑</button>
                               </div>
                             </td>
                           </tr>
@@ -2424,17 +2378,9 @@ export default function AdminPanel() {
           {/* ─── Packages Tab ──────────────────────────────── */}
           {tab === 'packages' && !loading && (
             <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: TEXT }}>Пакеты</div>
-                  <div style={{ fontSize: 13, color: '#888', marginTop: 2 }}>Всего: {packages.length}</div>
-                </div>
-                <button
-                  style={styles.btn('primary')}
-                  onClick={() => { setEditingPkg(null); setShowPkgForm(true); }}
-                >
-                  + Добавить пакет
-                </button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <div style={{ fontSize: 13, color: '#64748b' }}>Всего пакетов: <strong style={{ color: TEXT }}>{packages.length}</strong></div>
+                <button style={styles.btn('primary')} onClick={() => { setEditingPkg(null); setShowPkgForm(true); }}>+ Добавить пакет</button>
               </div>
 
               <div style={{ display: 'grid', gap: 16 }}>
@@ -2469,19 +2415,9 @@ export default function AdminPanel() {
                         Порядок: {pkg.sortOrder}
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                      <button
-                        style={styles.smallBtn('secondary')}
-                        onClick={() => { setEditingPkg(pkg); setShowPkgForm(true); }}
-                      >
-                        Изм.
-                      </button>
-                      <button
-                        style={styles.smallBtn('danger')}
-                        onClick={() => setConfirmDelete({ type: 'package', id: pkg.id, name: pkg.name })}
-                      >
-                        Удал.
-                      </button>
+                    <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                      <button title="Редактировать" style={styles.iconBtn('#475569', '#f1f5f9')} onClick={() => { setEditingPkg(pkg); setShowPkgForm(true); }}>✏️</button>
+                      <button title="Удалить" style={styles.iconBtn('#fff', '#ef4444')} onClick={() => setConfirmDelete({ type: 'package', id: pkg.id, name: pkg.name })}>🗑</button>
                     </div>
                   </div>
                 ))}
@@ -2497,17 +2433,9 @@ export default function AdminPanel() {
           {/* ─── Achievements Tab ───────────────────────────── */}
           {tab === 'achievements' && !loading && (
             <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: TEXT }}>Достижения</div>
-                  <div style={{ fontSize: 13, color: '#888', marginTop: 2 }}>Всего: {adminAchievements.length}</div>
-                </div>
-                <button
-                  style={styles.btn('primary')}
-                  onClick={() => { setEditingAch(null); setShowAchForm(true); }}
-                >
-                  + Добавить достижение
-                </button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <div style={{ fontSize: 13, color: '#64748b' }}>Всего достижений: <strong style={{ color: TEXT }}>{adminAchievements.length}</strong></div>
+                <button style={styles.btn('primary')} onClick={() => { setEditingAch(null); setShowAchForm(true); }}>+ Добавить достижение</button>
               </div>
 
               <div style={{ background: '#fff', borderRadius: 14, border: `1px solid ${BORDER}`, overflow: 'hidden' }}>
@@ -2571,17 +2499,15 @@ export default function AdminPanel() {
                             <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>
                               <div style={{ display: 'flex', gap: 6 }}>
                                 <button
-                                  style={styles.smallBtn('secondary')}
+                                  title="Редактировать"
+                                  style={styles.iconBtn('#475569', '#f1f5f9')}
                                   onClick={() => { setEditingAch(ach); setShowAchForm(true); }}
-                                >
-                                  Изм.
-                                </button>
+                                >✏️</button>
                                 <button
-                                  style={styles.smallBtn('danger')}
+                                  title="Удалить"
+                                  style={styles.iconBtn('#fff', '#ef4444')}
                                   onClick={() => setConfirmDelete({ type: 'achievement', id: ach.id, name: ach.name })}
-                                >
-                                  Удал.
-                                </button>
+                                >🗑</button>
                               </div>
                             </td>
                           </tr>
