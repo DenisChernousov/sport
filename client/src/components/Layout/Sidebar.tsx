@@ -1,5 +1,6 @@
 import type { TabId } from './Header';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 
 const NAV = [
   { id: 'feed' as TabId, icon: (
@@ -70,6 +71,7 @@ interface Props {
 
 export function Sidebar({ activeTab, onTabChange, onLoginClick, onAddActivity, unreadMessages = 0 }: Props) {
   const { user, isAuthenticated, logout } = useAuth();
+  const { primary } = useTheme();
 
   const visible = NAV.filter(n => {
     if ((n as any).adminOnly) return user?.role === 'ADMIN';
@@ -92,10 +94,10 @@ export function Sidebar({ activeTab, onTabChange, onLoginClick, onAddActivity, u
             onClick={onAddActivity}
             style={{
               width: '100%', padding: '10px 0', borderRadius: 12, border: 'none',
-              background: 'linear-gradient(135deg, #fc4c02, #ff7c3a)',
+              background: `linear-gradient(135deg, ${primary}, ${primary}bb)`,
               color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              boxShadow: '0 3px 10px rgba(252,76,2,0.3)',
+              boxShadow: `0 3px 10px ${primary}4d`,
             }}
           >
             <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Добавить активность
@@ -116,12 +118,12 @@ export function Sidebar({ activeTab, onTabChange, onLoginClick, onAddActivity, u
                 width: '100%', display: 'flex', alignItems: 'center', gap: 11,
                 padding: '9px 12px', borderRadius: 10, cursor: 'pointer',
                 marginBottom: 1, background: 'transparent', border: 'none',
-                color: active ? '#fc4c02' : '#333',
+                color: active ? primary : '#333',
                 fontSize: 14, fontWeight: active ? 700 : 500,
                 textAlign: 'left', position: 'relative',
                 transition: 'color 0.15s',
               }}
-              onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = '#fc4c02'; }}
+              onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = primary; }}
               onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = '#333'; }}
             >
               {item.icon}
@@ -129,7 +131,7 @@ export function Sidebar({ activeTab, onTabChange, onLoginClick, onAddActivity, u
               {showBadge && (
                 <span style={{
                   marginLeft: 'auto', minWidth: 18, height: 18, borderRadius: 9,
-                  background: '#fc4c02', color: '#fff', fontSize: 11, fontWeight: 800,
+                  background: primary, color: '#fff', fontSize: 11, fontWeight: 800,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px',
                 }}>
                   {unreadMessages > 9 ? '9+' : unreadMessages}
@@ -146,7 +148,7 @@ export function Sidebar({ activeTab, onTabChange, onLoginClick, onAddActivity, u
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 10px', borderRadius: 10, background: '#fafafa' }}>
             <div style={{
               width: 34, height: 34, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
-              background: user.avatarUrl ? 'none' : 'linear-gradient(135deg, #fc4c02, #ff7c3a)',
+              background: user.avatarUrl ? 'none' : `linear-gradient(135deg, ${primary}, ${primary}bb)`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 14, color: '#fff', fontWeight: 700,
             }}>
@@ -158,7 +160,7 @@ export function Sidebar({ activeTab, onTabChange, onLoginClick, onAddActivity, u
               <div style={{ fontSize: 13, fontWeight: 700, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {user.username}
               </div>
-              <div style={{ fontSize: 11, color: '#fc4c02', fontWeight: 600 }}>
+              <div style={{ fontSize: 11, color: primary, fontWeight: 600 }}>
                 Ур. {user.level ?? 1} · {user.xp ?? 0} XP
               </div>
             </div>
@@ -174,7 +176,7 @@ export function Sidebar({ activeTab, onTabChange, onLoginClick, onAddActivity, u
         ) : (
           <button onClick={onLoginClick} style={{
             width: '100%', padding: '9px 0', borderRadius: 10, border: '1.5px solid #fc4c02',
-            background: '#fff', color: '#fc4c02', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            background: '#fff', color: primary, fontSize: 13, fontWeight: 700, cursor: 'pointer',
           }}>
             Войти / Регистрация
           </button>

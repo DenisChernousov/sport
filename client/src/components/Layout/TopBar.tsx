@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { TabId } from './Header';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 import { api } from '@/services/api';
 
 interface SearchResult {
@@ -20,6 +21,7 @@ interface Props {
 
 export function TopBar({ onTabChange, onLoginClick, onRegisterClick }: Props) {
   const { user, isAuthenticated } = useAuth();
+  const { preset, primary } = useTheme();
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<{ id: string; type: string; text: string; isRead: boolean; createdAt: string; fromUserId?: string | null; entityId?: string | null; fromUser?: { id?: string; username: string; avatarUrl?: string } }[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -157,20 +159,26 @@ export function TopBar({ onTabChange, onLoginClick, onRegisterClick }: Props) {
       }}>
       {/* Logo */}
       <button onClick={() => onTabChange('feed')} style={{
-        display: 'flex', alignItems: 'center', gap: 7,
+        display: 'flex', alignItems: 'center', gap: 8,
         background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0,
       }}>
-        <div style={{
-          width: 30, height: 30, borderRadius: 9,
-          background: 'linear-gradient(135deg, #fc4c02, #ff7c3a)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <svg viewBox="0 0 24 24" style={{ width: 17, height: 17, color: '#fff' }} fill="currentColor">
-            <path d="M13.5 5.5C13.5 6.88 12.38 8 11 8c-1.38 0-2.5-1.12-2.5-2.5S9.62 3 11 3c1.38 0 2.5 1.12 2.5 2.5zM9.89 19.38l1-4.38L13 17v6h2v-7.5l-2.11-2 .61-3A8.27 8.27 0 0 0 19 13h2V11h-2a6.74 6.74 0 0 1-4.89-2.11l-1-1.22C12.78 7.28 12.28 7 11.72 7c-.28 0-.56.07-.82.22L6 10l1 1.73L10 10l-1.11 5.38L5 13v2l4.89 4.38z"/>
-          </svg>
-        </div>
-        <span style={{ fontSize: 16, fontWeight: 900, color: '#1a1a1a', letterSpacing: -0.3 }}>
-          Sport<span style={{ color: '#fc4c02' }}>Run</span>
+        {preset.logoSvg ? (
+          <div style={{ width: 34, height: 34, flexShrink: 0 }}
+            dangerouslySetInnerHTML={{ __html: preset.logoSvg }}
+          />
+        ) : (
+          <div style={{
+            width: 30, height: 30, borderRadius: 9,
+            background: `linear-gradient(135deg, ${primary}, ${primary}cc)`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <svg viewBox="0 0 24 24" style={{ width: 17, height: 17, color: '#fff' }} fill="currentColor">
+              <path d="M13.5 5.5C13.5 6.88 12.38 8 11 8c-1.38 0-2.5-1.12-2.5-2.5S9.62 3 11 3c1.38 0 2.5 1.12 2.5 2.5zM9.89 19.38l1-4.38L13 17v6h2v-7.5l-2.11-2 .61-3A8.27 8.27 0 0 0 19 13h2V11h-2a6.74 6.74 0 0 1-4.89-2.11l-1-1.22C12.78 7.28 12.28 7 11.72 7c-.28 0-.56.07-.82.22L6 10l1 1.73L10 10l-1.11 5.38L5 13v2l4.89 4.38z"/>
+            </svg>
+          </div>
+        )}
+        <span style={{ fontSize: 15, fontWeight: 900, color: '#1a1a1a', letterSpacing: -0.3, lineHeight: 1.1 }}>
+          {preset.name}
         </span>
       </button>
 
@@ -263,7 +271,7 @@ export function TopBar({ onTabChange, onLoginClick, onRegisterClick }: Props) {
                   <span style={{
                     position: 'absolute', top: 4, right: 4,
                     minWidth: 14, height: 14, borderRadius: 7,
-                    background: '#fc4c02', color: '#fff', fontSize: 9, fontWeight: 800,
+                    background: primary, color: '#fff', fontSize: 9, fontWeight: 800,
                     display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 2px',
                   }}>
                     {unreadCount > 9 ? '9+' : unreadCount}
@@ -299,7 +307,7 @@ export function TopBar({ onTabChange, onLoginClick, onRegisterClick }: Props) {
                     >
                       <div style={{
                         width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-                        background: 'linear-gradient(135deg, #fc4c02, #ff7c3a)',
+                        background: `linear-gradient(135deg, ${primary}, ${primary}bb)`,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: 11, color: '#fff', fontWeight: 700, overflow: 'hidden',
                       }}>
@@ -319,12 +327,12 @@ export function TopBar({ onTabChange, onLoginClick, onRegisterClick }: Props) {
 
             {/* Avatar → profile */}
             <button onClick={() => onTabChange('profile')} title="Профиль" style={{
-              width: 34, height: 34, borderRadius: '50%', border: '2px solid #fc4c02',
+              width: 34, height: 34, borderRadius: '50%', border: `2px solid ${primary}`,
               overflow: 'hidden', background: 'none', cursor: 'pointer', padding: 0, flexShrink: 0,
             }}>
               {user?.avatarUrl
                 ? <img src={user.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #fc4c02, #ff7c3a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#fff' }}>
+                : <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, ${primary}, ${primary}bb)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#fff' }}>
                     {(user?.username ?? '?')[0].toUpperCase()}
                   </div>}
             </button>
@@ -337,7 +345,7 @@ export function TopBar({ onTabChange, onLoginClick, onRegisterClick }: Props) {
             }}>Войти</button>
             <button onClick={onRegisterClick} style={{
               padding: '6px 14px', borderRadius: 8, border: 'none',
-              background: '#fc4c02', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+              background: primary, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer',
             }}>Регистрация</button>
           </>
         )}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { COLOR_PRESETS, useTheme } from '@/context/ThemeContext';
 import type { Event, DiplomaSettings } from '@/types';
 import { api } from '@/services/api';
 import { DiplomaEditor } from './DiplomaEditor';
@@ -1758,74 +1759,29 @@ function ActivitiesTab() {
 
 // ─── Color Scheme Presets ────────────────────────────────
 
-const COLOR_PRESETS = [
-  {
-    id: 'chetyre-stihii',
-    name: 'Четыре стихии',
-    description: 'Огонь, вода, земля, воздух',
-    colors: ['#C0392B', '#1A5276', '#27AE60', '#AED6F1', '#F4F6F7'],
-    logo: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
-  <defs>
-    <clipPath id="circ"><circle cx="60" cy="60" r="52"/></clipPath>
-  </defs>
-  <!-- Quadrant backgrounds -->
-  <circle cx="60" cy="60" r="52" fill="#F4F6F7"/>
-  <path d="M60,8 A52,52 0 0,1 112,60 L60,60 Z" fill="#C0392B"/>
-  <path d="M112,60 A52,52 0 0,1 60,112 L60,60 Z" fill="#27AE60"/>
-  <path d="M60,112 A52,52 0 0,1 8,60 L60,60 Z" fill="#1A5276"/>
-  <path d="M8,60 A52,52 0 0,1 60,8 L60,60 Z" fill="#AED6F1"/>
-  <!-- Center circle -->
-  <circle cx="60" cy="60" r="22" fill="#fff" stroke="#e0e0e0" stroke-width="1.5"/>
-  <!-- Element symbols -->
-  <!-- Fire (top-right) -->
-  <text x="80" y="46" text-anchor="middle" font-size="16" fill="#fff" opacity="0.92">🔥</text>
-  <!-- Earth (bottom-right) -->
-  <text x="80" y="82" text-anchor="middle" font-size="16" fill="#fff" opacity="0.92">🌿</text>
-  <!-- Water (bottom-left) -->
-  <text x="40" y="82" text-anchor="middle" font-size="16" fill="#fff" opacity="0.92">💧</text>
-  <!-- Air (top-left) -->
-  <text x="40" y="46" text-anchor="middle" font-size="16" fill="#1A5276" opacity="0.92">🌬</text>
-  <!-- Running person in center -->
-  <text x="60" y="66" text-anchor="middle" font-size="18" fill="#333">🏃</text>
-  <!-- Outer ring -->
-  <circle cx="60" cy="60" r="52" fill="none" stroke="#333" stroke-width="2.5"/>
-  <!-- Dividers -->
-  <line x1="60" y1="8" x2="60" y2="112" stroke="#333" stroke-width="1.5" opacity="0.35"/>
-  <line x1="8" y1="60" x2="112" y2="60" stroke="#333" stroke-width="1.5" opacity="0.35"/>
-</svg>`,
-  },
-  {
-    id: 'sovetskiy-kosmos',
-    name: 'Советский космос',
-    description: 'Ретро-футуризм, гордость, масштаб',
-    colors: ['#8D1B2A', '#1A3A5C', '#CC2B2B', '#E8C84A', '#F8EDD8'],
-    logo: null,
-  },
-] as const;
-
-function LogoPreviewCard({ logo, name, dark }: { logo: string | null; name: string; dark: boolean }) {
+function LogoPreviewCard({ logoSvg, name, primary, dark }: { logoSvg: string | null; name: string; primary: string; dark: boolean }) {
   const bg = dark ? '#1a1a2e' : '#fff';
   const textColor = dark ? '#fff' : '#1a1a1a';
   return (
     <div style={{
-      padding: '14px 18px', borderRadius: 12, background: bg,
+      padding: '12px 14px', borderRadius: 12, background: bg,
       border: `1.5px solid ${dark ? 'transparent' : '#e0e0e0'}`,
-      display: 'flex', alignItems: 'center', gap: 12, minWidth: 180,
+      display: 'flex', alignItems: 'center', gap: 10, flex: 1,
     }}>
-      {logo ? (
-        <div style={{ width: 42, height: 42, flexShrink: 0 }}
-          dangerouslySetInnerHTML={{ __html: logo.replace('width="120" height="120"', 'width="42" height="42"') }}
+      {logoSvg ? (
+        <div style={{ width: 38, height: 38, flexShrink: 0 }}
+          dangerouslySetInnerHTML={{ __html: logoSvg }}
         />
       ) : (
-        <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'linear-gradient(135deg,#fc4c02,#ff7c3a)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🏃</div>
+        <div style={{ width: 38, height: 38, borderRadius: '50%', background: `linear-gradient(135deg,${primary},${primary}bb)`, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🏃</div>
       )}
-      <div>
-        <div style={{ fontSize: 14, fontWeight: 800, color: textColor, letterSpacing: '-0.3px' }}>{name}</div>
-        <div style={{ fontSize: 11, color: dark ? 'rgba(255,255,255,0.5)' : '#888', marginTop: 1 }}>Виртуальные забеги</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: textColor, letterSpacing: '-0.3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
+        <div style={{ fontSize: 10, color: dark ? 'rgba(255,255,255,0.45)' : '#999', marginTop: 1 }}>Виртуальные забеги</div>
       </div>
       <div style={{
-        marginLeft: 'auto', padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: 800,
-        background: 'linear-gradient(135deg,#C0392B,#E74C3C)', color: '#fff',
+        padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 800,
+        background: primary, color: '#fff', flexShrink: 0,
       }}>Старт</div>
     </div>
   );
@@ -1834,6 +1790,7 @@ function LogoPreviewCard({ logo, name, dark }: { logo: string | null; name: stri
 // ─── Settings Tab ───────────────────────────────────────
 
 function SettingsTab() {
+  const { preset: activePreset, setSchemeId } = useTheme();
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
@@ -1915,12 +1872,13 @@ function SettingsTab() {
         <p style={{ fontSize: 13, color: '#888', margin: '0 0 20px' }}>Выберите тему оформления. Активная схема применяется к логотипу, кнопкам и баннерам.</p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
           {COLOR_PRESETS.map(preset => {
-            const isActive = (settings['color_scheme'] ?? 'chetyre-stihii') === preset.id;
+            const isActive = activePreset.id === preset.id;
             return (
               <div
                 key={preset.id}
                 onClick={() => {
                   setSettings(prev => ({ ...prev, color_scheme: preset.id }));
+                  setSchemeId(preset.id);
                   api.settings.update('color_scheme', preset.id).then(() => flash('Схема применена'));
                 }}
                 style={{
@@ -1949,9 +1907,9 @@ function SettingsTab() {
                   ))}
                 </div>
                 {/* Logo previews */}
-                <div style={{ display: 'flex', gap: 10 }}>
-                  <LogoPreviewCard logo={preset.logo ?? null} name="МирРун" dark={true} />
-                  <LogoPreviewCard logo={preset.logo ?? null} name="МирРун" dark={false} />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <LogoPreviewCard logoSvg={preset.logoSvg} name={preset.name} primary={preset.primary} dark={true} />
+                  <LogoPreviewCard logoSvg={preset.logoSvg} name={preset.name} primary={preset.primary} dark={false} />
                 </div>
               </div>
             );
