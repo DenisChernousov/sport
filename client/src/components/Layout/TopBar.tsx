@@ -177,8 +177,8 @@ export function TopBar({ onTabChange, onLoginClick, onRegisterClick }: Props) {
             </svg>
           </div>
         )}
-        <span style={{ fontSize: 16, fontWeight: 900, color: '#1a1a1a', letterSpacing: -0.3 }}>
-          Sport<span style={{ color: primary }}>Run</span>
+        <span style={{ fontSize: 15, fontWeight: 900, color: '#1a1a1a', letterSpacing: -0.3, lineHeight: 1.1 }}>
+          Четыре <span style={{ color: primary }}>стихии</span>
         </span>
       </button>
 
