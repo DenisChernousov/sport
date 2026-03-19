@@ -26,6 +26,7 @@ export function TopBar({ onTabChange, onLoginClick, onRegisterClick }: Props) {
   const [notifications, setNotifications] = useState<{ id: string; type: string; text: string; isRead: boolean; createdAt: string; fromUserId?: string | null; entityId?: string | null; fromUser?: { id?: string; username: string; avatarUrl?: string } }[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const notifRef = useRef<HTMLDivElement>(null);
+  const notifOpenRef = useRef(false);
 
   // Search
   const [query, setQuery] = useState('');
@@ -36,7 +37,7 @@ export function TopBar({ onTabChange, onLoginClick, onRegisterClick }: Props) {
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadNotifs = useCallback(async () => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || notifOpenRef.current) return;
     try {
       const res = await api.notifications.list();
       setNotifications(res.notifications);
@@ -52,7 +53,11 @@ export function TopBar({ onTabChange, onLoginClick, onRegisterClick }: Props) {
 
   useEffect(() => {
     const h = (e: MouseEvent) => {
-      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        notifOpenRef.current = false;
+        setNotifOpen(false);
+        loadNotifs();
+      }
     };
     if (notifOpen) document.addEventListener('mousedown', h);
     return () => document.removeEventListener('mousedown', h);
@@ -113,11 +118,19 @@ export function TopBar({ onTabChange, onLoginClick, onRegisterClick }: Props) {
   };
 
   const handleNotifOpen = async () => {
-    setNotifOpen(o => !o);
-    if (!notifOpen && unreadCount > 0) {
-      await api.notifications.readAll().catch(() => {});
-      setNotifications(p => p.map(n => ({ ...n, isRead: true })));
-      setUnreadCount(0);
+    const isOpening = !notifOpenRef.current;
+    notifOpenRef.current = isOpening;
+    setNotifOpen(isOpening);
+    if (isOpening && unreadCount > 0) {
+      try {
+        await api.notifications.readAll();
+        setNotifications(p => p.map(n => ({ ...n, isRead: true })));
+        setUnreadCount(0);
+      } catch {}
+    }
+    if (!isOpening) {
+      // Re-sync after closing
+      loadNotifs();
     }
   };
 
