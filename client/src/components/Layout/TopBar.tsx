@@ -132,10 +132,13 @@ export function TopBar({ onTabChange, onLoginClick, onRegisterClick }: Props) {
       position: 'fixed', top: 0, left: 0, right: 0, height: 52,
       background: '#fff',
       borderBottom: '1px solid #e8e8e8',
+      zIndex: 200,
       display: 'flex', alignItems: 'center',
-      padding: '0 16px', zIndex: 200,
-      gap: 12,
     }}>
+      <div style={{
+        width: '100%', maxWidth: 1060, margin: '0 auto',
+        padding: '0 16px', display: 'flex', alignItems: 'center', gap: 12, height: '100%',
+      }}>
       {/* Logo */}
       <button onClick={() => onTabChange('feed')} style={{
         display: 'flex', alignItems: 'center', gap: 7,
@@ -315,6 +318,7 @@ export function TopBar({ onTabChange, onLoginClick, onRegisterClick }: Props) {
             }}>Регистрация</button>
           </>
         )}
+      </div>
       </div>
     </header>
   );
