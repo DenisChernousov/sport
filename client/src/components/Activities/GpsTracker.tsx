@@ -76,12 +76,16 @@ export default function GpsTracker({ onClose, onSaved }: Props) {
   const handleStop = () => {
     const res = stop();
     setFinalStats(res.stats);
-    if (res.stats.distance < 0.02) { reset(); return; }
+    // Always show save form — let user correct manually if GPS didn't work
     setShowSave(true);
   };
 
   const handleSave = async () => {
     const fs = finalStats ?? stats;
+    if (fs.distance <= 0 || fs.duration <= 0) {
+      setSaveError('GPS не записал данные. Нужно двигаться с активным GPS.');
+      return;
+    }
     setSaving(true); setSaveError('');
     try {
       await api.activities.create({
