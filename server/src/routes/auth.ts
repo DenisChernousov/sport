@@ -39,12 +39,12 @@ router.post('/register', async (req: AuthRequest, res: Response) => {
     const { username, email, password, referralCode } = req.body;
 
     if (!username || !email || !password) {
-      res.status(400).json({ error: 'Username, email, and password are required' });
+      res.status(400).json({ error: 'Заполните логин, email и пароль' });
       return;
     }
 
     if (password.length < 6) {
-      res.status(400).json({ error: 'Password must be at least 6 characters' });
+      res.status(400).json({ error: 'Пароль должен быть не менее 6 символов' });
       return;
     }
 
@@ -58,7 +58,8 @@ router.post('/register', async (req: AuthRequest, res: Response) => {
     });
 
     if (existing) {
-      res.status(409).json({ error: 'User with this email or username already exists' });
+      const emailTaken = existing.email === email.toLowerCase();
+      res.status(409).json({ error: emailTaken ? 'Этот email уже зарегистрирован' : 'Этот логин уже занят' });
       return;
     }
 
@@ -102,7 +103,7 @@ router.post('/register', async (req: AuthRequest, res: Response) => {
     });
   } catch (err) {
     console.error('Register error:', err);
-    res.status(500).json({ error: 'Registration failed' });
+    res.status(500).json({ error: 'Ошибка при регистрации' });
   }
 });
 
@@ -113,7 +114,7 @@ router.post('/login', async (req: AuthRequest, res: Response) => {
     const { login, password } = req.body;
 
     if (!login || !password) {
-      res.status(400).json({ error: 'Login and password are required' });
+      res.status(400).json({ error: 'Введите логин и пароль' });
       return;
     }
 
@@ -127,18 +128,18 @@ router.post('/login', async (req: AuthRequest, res: Response) => {
     });
 
     if (!user) {
-      res.status(401).json({ error: 'Invalid credentials' });
+      res.status(401).json({ error: 'Пользователь с таким логином или email не найден' });
       return;
     }
 
     if (user.isBanned) {
-      res.status(403).json({ error: 'Account is banned' });
+      res.status(403).json({ error: 'Аккаунт заблокирован' });
       return;
     }
 
     const isValid = await bcrypt.compare(password, user.passwordHash);
     if (!isValid) {
-      res.status(401).json({ error: 'Invalid credentials' });
+      res.status(401).json({ error: 'Неверный пароль' });
       return;
     }
 
@@ -160,7 +161,7 @@ router.post('/login', async (req: AuthRequest, res: Response) => {
     });
   } catch (err) {
     console.error('Login error:', err);
-    res.status(500).json({ error: 'Login failed' });
+    res.status(500).json({ error: 'Ошибка при входе' });
   }
 });
 
@@ -171,7 +172,7 @@ router.post('/refresh', async (req: AuthRequest, res: Response) => {
     const { refreshToken } = req.body;
 
     if (!refreshToken) {
-      res.status(400).json({ error: 'Refresh token is required' });
+      res.status(400).json({ error: 'Токен не передан' });
       return;
     }
 
@@ -184,7 +185,7 @@ router.post('/refresh', async (req: AuthRequest, res: Response) => {
       if (stored) {
         await prisma.refreshToken.delete({ where: { id: stored.id } });
       }
-      res.status(401).json({ error: 'Invalid or expired refresh token' });
+      res.status(401).json({ error: 'Сессия устарела, войдите снова' });
       return;
     }
 

@@ -100,8 +100,8 @@ async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
   }
 
   if (!res.ok) {
-    const body = await res.json().catch(() => ({ message: res.statusText }));
-    throw new Error(body.message || `Request failed: ${res.status}`);
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || body.message || `Ошибка ${res.status}`);
   }
 
   if (res.status === 204) return undefined as T;
