@@ -280,7 +280,10 @@ export default function GpsTracker({ onClose, onSaved }: Props) {
             width: '100%', background: '#0f2035',
             borderRadius: '22px 22px 0 0',
             padding: '6px 0 0',
-          }}>
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
+          } as React.CSSProperties}>
             {/* drag handle */}
             <div style={{ width: 40, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)', margin: '0 auto 18px' }} />
 
