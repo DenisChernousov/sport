@@ -4,6 +4,7 @@ import type { TabId } from '@/components/Layout/Header';
 import { TopBar } from '@/components/Layout/TopBar';
 import { Sidebar } from '@/components/Layout/Sidebar';
 import { BottomNav } from '@/components/Layout/BottomNav';
+import { ToastNotifications } from '@/components/Layout/ToastNotifications';
 import { AuthModal } from '@/components/Auth/AuthModal';
 import { PublicProfilePanel } from '@/components/Profile/PublicProfilePanel';
 
@@ -154,6 +155,7 @@ function AppContent() {
         </div>
       )}
 
+      <ToastNotifications />
       <AuthModal isOpen={authModal.open} onClose={closeAuth} initialTab={authModal.tab} />
 
       {viewUserId && (
