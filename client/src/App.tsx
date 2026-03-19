@@ -15,6 +15,7 @@ const TeamsPanel = lazy(() => import('@/components/Teams/TeamsPanel'));
 const LeaderboardPanel = lazy(() => import('@/components/Leaderboard/LeaderboardPanel'));
 const ProfilePanel = lazy(() => import('@/components/Profile/ProfilePanel'));
 const AdminPanel = lazy(() => import('@/components/Admin/AdminPanel'));
+const ModeratorPanel = lazy(() => import('@/components/Moderator/ModeratorPanel'));
 const CommunityPanel = lazy(() => import('@/components/Community/CommunityPanel'));
 const FeedPanel = lazy(() => import('@/components/Feed/FeedPanel'));
 const MessagesPanel = lazy(() => import('@/components/Messages/MessagesPanel'));
@@ -122,6 +123,7 @@ function AppContent() {
       {activeTab === 'messages' && <MessagesPanel />}
       {activeTab === 'profile' && <ProfilePanel />}
       {activeTab === 'admin' && <AdminPanel />}
+      {activeTab === 'mod' && <ModeratorPanel />}
     </Suspense>
   );
 

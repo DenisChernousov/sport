@@ -1503,6 +1503,17 @@ const SPORT_COLORS: Record<string, string> = {
   TRIATHLON: '#ea580c',
 };
 
+interface EditActivityForm {
+  sport: string;
+  title: string;
+  description: string;
+  distance: string;
+  duration: string;
+  startedAt: string;
+  calories: string;
+  elevGain: string;
+}
+
 function ActivitiesTab() {
   const [activities, setActivities] = useState<AdminActivity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1511,6 +1522,9 @@ function ActivitiesTab() {
   const [confirmDelete, setConfirmDelete] = useState<AdminActivity | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
+  const [editModal, setEditModal] = useState<AdminActivity | null>(null);
+  const [editForm, setEditForm] = useState<EditActivityForm>({ sport: '', title: '', description: '', distance: '', duration: '', startedAt: '', calories: '', elevGain: '' });
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1541,6 +1555,49 @@ function ActivitiesTab() {
       setConfirmDelete(null);
     }
   }, []);
+
+  const openEdit = useCallback((a: AdminActivity) => {
+    const durationMin = Math.floor(a.duration / 60);
+    const durationSec = a.duration % 60;
+    setEditForm({
+      sport: a.sport,
+      title: a.title ?? '',
+      description: '',
+      distance: String(a.distance),
+      duration: `${durationMin}:${String(durationSec).padStart(2, '0')}`,
+      startedAt: a.startedAt ? new Date(a.startedAt).toISOString().slice(0, 16) : '',
+      calories: '',
+      elevGain: '',
+    });
+    setEditModal(a);
+  }, []);
+
+  const handleSaveEdit = useCallback(async () => {
+    if (!editModal) return;
+    setSavingEdit(true);
+    try {
+      const [min, sec] = editForm.duration.split(':').map(Number);
+      const durationSec = ((min || 0) * 60) + (sec || 0);
+      const updated = await api.admin.editActivity(editModal.id, {
+        sport: editForm.sport || undefined,
+        title: editForm.title || undefined,
+        description: editForm.description || undefined,
+        distance: editForm.distance ? parseFloat(editForm.distance) : undefined,
+        duration: durationSec || undefined,
+        startedAt: editForm.startedAt || undefined,
+        calories: editForm.calories ? parseInt(editForm.calories, 10) : null,
+        elevGain: editForm.elevGain ? parseFloat(editForm.elevGain) : null,
+      });
+      setActivities((prev) => prev.map((a) => a.id === editModal.id ? { ...a, ...updated } : a));
+      setSuccess('Активность обновлена');
+      setTimeout(() => setSuccess(''), 2000);
+      setEditModal(null);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Ошибка сохранения');
+    } finally {
+      setSavingEdit(false);
+    }
+  }, [editModal, editForm]);
 
   return (
     <div>
@@ -1610,14 +1667,22 @@ function ActivitiesTab() {
                       <td style={{ ...styles.td, fontSize: 12, color: '#888', whiteSpace: 'nowrap' }}>
                         {new Date(a.createdAt).toLocaleDateString('ru-RU')}
                       </td>
-                      <td style={styles.td}>
-                        <button
-                          style={{ ...styles.smallBtn('danger'), fontSize: 11, opacity: deletingId === a.id ? 0.6 : 1 }}
-                          disabled={deletingId === a.id}
-                          onClick={() => setConfirmDelete(a)}
-                        >
-                          🗑
-                        </button>
+                      <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button
+                            style={{ ...styles.smallBtn('secondary'), fontSize: 11 }}
+                            onClick={() => openEdit(a)}
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            style={{ ...styles.smallBtn('danger'), fontSize: 11, opacity: deletingId === a.id ? 0.6 : 1 }}
+                            disabled={deletingId === a.id}
+                            onClick={() => setConfirmDelete(a)}
+                          >
+                            🗑
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -1641,6 +1706,64 @@ function ActivitiesTab() {
           onConfirm={() => handleDelete(confirmDelete.id)}
           onCancel={() => setConfirmDelete(null)}
         />
+      )}
+
+      {editModal && (
+        <div style={styles.overlay} onClick={(e) => { if (e.target === e.currentTarget) setEditModal(null); }}>
+          <div style={{ ...styles.modal, maxWidth: 520 }}>
+            <h3 style={{ fontSize: 20, fontWeight: 900, color: TEXT, marginBottom: 20 }}>
+              ✏️ Редактировать активность
+            </h3>
+            <div style={{ fontSize: 13, color: '#888', marginBottom: 16 }}>
+              Пользователь: <strong>{editModal.user.username}</strong>
+            </div>
+            <div style={styles.grid2}>
+              <div style={styles.fieldGroup}>
+                <label style={styles.label}>Вид спорта</label>
+                <select style={styles.select} value={editForm.sport} onChange={(e) => setEditForm(p => ({ ...p, sport: e.target.value }))}>
+                  <option value="RUNNING">Бег</option>
+                  <option value="CYCLING">Велоспорт</option>
+                  <option value="SKIING">Лыжи</option>
+                  <option value="WALKING">Ходьба</option>
+                </select>
+              </div>
+              <div style={styles.fieldGroup}>
+                <label style={styles.label}>Дата и время</label>
+                <input type="datetime-local" style={styles.input} value={editForm.startedAt} onChange={(e) => setEditForm(p => ({ ...p, startedAt: e.target.value }))} />
+              </div>
+            </div>
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>Название</label>
+              <input style={styles.input} value={editForm.title} onChange={(e) => setEditForm(p => ({ ...p, title: e.target.value }))} placeholder="Название активности" />
+            </div>
+            <div style={styles.grid2}>
+              <div style={styles.fieldGroup}>
+                <label style={styles.label}>Дистанция (км)</label>
+                <input type="number" step="0.01" style={styles.input} value={editForm.distance} onChange={(e) => setEditForm(p => ({ ...p, distance: e.target.value }))} placeholder="10.5" />
+              </div>
+              <div style={styles.fieldGroup}>
+                <label style={styles.label}>Время (мм:сс)</label>
+                <input style={styles.input} value={editForm.duration} onChange={(e) => setEditForm(p => ({ ...p, duration: e.target.value }))} placeholder="45:30" />
+              </div>
+            </div>
+            <div style={styles.grid2}>
+              <div style={styles.fieldGroup}>
+                <label style={styles.label}>Калории</label>
+                <input type="number" style={styles.input} value={editForm.calories} onChange={(e) => setEditForm(p => ({ ...p, calories: e.target.value }))} placeholder="450" />
+              </div>
+              <div style={styles.fieldGroup}>
+                <label style={styles.label}>Набор высоты (м)</label>
+                <input type="number" step="1" style={styles.input} value={editForm.elevGain} onChange={(e) => setEditForm(p => ({ ...p, elevGain: e.target.value }))} placeholder="120" />
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
+              <button style={styles.btn('secondary')} onClick={() => setEditModal(null)}>Отмена</button>
+              <button style={{ ...styles.btn('primary'), opacity: savingEdit ? 0.6 : 1 }} disabled={savingEdit} onClick={handleSaveEdit}>
+                {savingEdit ? 'Сохранение...' : 'Сохранить'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

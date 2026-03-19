@@ -405,6 +405,39 @@ router.get('/activities', authMiddleware, adminMiddleware, async (req: AuthReque
   }
 });
 
+// ─── PUT /api/admin/activities/:id ───────────────────────
+
+router.put('/activities/:id', authMiddleware, adminMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const { sport, title, description, distance, duration, startedAt, calories, elevGain } = req.body;
+
+    const activity = await prisma.activity.findUnique({ where: { id } });
+    if (!activity) { res.status(404).json({ error: 'Activity not found' }); return; }
+
+    const updated = await prisma.activity.update({
+      where: { id },
+      data: {
+        ...(sport != null ? { sport } : {}),
+        ...(title !== undefined ? { title: title || null } : {}),
+        ...(description !== undefined ? { description: description || null } : {}),
+        ...(distance != null ? { distance: parseFloat(String(distance)) } : {}),
+        ...(duration != null ? { duration: parseInt(String(duration), 10) } : {}),
+        ...(startedAt != null ? { startedAt: new Date(startedAt) } : {}),
+        ...(calories !== undefined ? { calories: calories != null ? parseInt(String(calories), 10) : null } : {}),
+        ...(elevGain !== undefined ? { elevGain: elevGain != null ? parseFloat(String(elevGain)) : null } : {}),
+      },
+      select: { id: true, sport: true, title: true, distance: true, duration: true, startedAt: true, createdAt: true,
+        user: { select: { id: true, username: true, avatarUrl: true, level: true } } },
+    });
+
+    res.json(updated);
+  } catch (err) {
+    console.error('Admin edit activity error:', err);
+    res.status(500).json({ error: 'Failed to update activity' });
+  }
+});
+
 // ─── DELETE /api/admin/activities/:id ────────────────────
 
 router.delete('/activities/:id', authMiddleware, adminMiddleware, async (req: AuthRequest, res: Response) => {

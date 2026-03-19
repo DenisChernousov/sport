@@ -571,6 +571,38 @@ export const api = {
     deleteActivity(id: string) {
       return request<void>(`/admin/activities/${id}`, { method: 'DELETE' });
     },
+    editActivity(id: string, data: { sport?: string; title?: string; description?: string; distance?: number; duration?: number; startedAt?: string; calories?: number | null; elevGain?: number | null }) {
+      return request<{ id: string; sport: string; title?: string; distance: number; duration: number; startedAt: string; createdAt: string; user: { id: string; username: string; avatarUrl?: string; level: number } }>(`/admin/activities/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      });
+    },
+  },
+
+  mod: {
+    stats() {
+      return request<{
+        totalUsers: number;
+        totalActivities: number;
+        activitiesToday: number;
+        activitiesThisWeek: number;
+        recentActivities: { id: string; sport: string; title?: string; distance: number; duration: number; createdAt: string; user: { id: string; username: string; avatarUrl?: string } }[];
+        topActiveUsers: { id: string; username: string; avatarUrl?: string; totalActivities: number; totalDistance: number; level: number }[];
+      }>('/mod/stats');
+    },
+    activities(params?: { limit?: number; sport?: string; search?: string }) {
+      const q = params ? Object.entries(params).filter(([, v]) => v != null).map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`).join('&') : '';
+      return request<{ id: string; sport: string; title?: string; description?: string; distance: number; duration: number; startedAt: string; createdAt: string; isManual: boolean; user: { id: string; username: string; avatarUrl?: string; level: number } }[]>(`/mod/activities${q ? `?${q}` : ''}`);
+    },
+    deleteActivity(id: string) {
+      return request<void>(`/mod/activities/${id}`, { method: 'DELETE' });
+    },
+    users(search?: string) {
+      return request<{ id: string; username: string; email: string; role: string; city?: string; level: number; xp: number; totalDistance: number; totalActivities: number; currentStreak: number; createdAt: string; avatarUrl?: string }[]>(`/mod/users${search ? `?search=${encodeURIComponent(search)}` : ''}`);
+    },
+    warnUser(userId: string, reason: string) {
+      return request<{ ok: boolean }>(`/mod/users/${userId}/warn`, { method: 'POST', body: JSON.stringify({ reason }) });
+    },
   },
 
   profile: {

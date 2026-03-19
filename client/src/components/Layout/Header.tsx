@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/services/api';
 
-export type TabId = 'feed' | 'events' | 'activities' | 'teams' | 'leaderboard' | 'community' | 'friends' | 'messages' | 'profile' | 'admin';
+export type TabId = 'feed' | 'events' | 'activities' | 'teams' | 'leaderboard' | 'community' | 'friends' | 'messages' | 'profile' | 'admin' | 'mod';
 
 const tabs: { id: TabId; label: string; short: string; icon: string; adminOnly?: boolean; authOnly?: boolean }[] = [
   { id: 'feed', label: 'Лента', short: 'Лент.', icon: '📰' },

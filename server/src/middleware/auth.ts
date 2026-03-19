@@ -55,3 +55,11 @@ export function adminMiddleware(req: AuthRequest, res: Response, next: NextFunct
   }
   next();
 }
+
+export function moderatorMiddleware(req: AuthRequest, res: Response, next: NextFunction): void {
+  if (req.role !== Role.ADMIN && req.role !== Role.MODERATOR) {
+    res.status(403).json({ error: 'Moderator access required' });
+    return;
+  }
+  next();
+}
