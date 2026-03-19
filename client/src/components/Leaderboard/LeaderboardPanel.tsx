@@ -47,7 +47,7 @@ export default function LeaderboardPanel() {
         const res = await api.leaderboard.users({ period });
         raw = Array.isArray(res) ? res : (res?.items ?? []);
       } else {
-        const res = await api.leaderboard.bySport(sport);
+        const res = await api.leaderboard.bySport(sport, { period });
         raw = Array.isArray(res) ? res : ((res as any)?.items ?? []);
       }
       // Normalize: backend returns { user: {...}, periodDistance } but we need flat LeaderboardEntry
