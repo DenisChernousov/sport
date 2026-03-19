@@ -133,15 +133,10 @@ router.get('/sport/:sport', async (req: AuthRequest, res: Response) => {
   try {
     const sport = req.params.sport as string;
     const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || '50'), 10)));
-    const period = String(req.query.period || 'all');
-    const periodStart = getPeriodStart(period);
-
-    const where: any = { sport: sport as any };
-    if (periodStart) where.startedAt = { gte: periodStart };
 
     const results = await prisma.activity.groupBy({
       by: ['userId'],
-      where,
+      where: { sport: sport as any },
       _sum: { distance: true },
       _count: { _all: true },
       orderBy: { _sum: { distance: 'desc' } },

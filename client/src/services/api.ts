@@ -358,8 +358,8 @@ export const api = {
     teams() {
       return request<Team[]>('/leaderboard/teams');
     },
-    bySport(sport: string, params?: { period?: string }) {
-      return request<LeaderboardEntry[]>(`/leaderboard/sport/${sport}${toQuery(params)}`);
+    bySport(sport: string) {
+      return request<LeaderboardEntry[]>(`/leaderboard/sport/${sport}`);
     },
   },
 

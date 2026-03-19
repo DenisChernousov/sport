@@ -26,7 +26,7 @@ function getRankDisplay(rank: number): { text: string; bg: string; color: string
 }
 
 export default function LeaderboardPanel() {
-  const [period, setPeriod] = useState<Period>('week');
+  const [period, setPeriod] = useState<Period>('all');
   const [sport, setSport] = useState<SportType | 'ALL'>('ALL');
   const [users, setUsers] = useState<LeaderboardEntry[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -47,7 +47,7 @@ export default function LeaderboardPanel() {
         const res = await api.leaderboard.users({ period });
         raw = Array.isArray(res) ? res : (res?.items ?? []);
       } else {
-        const res = await api.leaderboard.bySport(sport, { period });
+        const res = await api.leaderboard.bySport(sport);
         raw = Array.isArray(res) ? res : ((res as any)?.items ?? []);
       }
       // Normalize: backend returns { user: {...}, periodDistance } but we need flat LeaderboardEntry
