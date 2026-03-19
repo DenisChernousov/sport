@@ -152,83 +152,76 @@ export default function GpsTracker({ onClose, onSaved }: Props) {
       </div>
 
       {/* ── Map ─────────────────────────────────── */}
-      <div ref={mapRef} style={{ flex: 1, minHeight: 0 }} />
+      <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+        <div ref={mapRef} style={{ position: 'absolute', inset: 0 }} />
 
-      {/* ── Error banner ────────────────────────── */}
-      {error && (
-        <div style={{
-          background: 'rgba(204,43,43,0.95)', color: '#fff',
-          padding: '10px 16px', fontSize: 13, fontWeight: 600, textAlign: 'center',
-          flexShrink: 0,
-        }}>{error}</div>
-      )}
-
-      {/* ── Bottom panel ────────────────────────── */}
-      <div style={{
-        background: preset.dark, flexShrink: 0,
-        borderTop: `1px solid rgba(255,255,255,0.08)`,
-      }}>
-
-        {/* Sport selector (idle only) */}
-        {isIdle && (
-          <div style={{ display: 'flex', gap: 6, padding: '12px 14px 0', justifyContent: 'center', flexWrap: 'wrap' }}>
-            {SPORTS.map(s => (
-              <button key={s.id} onClick={() => setSport(s.id)} style={{
-                padding: '7px 13px', borderRadius: 10,
-                border: `1.5px solid ${sport === s.id ? primary : 'rgba(255,255,255,0.15)'}`,
-                background: sport === s.id ? `${primary}28` : 'transparent',
-                color: sport === s.id ? primary : '#8aadcc',
-                fontSize: 13, fontWeight: 700, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: 5,
-              }}>
-                <span style={{ fontSize: 16 }}>{s.icon}</span>{s.label}
-              </button>
-            ))}
-          </div>
+        {/* Error banner over map */}
+        {error && (
+          <div style={{
+            position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
+            background: 'rgba(204,43,43,0.95)', color: '#fff',
+            padding: '10px 16px', fontSize: 13, fontWeight: 600, textAlign: 'center',
+          }}>{error}</div>
         )}
 
-        {/* Stats grid (active/paused) */}
+        {/* Stats overlay (active/paused) — bottom of map */}
         {isActive && (
-          <div style={{ padding: '12px 16px 0' }}>
-            {/* Big timer */}
-            <div style={{
-              textAlign: 'center', marginBottom: 10,
-              fontVariantNumeric: 'tabular-nums',
-            }}>
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10,
+            background: 'linear-gradient(transparent, rgba(10,22,40,0.97) 30%)',
+            padding: '28px 14px 14px',
+            pointerEvents: 'none',
+          }}>
+            {/* Timer */}
+            <div style={{ textAlign: 'center', marginBottom: 8, fontVariantNumeric: 'tabular-nums' }}>
               <span style={{
-                fontSize: 52, fontWeight: 900, color: '#fff',
-                letterSpacing: -2, lineHeight: 1,
-                fontFamily: 'ui-monospace, monospace',
+                fontSize: 44, fontWeight: 900, color: '#fff',
+                letterSpacing: -2, lineHeight: 1, fontFamily: 'ui-monospace, monospace',
               }}>
                 {fmtTime(stats.duration)}
               </span>
             </div>
-
             {/* Stats row */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 4 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
               <Stat label="Дистанция" value={fmtDist(stats.distance)} accent={primary} />
               <Stat label="Ср. темп"  value={stats.avgPace + ' /км'} accent={primary} />
               <Stat label="Скорость"  value={stats.currentSpeed.toFixed(1) + ' км/ч'} accent={primary} />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
-              <Stat label="Ср. скорость" value={stats.avgSpeed.toFixed(1) + ' км/ч'} accent={primary} />
-              <Stat label="Калории"      value={stats.calories + ' ккал'} accent={primary} />
-            </div>
           </div>
         )}
+      </div>
 
-        {/* Idle hint */}
+      {/* ── Bottom bar (controls only) ───────────── */}
+      <div style={{
+        background: preset.dark, flexShrink: 0,
+        borderTop: `1px solid rgba(255,255,255,0.08)`,
+        padding: '12px 0 16px',
+      }}>
+        {/* Sport selector (idle only) */}
         {isIdle && (
-          <p style={{ color: '#4a6a88', fontSize: 12, textAlign: 'center', margin: '10px 0 0' }}>
-            Нажмите ▶ для старта записи маршрута
-          </p>
+          <>
+            <div style={{ display: 'flex', gap: 6, padding: '0 14px 10px', justifyContent: 'center', flexWrap: 'wrap' }}>
+              {SPORTS.map(s => (
+                <button key={s.id} onClick={() => setSport(s.id)} style={{
+                  padding: '7px 13px', borderRadius: 10,
+                  border: `1.5px solid ${sport === s.id ? primary : 'rgba(255,255,255,0.15)'}`,
+                  background: sport === s.id ? `${primary}28` : 'transparent',
+                  color: sport === s.id ? primary : '#8aadcc',
+                  fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: 5,
+                }}>
+                  <span style={{ fontSize: 16 }}>{s.icon}</span>{s.label}
+                </button>
+              ))}
+            </div>
+            <p style={{ color: '#4a6a88', fontSize: 12, textAlign: 'center', margin: '0 0 10px' }}>
+              Нажмите ▶ для старта записи маршрута
+            </p>
+          </>
         )}
 
         {/* Controls */}
-        <div style={{
-          display: 'flex', justifyContent: 'center', alignItems: 'center',
-          gap: 20, padding: '14px 0 18px',
-        }}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 20 }}>
           {isIdle && (
             <Btn size={72} bg={primary} shadow={primary} onClick={start}>
               <svg viewBox="0 0 24 24" fill="white" style={{ width: 28, height: 28, marginLeft: 3 }}>
