@@ -50,6 +50,9 @@ export default function MessagesPanel() {
   const [searchLoading, setSearchLoading] = useState(false);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Filter existing convs
+  const [convsFilter, setConvsFilter] = useState('');
+
   useEffect(() => {
     const h = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', h);
@@ -58,6 +61,19 @@ export default function MessagesPanel() {
 
   useEffect(() => {
     api.messages.conversations().then(setConvs).catch(() => {}).finally(() => setLoading(false));
+  }, []);
+
+  // Listen for "open chat with user" event from profile popup
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { userId: string; username: string; avatarUrl?: string; level: number };
+      if (!detail?.userId) return;
+      const convUser: ConvUser = { id: detail.userId, username: detail.username, avatarUrl: detail.avatarUrl, level: detail.level };
+      selectConv(convUser);
+    };
+    window.addEventListener('open-messages-with', handler);
+    return () => window.removeEventListener('open-messages-with', handler);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadMessages = async (userId: string) => {
@@ -187,13 +203,14 @@ export default function MessagesPanel() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
                 <input
+                  value={convsFilter}
+                  onChange={e => setConvsFilter(e.target.value)}
                   placeholder="Поиск по беседам..."
                   style={{
                     width: '100%', height: 32, padding: '0 10px 0 30px',
                     borderRadius: 8, border: '1px solid #e8e8e8',
                     background: '#f5f5f5', fontSize: 13, outline: 'none', boxSizing: 'border-box',
                   }}
-                  readOnly
                 />
               </div>
             )}
@@ -236,7 +253,7 @@ export default function MessagesPanel() {
                   <div style={{ fontSize: 32, marginBottom: 8 }}>💬</div>
                   Нет бесед. Нажмите карандаш, чтобы написать кому-нибудь.
                 </div>
-              ) : convs.map(conv => (
+              ) : convs.filter(c => !convsFilter || c.user.username.toLowerCase().includes(convsFilter.toLowerCase())).map(conv => (
                 <div
                   key={conv.user.id}
                   onClick={() => selectConv(conv.user)}

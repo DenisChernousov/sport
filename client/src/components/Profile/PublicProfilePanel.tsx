@@ -359,24 +359,49 @@ export function PublicProfilePanel({ userId, onClose }: PublicProfilePanelProps)
                 )}
               </div>
               {isAuthenticated && !isOwnProfile && (
-                <button
-                  onClick={handleFollow}
-                  disabled={followLoading}
-                  style={{
-                    padding: '8px 20px',
-                    borderRadius: 10,
-                    border: isFollowing ? '1px solid #e0e0e0' : 'none',
-                    background: isFollowing ? '#fff' : 'linear-gradient(135deg, #fc4c02, #ff6b2b)',
-                    color: isFollowing ? '#666' : '#fff',
-                    fontSize: 13,
-                    fontWeight: 700,
-                    cursor: followLoading ? 'not-allowed' : 'pointer',
-                    opacity: followLoading ? 0.7 : 1,
-                    flexShrink: 0,
-                  }}
-                >
-                  {isFollowing ? 'Отписаться' : 'Подписаться'}
-                </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+                  <button
+                    onClick={handleFollow}
+                    disabled={followLoading}
+                    style={{
+                      padding: '7px 16px',
+                      borderRadius: 10,
+                      border: isFollowing ? '1px solid #e0e0e0' : 'none',
+                      background: isFollowing ? '#fff' : 'linear-gradient(135deg, #fc4c02, #ff6b2b)',
+                      color: isFollowing ? '#666' : '#fff',
+                      fontSize: 13,
+                      fontWeight: 700,
+                      cursor: followLoading ? 'not-allowed' : 'pointer',
+                      opacity: followLoading ? 0.7 : 1,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {isFollowing ? 'Отписаться' : 'Подписаться'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      onClose();
+                      window.dispatchEvent(new CustomEvent('open-messages-with', { detail: { userId: profile.id, username: profile.username, avatarUrl: profile.avatarUrl, level: profile.level } }));
+                    }}
+                    style={{
+                      padding: '7px 16px',
+                      borderRadius: 10,
+                      border: '1px solid #e0e0e0',
+                      background: '#fff',
+                      color: '#333',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                    }}
+                  >
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    Написать
+                  </button>
+                </div>
               )}
             </div>
 

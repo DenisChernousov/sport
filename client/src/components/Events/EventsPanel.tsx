@@ -191,12 +191,14 @@ function EventParticipantsModal({ event, currentUserId, onClose }: {
                   {p.rank <= 3 ? ['🥇','🥈','🥉'][p.rank - 1] : `#${p.rank}`}
                 </div>
                 {/* Avatar */}
-                <div style={{
-                  width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
-                  background: p.user.avatarUrl ? 'none' : 'linear-gradient(135deg, #fc4c02, #ff6b2b)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 16, color: '#fff', fontWeight: 700, overflow: 'hidden',
-                }}>
+                <div
+                  onClick={() => window.dispatchEvent(new CustomEvent('open-profile', { detail: { userId: p.user.id } }))}
+                  style={{
+                    width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
+                    background: p.user.avatarUrl ? 'none' : 'linear-gradient(135deg, #fc4c02, #ff6b2b)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 16, color: '#fff', fontWeight: 700, overflow: 'hidden', cursor: 'pointer',
+                  }}>
                   {p.user.avatarUrl
                     ? <img src={p.user.avatarUrl} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: '50%' }} />
                     : (p.user.username[0] ?? '?').toUpperCase()}
@@ -204,7 +206,7 @@ function EventParticipantsModal({ event, currentUserId, onClose }: {
                 {/* Info */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: '#242424', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    {p.user.username}
+                    <span onClick={() => window.dispatchEvent(new CustomEvent('open-profile', { detail: { userId: p.user.id } }))} style={{ cursor: 'pointer' }}>{p.user.username}</span>
                     {isMe && <span style={{ fontSize: 11, color: '#fc4c02', fontWeight: 600 }}>Вы</span>}
                     {p.isFinished && <span style={{ fontSize: 11, color: '#1a7f37', fontWeight: 600 }}>✓</span>}
                   </div>

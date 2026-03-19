@@ -61,6 +61,12 @@ function AppContent() {
     return () => window.removeEventListener('open-messages', handler);
   }, []);
 
+  useEffect(() => {
+    const handler = () => setActiveTab('messages');
+    window.addEventListener('open-messages-with', handler);
+    return () => window.removeEventListener('open-messages-with', handler);
+  }, []);
+
   const openLogin = useCallback(() => setAuthModal({ open: true, tab: 'login' }), []);
   const openRegister = useCallback(() => setAuthModal({ open: true, tab: 'register' }), []);
   const closeAuth = useCallback(() => setAuthModal(prev => ({ ...prev, open: false })), []);

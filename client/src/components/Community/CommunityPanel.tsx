@@ -247,10 +247,12 @@ function FeedSection() {
                 borderBottom: '1px solid #f0f0f0',
               }}
             >
-              <Avatar url={item.user.avatarUrl} username={item.user.username} size={40} />
+              <div onClick={() => window.dispatchEvent(new CustomEvent('open-profile', { detail: { userId: item.user.id } }))} style={{ cursor: 'pointer', flexShrink: 0 }}>
+                <Avatar url={item.user.avatarUrl} username={item.user.username} size={40} />
+              </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontWeight: 700, fontSize: 14, color: '#242424' }}>
+                  <span onClick={() => window.dispatchEvent(new CustomEvent('open-profile', { detail: { userId: item.user.id } }))} style={{ fontWeight: 700, fontSize: 14, color: '#242424', cursor: 'pointer' }}>
                     {item.user.username}
                   </span>
                   <span
@@ -437,6 +439,7 @@ function SearchSection() {
       {results.map((u) => {
         const isSelf = currentUser?.id === u.id;
         const isFollowing = followingSet.has(u.id);
+        const openProfile = () => window.dispatchEvent(new CustomEvent('open-profile', { detail: { userId: u.id } }));
         return (
           <div
             key={u.id}
@@ -448,9 +451,11 @@ function SearchSection() {
               borderBottom: '1px solid #f0f0f0',
             }}
           >
-            <Avatar url={u.avatarUrl} username={u.username} size={44} />
+            <div onClick={openProfile} style={{ cursor: 'pointer' }}>
+              <Avatar url={u.avatarUrl} username={u.username} size={44} />
+            </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: 14, color: '#242424' }}>{u.username}</div>
+              <div onClick={openProfile} style={{ fontWeight: 700, fontSize: 14, color: '#242424', cursor: 'pointer', display: 'inline-block' }}>{u.username}</div>
               <div style={{ fontSize: 12, color: '#999', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {u.city && <span>{u.city}</span>}
                 <span>Ур. {u.level}</span>
@@ -749,7 +754,10 @@ function PlannedSection() {
                 {item.description && (
                   <div style={{ fontSize: 13, color: '#888', marginBottom: 4 }}>{item.description}</div>
                 )}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div
+                  onClick={() => window.dispatchEvent(new CustomEvent('open-profile', { detail: { userId: item.user.id } }))}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', width: 'fit-content' }}
+                >
                   <Avatar url={item.user.avatarUrl} username={item.user.username} size={20} />
                   <span style={{ fontSize: 12, color: '#999' }}>{item.user.username}</span>
                 </div>
