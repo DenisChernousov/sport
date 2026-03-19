@@ -1,8 +1,8 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import type { TabId } from '@/components/Layout/Header';
-import { Sidebar } from '@/components/Layout/Sidebar';
 import { TopBar } from '@/components/Layout/TopBar';
+import { Sidebar } from '@/components/Layout/Sidebar';
 import { BottomNav } from '@/components/Layout/BottomNav';
 import { AuthModal } from '@/components/Auth/AuthModal';
 import { PublicProfilePanel } from '@/components/Profile/PublicProfilePanel';
@@ -21,14 +21,18 @@ const MessagesPanel = lazy(() => import('@/components/Messages/MessagesPanel'));
 function LoadingSpinner() {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '80px 0' }}>
-      <div style={{ width: 36, height: 36, border: '3px solid rgba(252,76,2,0.2)', borderTopColor: '#fc4c02', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      <div style={{ width: 34, height: 34, border: '3px solid rgba(252,76,2,0.15)', borderTopColor: '#fc4c02', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
     </div>
   );
 }
 
 function useWidth() {
   const [w, setW] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
-  useEffect(() => { const h = () => setW(window.innerWidth); window.addEventListener('resize', h); return () => window.removeEventListener('resize', h); }, []);
+  useEffect(() => {
+    const h = () => setW(window.innerWidth);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
   return w;
 }
 
@@ -39,8 +43,7 @@ function AppContent() {
   const isMobile = w < 768;
   const [viewUserId, setViewUserId] = useState<string | null>(null);
   const [authModal, setAuthModal] = useState<{ open: boolean; tab: 'login' | 'register' }>({
-    open: false,
-    tab: 'login',
+    open: false, tab: 'login',
   });
 
   useEffect(() => {
@@ -53,14 +56,14 @@ function AppContent() {
   }, []);
 
   useEffect(() => {
-    const handler = () => { setActiveTab('messages'); };
+    const handler = () => setActiveTab('messages');
     window.addEventListener('open-messages', handler);
     return () => window.removeEventListener('open-messages', handler);
   }, []);
 
   const openLogin = useCallback(() => setAuthModal({ open: true, tab: 'login' }), []);
   const openRegister = useCallback(() => setAuthModal({ open: true, tab: 'register' }), []);
-  const closeAuth = useCallback(() => setAuthModal((prev) => ({ ...prev, open: false })), []);
+  const closeAuth = useCallback(() => setAuthModal(prev => ({ ...prev, open: false })), []);
 
   const handleTabChange = useCallback(
     (tab: TabId) => {
@@ -76,16 +79,15 @@ function AppContent() {
   const handleAddActivity = useCallback(() => {
     if (!isAuthenticated) { openLogin(); return; }
     setActiveTab('activities');
-    // Small delay so ActivitiesPanel mounts before the event fires
     setTimeout(() => window.dispatchEvent(new CustomEvent('open-add-activity')), 50);
   }, [isAuthenticated, openLogin]);
 
   if (isLoading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f2f3f5' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f2f5' }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>🏃</div>
-          <div style={{ width: 40, height: 40, margin: '0 auto', border: '3px solid rgba(252,76,2,0.2)', borderTopColor: '#fc4c02', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          <div style={{ width: 38, height: 38, margin: '0 auto', border: '3px solid rgba(252,76,2,0.15)', borderTopColor: '#fc4c02', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
         </div>
       </div>
     );
@@ -106,17 +108,19 @@ function AppContent() {
   );
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f2f3f5' }}>
+    <div style={{ minHeight: '100vh', background: '#f0f2f5' }}>
+      {/* TopBar — always visible */}
+      <TopBar
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        onLoginClick={openLogin}
+        onRegisterClick={openRegister}
+      />
+
       {isMobile ? (
         <>
-          <TopBar
-            activeTab={activeTab}
-            onTabChange={handleTabChange}
-            onLoginClick={openLogin}
-            onRegisterClick={openRegister}
-          />
-          <main style={{ paddingTop: 56, paddingBottom: 72, minHeight: '100vh' }}>
-            <div style={{ padding: '12px' }}>{panels}</div>
+          <main style={{ paddingTop: 52, paddingBottom: 68 }}>
+            <div style={{ padding: '10px 10px' }}>{panels}</div>
           </main>
           <BottomNav
             activeTab={activeTab}
@@ -125,16 +129,22 @@ function AppContent() {
           />
         </>
       ) : (
-        <div style={{ display: 'flex', minHeight: '100vh' }}>
-          <Sidebar
-            activeTab={activeTab}
-            onTabChange={handleTabChange}
-            onLoginClick={openLogin}
-            onAddActivity={handleAddActivity}
-          />
-          <main style={{ marginLeft: 240, flex: 1, minHeight: '100vh' }}>
-            <div style={{ maxWidth: 860, margin: '0 auto', padding: '28px 24px' }}>{panels}</div>
-          </main>
+        /* Desktop: centered wrapper with sidebar + content */
+        <div style={{ maxWidth: 1060, margin: '0 auto', padding: '0 16px', paddingTop: 52 }}>
+          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', paddingTop: 16 }}>
+            {/* Left sidebar — sticky */}
+            <Sidebar
+              activeTab={activeTab}
+              onTabChange={handleTabChange}
+              onLoginClick={openLogin}
+              onAddActivity={handleAddActivity}
+            />
+
+            {/* Main content */}
+            <main style={{ flex: 1, minWidth: 0 }}>
+              {panels}
+            </main>
+          </div>
         </div>
       )}
 
