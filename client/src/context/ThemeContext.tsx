@@ -6,39 +6,63 @@ export interface ColorPreset {
   name: string;
   description: string;
   primary: string;
+  dark: string;
+  secondary: string;
+  gold: string;
+  light: string;
   colors: readonly string[];
   logoSvg: string | null;
 }
 
 export const COLOR_PRESETS: ColorPreset[] = [
   {
-    id: 'chetyre-stihii',
-    name: 'Четыре стихии',
-    description: 'Огонь, вода, земля, воздух',
-    primary: '#C0392B',
-    colors: ['#C0392B', '#1A5276', '#27AE60', '#AED6F1', '#F4F6F7'],
+    id: 'mirrun',
+    name: 'МирРун',
+    description: 'Глубина, сила, движение',
+    primary: '#CC2B2B',
+    dark: '#0D1B2A',
+    secondary: '#1A3A5C',
+    gold: '#E8C84A',
+    light: '#F0EDD8',
+    colors: ['#0D1B2A', '#1A3A5C', '#CC2B2B', '#E8C84A', '#F0EDD8'],
     logoSvg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
-  <circle cx="60" cy="60" r="52" fill="#F4F6F7"/>
-  <path d="M60,8 A52,52 0 0,1 112,60 L60,60 Z" fill="#C0392B"/>
-  <path d="M112,60 A52,52 0 0,1 60,112 L60,60 Z" fill="#27AE60"/>
-  <path d="M60,112 A52,52 0 0,1 8,60 L60,60 Z" fill="#1A5276"/>
-  <path d="M8,60 A52,52 0 0,1 60,8 L60,60 Z" fill="#AED6F1"/>
-  <circle cx="60" cy="60" r="22" fill="#fff" stroke="#ddd" stroke-width="1.5"/>
-  <circle cx="60" cy="60" r="52" fill="none" stroke="#222" stroke-width="2.5"/>
-  <line x1="60" y1="8" x2="60" y2="112" stroke="#222" stroke-width="1.5" opacity="0.3"/>
-  <line x1="8" y1="60" x2="112" y2="60" stroke="#222" stroke-width="1.5" opacity="0.3"/>
-  <text x="83" y="48" text-anchor="middle" font-size="13" fill="#fff">🔥</text>
-  <text x="83" y="80" text-anchor="middle" font-size="13" fill="#fff">🌿</text>
-  <text x="37" y="80" text-anchor="middle" font-size="13" fill="#fff">💧</text>
-  <text x="37" y="48" text-anchor="middle" font-size="13" fill="#1A5276">💨</text>
-  <text x="60" y="65" text-anchor="middle" font-size="16" fill="#333">🏃</text>
+  <!-- Background -->
+  <rect width="120" height="120" rx="24" fill="#0D1B2A"/>
+  <!-- Gold accent bar -->
+  <rect x="0" y="88" width="120" height="8" rx="0" fill="#E8C84A" opacity="0.85"/>
+  <!-- Red accent stripe -->
+  <rect x="0" y="96" width="120" height="24" rx="0" fill="#CC2B2B"/>
+  <!-- Bottom rounded corners fix -->
+  <rect x="0" y="96" width="120" height="24" fill="#CC2B2B"/>
+  <path d="M0,96 L0,108 Q0,120 12,120 L108,120 Q120,120 120,108 L120,96 Z" fill="#CC2B2B"/>
+  <!-- Running figure -->
+  <!-- Head -->
+  <circle cx="72" cy="28" r="9" fill="#F0EDD8"/>
+  <!-- Body -->
+  <line x1="72" y1="37" x2="68" y2="58" stroke="#F0EDD8" stroke-width="4.5" stroke-linecap="round"/>
+  <!-- Left arm (forward) -->
+  <line x1="71" y1="44" x2="56" y2="52" stroke="#F0EDD8" stroke-width="3.5" stroke-linecap="round"/>
+  <!-- Right arm (back) -->
+  <line x1="70" y1="45" x2="82" y2="38" stroke="#E8C84A" stroke-width="3.5" stroke-linecap="round"/>
+  <!-- Left leg (forward) -->
+  <line x1="68" y1="58" x2="54" y2="72" stroke="#F0EDD8" stroke-width="4" stroke-linecap="round"/>
+  <line x1="54" y1="72" x2="46" y2="86" stroke="#F0EDD8" stroke-width="4" stroke-linecap="round"/>
+  <!-- Right leg (back) -->
+  <line x1="68" y1="58" x2="80" y2="68" stroke="#F0EDD8" stroke-width="4" stroke-linecap="round"/>
+  <line x1="80" y1="68" x2="84" y2="84" stroke="#F0EDD8" stroke-width="4" stroke-linecap="round"/>
+  <!-- M letter left side decoration -->
+  <text x="22" y="78" font-family="serif" font-size="52" font-weight="900" fill="#1A3A5C" opacity="0.6">М</text>
 </svg>`,
   },
   {
     id: 'sportrun-orange',
-    name: 'SportRun Orange',
+    name: 'SportRun',
     description: 'Классический оранжевый',
     primary: '#fc4c02',
+    dark: '#1a1a1a',
+    secondary: '#333',
+    gold: '#ff7c3a',
+    light: '#f0f2f5',
     colors: ['#fc4c02', '#ff7c3a', '#1a1a1a', '#f0f2f5', '#ffffff'],
     logoSvg: null,
   },
@@ -66,7 +90,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     api.settings.getPublic()
       .then(data => {
-        const id = data?.['color_scheme'] ?? 'chetyre-stihii';
+        const id = data?.['color_scheme'] ?? 'mirrun';
         setPreset(getPreset(id));
       })
       .catch(() => {});
