@@ -152,7 +152,7 @@ export default function GpsTracker({ onClose, onSaved }: Props) {
       </div>
 
       {/* ── Map ─────────────────────────────────── */}
-      <div style={{ position: 'relative', flex: isPaused ? '0 0 0px' : isRunning ? '0 0 220px' : '1 1 0', minHeight: 0, overflow: 'hidden' }}>
+      <div style={{ position: 'relative', flex: isRunning ? '0 0 220px' : isIdle ? '1 1 0' : undefined, minHeight: 0, overflow: 'hidden', display: isPaused ? 'none' : undefined }}>
         <div ref={mapRef} style={{ position: 'absolute', inset: 0 }} />
 
         {/* Error banner over map */}
