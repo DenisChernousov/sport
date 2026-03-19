@@ -1269,19 +1269,21 @@ export default function ActivitiesPanel() {
 
       {/* Кнопки добавления */}
       <div style={{ marginBottom: 16, display: 'flex', gap: 10 }}>
-        <button
-          type="button"
-          onClick={() => setTrackerOpen(true)}
-          style={{
-            padding: '10px 20px', borderRadius: 10, border: 'none',
-            background: `linear-gradient(135deg, ${primary}, ${primary}cc)`,
-            color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
-            boxShadow: `0 2px 10px ${primary}44`,
-            display: 'flex', alignItems: 'center', gap: 7,
-          }}
-        >
-          📍 GPS-тренировка
-        </button>
+        {isMobile && (
+          <button
+            type="button"
+            onClick={() => setTrackerOpen(true)}
+            style={{
+              padding: '10px 20px', borderRadius: 10, border: 'none',
+              background: `linear-gradient(135deg, ${primary}, ${primary}cc)`,
+              color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+              boxShadow: `0 2px 10px ${primary}44`,
+              display: 'flex', alignItems: 'center', gap: 7,
+            }}
+          >
+            📍 GPS-тренировка
+          </button>
+        )}
         <button
           type="button"
           onClick={() => setWizardOpen(true)}
