@@ -775,14 +775,8 @@ export default function EventsPanel() {
         const myEvents = events.filter(e => e.isJoined);
         return (
           <div style={{ marginBottom: isMobile ? 16 : 22 }}>
-            {/* Header — always visible, click to toggle */}
-            <button
-              onClick={() => setMyEventsOpen(o => !o)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 10, marginBottom: myEventsOpen ? 14 : 0,
-                background: 'none', border: 'none', cursor: 'pointer', padding: 0, width: '100%', textAlign: 'left',
-              }}
-            >
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: myEventsOpen ? 14 : 0 }}>
               <span style={{ fontSize: 20 }}>🏅</span>
               <h2 style={{ fontSize: 18, fontWeight: 800, color: '#242424', margin: 0, flex: 1 }}>
                 Мои события
@@ -792,15 +786,24 @@ export default function EventsPanel() {
                   </span>
                 )}
               </h2>
-              <span style={{
-                fontSize: 18, color: '#bbb', lineHeight: 1,
-                transform: myEventsOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
-                transition: 'transform 0.2s',
-                display: 'inline-block',
-              }}>
-                ⌄
-              </span>
-            </button>
+              <button
+                onClick={() => setMyEventsOpen(o => !o)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+                  cursor: 'pointer', border: '1.5px solid #e0e0e0',
+                  background: myEventsOpen ? '#f5f5f5' : '#fff', color: '#888',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {myEventsOpen ? 'Скрыть' : 'Показать'}
+                <span style={{
+                  display: 'inline-block', fontSize: 10,
+                  transform: myEventsOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.2s',
+                }}>▾</span>
+              </button>
+            </div>
 
             <AnimatePresence initial={false}>
             {myEventsOpen && (
