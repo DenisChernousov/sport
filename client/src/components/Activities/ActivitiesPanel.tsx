@@ -657,6 +657,422 @@ function ActivityDetailModal({
   );
 }
 
+// --- Activity Wizard ---
+
+function ActivityWizard({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [mode, setMode] = useState<'screenshot' | 'manual' | null>(null);
+
+  // Step 1/2
+  const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
+  const [ocrRunning, setOcrRunning] = useState(false);
+
+  // Step 2
+  const [sport, setSport] = useState<SportType>('RUNNING');
+  const [distance, setDistance] = useState('');
+  const [hours, setHours] = useState('');
+  const [minutes, setMinutes] = useState('');
+  const [seconds, setSeconds] = useState('');
+
+  // Step 3
+  const [title, setTitle] = useState('');
+  const [desc, setDesc] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+
+  // Step 4
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [gpxLoading, setGpxLoading] = useState(false);
+
+  const screenshotRef = useRef<HTMLInputElement>(null);
+  const gpxRef = useRef<HTMLInputElement>(null);
+  const photoRef = useRef<HTMLInputElement>(null);
+
+  const handleScreenshotFile = async (file: File) => {
+    setOcrRunning(true);
+    setMode('screenshot');
+    setError('');
+    try {
+      const [ocrResult, uploadRes] = await Promise.allSettled([
+        Tesseract.recognize(file, 'eng+rus'),
+        api.activities.uploadScreenshot(file),
+      ]);
+      if (uploadRes.status === 'rejected') throw new Error('Ошибка загрузки скриншота');
+      setScreenshotUrl((uploadRes as PromiseFulfilledResult<{ imageUrl: string; message: string }>).value.imageUrl);
+
+      if (ocrResult.status === 'fulfilled') {
+        const text = ocrResult.value.data.text;
+        const dur = parseDurationFromText(text);
+        if (dur.hours) setHours(dur.hours);
+        if (dur.minutes) setMinutes(dur.minutes);
+        if (dur.seconds) setSeconds(dur.seconds);
+        const allText = text.replace(/\n/g, ' ');
+        const speedMatch = allText.match(/(\d{1,4}[.,]\d{1,3})\s*(?:км\s*\/\s*ч|km\s*\/\s*h|кмч)/i)
+          || allText.match(/(\d{1,4})\s*(?:км\s*\/\s*ч|km\s*\/\s*h|кмч)/i);
+        const spd = speedMatch ? parseFloat(speedMatch[1].replace(',', '.')) : 0;
+        if (spd > 0) {
+          const h = parseInt(dur.hours || '0', 10);
+          const m = parseInt(dur.minutes || '0', 10);
+          const s = parseInt(dur.seconds || '0', 10);
+          const totalHours = h + m / 60 + s / 3600;
+          if (totalHours > 0) setDistance((spd * totalHours).toFixed(2));
+        }
+      }
+      setStep(2);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка');
+    } finally {
+      setOcrRunning(false);
+      if (screenshotRef.current) screenshotRef.current.value = '';
+    }
+  };
+
+  const handleGpxFile = async (file: File) => {
+    setGpxLoading(true);
+    setError('');
+    try {
+      await api.activities.uploadGpx(file);
+      onSuccess();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка загрузки GPX');
+      setGpxLoading(false);
+    }
+  };
+
+  const handlePhotoFiles = (files: FileList) => {
+    const arr = Array.from(files).slice(0, 5);
+    setPhotoFiles(arr);
+    setPhotoUrls(arr.map(f => URL.createObjectURL(f)));
+  };
+
+  const removePhoto = (i: number) => {
+    setPhotoFiles(f => f.filter((_, fi) => fi !== i));
+    setPhotoUrls(u => u.filter((_, ui) => ui !== i));
+  };
+
+  const validateStep2 = () => {
+    const d = parseFloat(distance);
+    if (isNaN(d) || d <= 0) { setError('Укажите дистанцию'); return false; }
+    const dur = parseInt(hours || '0') * 3600 + parseInt(minutes || '0') * 60 + parseInt(seconds || '0');
+    if (dur <= 0) { setError('Укажите время'); return false; }
+    return true;
+  };
+
+  const handleSave = async () => {
+    setError('');
+    if (!validateStep2()) return;
+    const distKm = parseFloat(distance);
+    const dur = parseInt(hours || '0') * 3600 + parseInt(minutes || '0') * 60 + parseInt(seconds || '0');
+    setSaving(true);
+    try {
+      const activity = await api.activities.create({
+        sport, distance: distKm, duration: dur,
+        title: title || undefined, description: desc || undefined,
+        startedAt: date ? new Date(date).toISOString() : new Date().toISOString(),
+        isManual: true,
+      });
+      if (photoFiles.length > 0 && (activity as { id?: string })?.id) {
+        await api.photos.upload((activity as { id: string }).id, photoFiles).catch(() => {});
+      }
+      onSuccess();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка сохранения');
+      setSaving(false);
+    }
+  };
+
+  const inputStyle = {
+    padding: '8px 12px', borderRadius: 8, border: '1px solid #e0e0e0',
+    fontSize: 14, outline: 'none', boxSizing: 'border-box' as const,
+  };
+  const primaryBtn = {
+    padding: '10px 24px', borderRadius: 10, border: 'none',
+    background: '#fc4c02', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+  };
+  const outlineBtn = {
+    padding: '10px 20px', borderRadius: 10, border: '1px solid #e0e0e0',
+    background: '#fff', color: '#666', fontSize: 14, cursor: 'pointer',
+  };
+
+  const stepLabels = ['Данные', 'Описание', 'Фото'];
+  const displayStep = step - 1; // steps 2,3,4 → 1,2,3
+
+  return (
+    <div
+      style={{
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        background: 'rgba(0,0,0,0.55)', display: 'flex',
+        alignItems: 'center', justifyContent: 'center', zIndex: 9998, padding: 16,
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div style={{
+        background: '#fff', borderRadius: 20, padding: 28,
+        maxWidth: 540, width: '100%', maxHeight: '90vh',
+        overflowY: 'auto', boxShadow: '0 8px 40px rgba(0,0,0,0.2)', position: 'relative',
+      }}>
+        <button onClick={onClose} style={{
+          position: 'absolute', top: 16, right: 16,
+          background: 'none', border: 'none', color: '#999', cursor: 'pointer', fontSize: 22,
+        }}>✕</button>
+
+        <div style={{ fontSize: 20, fontWeight: 800, color: '#242424', marginBottom: 20 }}>
+          Добавить активность
+        </div>
+
+        {/* Step indicator (steps 2-4) */}
+        {step > 1 && (
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24 }}>
+            {stepLabels.map((label, i) => {
+              const s = i + 1;
+              const isDone = s < displayStep;
+              const isActive = s === displayStep;
+              return (
+                <div key={label} style={{ display: 'flex', alignItems: 'center', flex: i < 2 ? 1 : undefined }}>
+                  <div style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                  }}>
+                    <div style={{
+                      width: 28, height: 28, borderRadius: '50%',
+                      background: isActive || isDone ? '#fc4c02' : '#f0f0f0',
+                      color: isActive || isDone ? '#fff' : '#aaa',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 12, fontWeight: 700,
+                    }}>
+                      {isDone ? '✓' : s}
+                    </div>
+                    <span style={{ fontSize: 10, color: isActive ? '#fc4c02' : '#aaa', fontWeight: isActive ? 700 : 400 }}>
+                      {label}
+                    </span>
+                  </div>
+                  {i < 2 && (
+                    <div style={{
+                      flex: 1, height: 2, margin: '0 6px',
+                      background: isDone ? '#fc4c02' : '#e0e0e0',
+                      borderRadius: 2, marginBottom: 16,
+                    }} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* STEP 1: Choose source */}
+        {step === 1 && !ocrRunning && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <label style={{
+              display: 'flex', alignItems: 'center', gap: 16,
+              padding: '18px 20px', borderRadius: 14,
+              border: '2px dashed #fc4c02', background: '#fff8f5', cursor: 'pointer',
+            }}>
+              <span style={{ fontSize: 32, flexShrink: 0 }}>📷</span>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#242424' }}>Загрузить скриншот</div>
+                <div style={{ fontSize: 13, color: '#999', marginTop: 2 }}>Данные распознаются автоматически</div>
+              </div>
+              <input ref={screenshotRef} type="file" accept="image/*" style={{ display: 'none' }}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleScreenshotFile(f); }} />
+            </label>
+
+            <button
+              onClick={() => { setMode('manual'); setStep(2); }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 16,
+                padding: '18px 20px', borderRadius: 14,
+                border: '1.5px solid #e0e0e0', background: '#fff',
+                cursor: 'pointer', textAlign: 'left', width: '100%',
+              }}
+            >
+              <span style={{ fontSize: 32, flexShrink: 0 }}>✏️</span>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#242424' }}>Ввести вручную</div>
+                <div style={{ fontSize: 13, color: '#999', marginTop: 2 }}>Дистанция, время, вид спорта</div>
+              </div>
+            </button>
+
+            <label style={{
+              display: 'flex', alignItems: 'center', gap: 16,
+              padding: '18px 20px', borderRadius: 14,
+              border: '1.5px solid #e0e0e0', background: '#fff',
+              cursor: gpxLoading ? 'not-allowed' : 'pointer',
+              opacity: gpxLoading ? 0.7 : 1,
+            }}>
+              <span style={{ fontSize: 32, flexShrink: 0 }}>📁</span>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#242424' }}>
+                  {gpxLoading ? 'Загрузка...' : 'Загрузить GPX'}
+                </div>
+                <div style={{ fontSize: 13, color: '#999', marginTop: 2 }}>Импорт GPS-трека</div>
+              </div>
+              <input ref={gpxRef} type="file" accept=".gpx" style={{ display: 'none' }}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleGpxFile(f); }} />
+            </label>
+
+            {error && <div style={{ color: '#d32f2f', fontSize: 13, marginTop: 4 }}>{error}</div>}
+          </div>
+        )}
+
+        {/* OCR loading */}
+        {step === 1 && ocrRunning && (
+          <div style={{ textAlign: 'center', padding: '40px 0' }}>
+            <div style={{ fontSize: 40, marginBottom: 16 }}>🔍</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#242424', marginBottom: 8 }}>Распознаём данные...</div>
+            <div style={{ fontSize: 13, color: '#999' }}>Загружаем скриншот и извлекаем дистанцию и время</div>
+          </div>
+        )}
+
+        {/* STEP 2: Stats */}
+        {step === 2 && (
+          <div>
+            {screenshotUrl && (
+              <div style={{ marginBottom: 16, textAlign: 'center' }}>
+                <img src={screenshotUrl} alt="" style={{
+                  maxWidth: '100%', maxHeight: 180, borderRadius: 12,
+                  objectFit: 'contain', border: '1px solid #f0f0f0',
+                }} />
+              </div>
+            )}
+
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 13, color: '#666', marginBottom: 8 }}>Вид спорта</div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {ALL_SPORTS.map((s) => (
+                  <button key={s} type="button" onClick={() => setSport(s)} style={{
+                    padding: '8px 14px', borderRadius: 8,
+                    border: sport === s ? `2px solid ${SPORT_COLORS[s]}` : '1px solid #e0e0e0',
+                    background: sport === s ? '#fff' : '#f5f5f5',
+                    cursor: 'pointer', fontSize: 14,
+                    fontWeight: sport === s ? 600 : 400,
+                    color: sport === s ? SPORT_COLORS[s] : '#666',
+                  }}>
+                    {SPORT_ICONS[s]} {SPORT_LABELS[s]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 6 }}>Дистанция (км)</label>
+              <input type="number" step="0.01" min="0" value={distance}
+                onChange={(e) => setDistance(e.target.value)}
+                placeholder="5.0" style={{ ...inputStyle, width: 160 }} />
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 6 }}>Время</label>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input type="number" min="0" value={hours} onChange={(e) => setHours(e.target.value)}
+                  placeholder="ч" style={{ ...inputStyle, width: 60, textAlign: 'center' }} />
+                <span style={{ color: '#999' }}>:</span>
+                <input type="number" min="0" max="59" value={minutes} onChange={(e) => setMinutes(e.target.value)}
+                  placeholder="м" style={{ ...inputStyle, width: 60, textAlign: 'center' }} />
+                <span style={{ color: '#999' }}>:</span>
+                <input type="number" min="0" max="59" value={seconds} onChange={(e) => setSeconds(e.target.value)}
+                  placeholder="с" style={{ ...inputStyle, width: 60, textAlign: 'center' }} />
+              </div>
+            </div>
+
+            {error && <div style={{ color: '#d32f2f', fontSize: 13, marginBottom: 12 }}>{error}</div>}
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => { setError(''); setStep(1); setScreenshotUrl(null); setMode(null); }} style={outlineBtn}>
+                Назад
+              </button>
+              <button onClick={() => { setError(''); if (validateStep2()) setStep(3); }} style={primaryBtn}>
+                Далее
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 3: Details */}
+        {step === 3 && (
+          <div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 6 }}>
+                Название (необязательно)
+              </label>
+              <input value={title} onChange={(e) => setTitle(e.target.value)}
+                placeholder={`${SPORT_AUTO_TITLES[sport]} ${distance} км`}
+                style={{ ...inputStyle, width: '100%' }} />
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 6 }}>
+                Описание (необязательно)
+              </label>
+              <textarea value={desc} onChange={(e) => setDesc(e.target.value)}
+                rows={3} style={{ ...inputStyle, width: '100%', resize: 'vertical', fontFamily: 'inherit' }} />
+            </div>
+            <div style={{ marginBottom: 24 }}>
+              <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 6 }}>Дата</label>
+              <input type="date" value={date} max={new Date().toISOString().split('T')[0]}
+                onChange={(e) => setDate(e.target.value)} style={{ ...inputStyle, width: 180 }} />
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setStep(2)} style={outlineBtn}>Назад</button>
+              <button onClick={() => setStep(4)} style={primaryBtn}>Далее</button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 4: Photos + Save */}
+        {step === 4 && (
+          <div>
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 14, color: '#666', marginBottom: 12 }}>
+                Добавьте фотографии (необязательно, до 5 штук)
+              </div>
+              <label style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                gap: 8, padding: 16, borderRadius: 12,
+                border: '2px dashed #e0e0e0', background: '#fafafa',
+                cursor: 'pointer', fontSize: 14, color: '#666',
+              }}>
+                <span>🖼️</span> Выбрать фотографии
+                <input ref={photoRef} type="file" accept="image/*" multiple style={{ display: 'none' }}
+                  onChange={(e) => { if (e.target.files) handlePhotoFiles(e.target.files); }} />
+              </label>
+              {photoUrls.length > 0 && (
+                <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                  {photoUrls.map((url, i) => (
+                    <div key={i} style={{ position: 'relative' }}>
+                      <img src={url} alt="" style={{
+                        width: 80, height: 80, objectFit: 'cover', borderRadius: 8, border: '1px solid #e0e0e0',
+                      }} />
+                      <button onClick={() => removePhoto(i)} style={{
+                        position: 'absolute', top: -6, right: -6,
+                        width: 20, height: 20, borderRadius: '50%',
+                        background: '#fc4c02', color: '#fff', border: 'none',
+                        cursor: 'pointer', fontSize: 11,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>✕</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {error && <div style={{ color: '#d32f2f', fontSize: 13, marginBottom: 12 }}>{error}</div>}
+
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <button onClick={() => setStep(3)} style={outlineBtn}>Назад</button>
+              <button onClick={handleSave} disabled={saving} style={{
+                ...primaryBtn, opacity: saving ? 0.7 : 1, cursor: saving ? 'not-allowed' : 'pointer',
+              }}>
+                {saving ? 'Сохранение...' : 'Сохранить активность'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 const PAGE_SIZE = 10;
 
 export default function ActivitiesPanel() {
@@ -681,46 +1097,13 @@ export default function ActivitiesPanel() {
   const [weeklyDist, setWeeklyDist] = useState(0);
   const [monthlyDist, setMonthlyDist] = useState(0);
 
-  const [showForm, setShowForm] = useState(false);
-  const [formSport, setFormSport] = useState<SportType>('RUNNING');
-  const [formDistance, setFormDistance] = useState('');
-  const [formHours, setFormHours] = useState('');
-  const [formMinutes, setFormMinutes] = useState('');
-  const [formSeconds, setFormSeconds] = useState('');
-  const [formTitle, setFormTitle] = useState('');
-  const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]);
-  const [formDesc, setFormDesc] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState('');
-  const [gpxUploading, setGpxUploading] = useState(false);
-
-  // Screenshot upload state
-  const [screenshotUploading, setScreenshotUploading] = useState(false);
-  const [screenshotPreviewUrl, setScreenshotPreviewUrl] = useState<string | null>(null);
-  const [scrSport, setScrSport] = useState<SportType>('RUNNING');
-  const [scrDistance, setScrDistance] = useState('');
-  const [scrHours, setScrHours] = useState('');
-  const [scrMinutes, setScrMinutes] = useState('');
-  const [scrSeconds, setScrSeconds] = useState('');
-  const [scrTitle, setScrTitle] = useState('');
-  const [scrDate, setScrDate] = useState('');
-  const [scrSubmitting, setScrSubmitting] = useState(false);
-  const [scrError, setScrError] = useState('');
-  const [scrSuccess, setScrSuccess] = useState('');
-
-  // OCR state
-  const [ocrRunning, setOcrRunning] = useState(false);
-  const [ocrRawText, setOcrRawText] = useState('');
-  const [ocrTextExpanded, setOcrTextExpanded] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
 
   // Detail modal state
   const [detailActivity, setDetailActivity] = useState<Activity | null>(null);
 
   // Likes cache for activity cards
   const [likesMap, setLikesMap] = useState<Record<string, { liked: boolean; count: number }>>({});
-
-  const gpxInputRef = useRef<HTMLInputElement>(null);
-  const screenshotInputRef = useRef<HTMLInputElement>(null);
 
   const loadActivities = useCallback(async () => {
     if (!user) return;
@@ -772,221 +1155,6 @@ export default function ActivitiesPanel() {
       }
     });
   }, [activities]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleSubmit = useCallback(
-    async (e: FormEvent) => {
-      e.preventDefault();
-      if (!user) return;
-      setSubmitting(true);
-      setFormError('');
-      try {
-        const distKm = parseFloat(formDistance);
-        if (isNaN(distKm) || distKm <= 0) {
-          setFormError('Укажите дистанцию');
-          setSubmitting(false);
-          return;
-        }
-        const h = parseInt(formHours || '0', 10);
-        const m = parseInt(formMinutes || '0', 10);
-        const s = parseInt(formSeconds || '0', 10);
-        const duration = h * 3600 + m * 60 + s;
-        if (duration <= 0) {
-          setFormError('Укажите время');
-          setSubmitting(false);
-          return;
-        }
-        await api.activities.create({
-          sport: formSport,
-          distance: distKm,
-          duration,
-          title: formTitle || undefined,
-          description: formDesc || undefined,
-          startedAt: formDate ? new Date(formDate).toISOString() : new Date().toISOString(),
-          isManual: true,
-        });
-        setFormDistance('');
-        setFormHours('');
-        setFormMinutes('');
-        setFormSeconds('');
-        setFormTitle('');
-        setFormDate('');
-        setFormDesc('');
-        setShowForm(false);
-        setPage(1);
-        refreshAll();
-      } catch (err: unknown) {
-        setFormError(err instanceof Error ? err.message : 'Ошибка при создании активности');
-      } finally {
-        setSubmitting(false);
-      }
-    },
-    [user, formSport, formDistance, formHours, formMinutes, formSeconds, formTitle, formDate, formDesc, loadActivities],
-  );
-
-  const handleGpxUpload = useCallback(
-    async (e: ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      setGpxUploading(true);
-      setFormError('');
-      try {
-        await api.activities.uploadGpx(file);
-        setPage(1);
-        refreshAll();
-      } catch (err: unknown) {
-        setFormError(err instanceof Error ? err.message : 'Ошибка загрузки GPX');
-      } finally {
-        setGpxUploading(false);
-        if (gpxInputRef.current) gpxInputRef.current.value = '';
-      }
-    },
-    [loadActivities],
-  );
-
-  const handleScreenshotUpload = useCallback(
-    async (e: ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      setScreenshotUploading(true);
-      setOcrRunning(true);
-      setScrError('');
-      setScrSuccess('');
-      setOcrRawText('');
-      setOcrTextExpanded(false);
-      try {
-        // Run OCR and upload simultaneously
-        const [ocrResult, uploadRes] = await Promise.allSettled([
-          Tesseract.recognize(file, 'eng+rus'),
-          api.activities.uploadScreenshot(file),
-        ]);
-
-        // Handle upload result
-        if (uploadRes.status === 'fulfilled') {
-          setScreenshotPreviewUrl(uploadRes.value.imageUrl);
-        } else {
-          throw uploadRes.reason instanceof Error
-            ? uploadRes.reason
-            : new Error('Ошибка загрузки скриншота');
-        }
-
-        // Handle OCR result - graceful degradation
-        if (ocrResult.status === 'fulfilled') {
-          const text = ocrResult.value.data.text;
-          setOcrRawText(text);
-
-          // 1. Parse duration (HH:MM:SS) — works well
-          const parsedDuration = parseDurationFromText(text);
-          if (parsedDuration.hours) setScrHours(parsedDuration.hours);
-          if (parsedDuration.minutes) setScrMinutes(parsedDuration.minutes);
-          if (parsedDuration.seconds) setScrSeconds(parsedDuration.seconds);
-
-          // 2. Parse speed (км/ч) — works well
-          // Parse speed: supports "16.4км/ч", "16,4 км/ч", "16.4 km/h", also multiline
-          const allText = text.replace(/\n/g, ' ');
-          const speedMatch = allText.match(/(\d{1,4}[.,]\d{1,3})\s*(?:км\s*\/\s*ч|km\s*\/\s*h|кмч)/i)
-            || allText.match(/(\d{1,4})\s*(?:км\s*\/\s*ч|km\s*\/\s*h|кмч)/i);
-          const speedKmh = speedMatch ? parseFloat(speedMatch[1].replace(',', '.')) : 0;
-
-          // 3. ALWAYS calculate distance = speed × time (OCR distance is unreliable)
-          if (speedKmh > 0) {
-            const h = parseInt(parsedDuration.hours || '0', 10);
-            const m = parseInt(parsedDuration.minutes || '0', 10);
-            const s = parseInt(parsedDuration.seconds || '0', 10);
-            const totalHours = h + m / 60 + s / 3600;
-            if (totalHours > 0) {
-              const calcDist = (speedKmh * totalHours).toFixed(2);
-              setScrDistance(calcDist);
-            }
-          }
-
-          // 4. If no speed but have pace (мин/км), calculate duration from pace
-          if (!speedKmh) {
-            const pace = parsePaceFromText(text);
-            if (pace) {
-              // Can't calculate distance without speed or distance input
-              // Leave distance empty for user
-            }
-          }
-        }
-        // If OCR fails, fields stay empty - user fills manually
-
-        setScrDate(new Date().toISOString().slice(0, 10));
-      } catch (err: unknown) {
-        setScrError(err instanceof Error ? err.message : 'Ошибка загрузки скриншота');
-      } finally {
-        setScreenshotUploading(false);
-        setOcrRunning(false);
-        if (screenshotInputRef.current) screenshotInputRef.current.value = '';
-      }
-    },
-    [],
-  );
-
-  const handleScreenshotConfirm = useCallback(
-    async (e: FormEvent) => {
-      e.preventDefault();
-      if (!user) return;
-      setScrSubmitting(true);
-      setScrError('');
-      setScrSuccess('');
-      try {
-        const distKm = parseFloat(scrDistance);
-        if (isNaN(distKm) || distKm <= 0) {
-          setScrError('Укажите дистанцию');
-          setScrSubmitting(false);
-          return;
-        }
-        const h = parseInt(scrHours || '0', 10);
-        const m = parseInt(scrMinutes || '0', 10);
-        const s = parseInt(scrSeconds || '0', 10);
-        const duration = h * 3600 + m * 60 + s;
-        if (duration <= 0) {
-          setScrError('Укажите время');
-          setScrSubmitting(false);
-          return;
-        }
-        await api.activities.create({
-          sport: scrSport,
-          distance: distKm,
-          duration,
-          title: scrTitle || undefined,
-          startedAt: scrDate ? new Date(scrDate).toISOString() : new Date().toISOString(),
-          isManual: true,
-        });
-        setScrSuccess('Активность успешно сохранена!');
-        setScrDistance('');
-        setScrHours('');
-        setScrMinutes('');
-        setScrSeconds('');
-        setScrTitle('');
-        setScrDate('');
-        setScreenshotPreviewUrl(null);
-        setOcrRawText('');
-        setOcrTextExpanded(false);
-        setPage(1);
-        refreshAll();
-      } catch (err: unknown) {
-        setScrError(err instanceof Error ? err.message : 'Ошибка при создании активности');
-      } finally {
-        setScrSubmitting(false);
-      }
-    },
-    [user, scrSport, scrDistance, scrHours, scrMinutes, scrSeconds, scrTitle, scrDate, loadActivities],
-  );
-
-  const handleCancelScreenshot = useCallback(() => {
-    setScreenshotPreviewUrl(null);
-    setScrDistance('');
-    setScrHours('');
-    setScrMinutes('');
-    setScrSeconds('');
-    setScrTitle('');
-    setScrDate('');
-    setScrError('');
-    setScrSuccess('');
-    setOcrRawText('');
-    setOcrTextExpanded(false);
-  }, []);
 
   const handleDelete = useCallback(
     async (id: string) => {
@@ -1072,511 +1240,29 @@ export default function ActivitiesPanel() {
         </div>
       </div>
 
-      {/* Кнопки действий */}
-      <div style={{ marginBottom: 16, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+      {/* Wizard */}
+      {wizardOpen && (
+        <ActivityWizard
+          onClose={() => setWizardOpen(false)}
+          onSuccess={() => { setWizardOpen(false); setPage(1); refreshAll(); }}
+        />
+      )}
+
+      {/* Кнопка добавления */}
+      <div style={{ marginBottom: 16 }}>
         <button
           type="button"
-          onClick={() => setShowForm((v) => !v)}
+          onClick={() => setWizardOpen(true)}
           style={{
-            padding: '10px 20px',
-            borderRadius: 8,
-            border: 'none',
-            background: '#fc4c02',
-            color: '#fff',
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: 'pointer',
+            padding: '10px 24px', borderRadius: 10, border: 'none',
+            background: 'linear-gradient(135deg, #fc4c02, #ff6b2b)',
+            color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+            boxShadow: '0 2px 10px rgba(252,76,2,0.25)',
           }}
         >
-          {showForm ? 'Отмена' : 'Добавить активность'}
+          + Добавить активность
         </button>
-        <label
-          style={{
-            padding: '10px 20px',
-            borderRadius: 8,
-            border: '1px solid #e0e0e0',
-            background: '#fff',
-            color: '#242424',
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: gpxUploading ? 'not-allowed' : 'pointer',
-            opacity: gpxUploading ? 0.7 : 1,
-            display: 'inline-flex',
-            alignItems: 'center',
-          }}
-        >
-          {gpxUploading ? 'Загрузка...' : 'Загрузить GPX'}
-          <input
-            ref={gpxInputRef}
-            type="file"
-            accept=".gpx"
-            onChange={handleGpxUpload}
-            style={{ display: 'none' }}
-          />
-        </label>
-        <label
-          style={{
-            padding: '10px 20px',
-            borderRadius: 8,
-            border: '1px solid #e0e0e0',
-            background: '#fff',
-            color: '#242424',
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: screenshotUploading ? 'not-allowed' : 'pointer',
-            opacity: screenshotUploading ? 0.7 : 1,
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-          }}
-        >
-          {screenshotUploading ? 'Загрузка...' : '📷 Загрузить скриншот результата'}
-          <input
-            ref={screenshotInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleScreenshotUpload}
-            style={{ display: 'none' }}
-          />
-        </label>
       </div>
-
-      {/* OCR loading indicator */}
-      {(screenshotUploading || ocrRunning) && !screenshotPreviewUrl && (
-        <div
-          style={{
-            background: '#fff',
-            borderRadius: 16,
-            padding: 24,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-            border: '1px solid #e0e0e0',
-            marginBottom: 20,
-            textAlign: 'center',
-          }}
-        >
-          <div style={{ fontSize: 28, marginBottom: 12 }}>🔍</div>
-          <div style={{ fontSize: 15, fontWeight: 600, color: '#242424', marginBottom: 6 }}>
-            Распознаём данные...
-          </div>
-          <div style={{ fontSize: 13, color: '#999' }}>
-            Загружаем скриншот и извлекаем дистанцию и время
-          </div>
-        </div>
-      )}
-
-      {/* Скриншот превью и форма */}
-      {screenshotPreviewUrl && (
-        <div
-          style={{
-            background: '#fff',
-            borderRadius: 16,
-            padding: 20,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-            border: '1px solid #e0e0e0',
-            marginBottom: 20,
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#242424' }}>
-              📷 Скриншот загружен! Проверьте данные
-            </div>
-            <button
-              type="button"
-              onClick={handleCancelScreenshot}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#999',
-                cursor: 'pointer',
-                fontSize: 18,
-                padding: '4px 8px',
-              }}
-            >
-              ✕
-            </button>
-          </div>
-
-          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', flexDirection: isMobile ? 'column' : 'row' }}>
-            {/* Превью изображения */}
-            <div style={{ flexShrink: 0, width: isMobile ? '100%' : undefined }}>
-              <img
-                src={screenshotPreviewUrl}
-                alt="Скриншот результата"
-                style={{
-                  maxWidth: isMobile ? '100%' : 300,
-                  maxHeight: 400,
-                  borderRadius: 12,
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-                  objectFit: 'contain',
-                  display: 'block',
-                }}
-              />
-              <div style={{ fontSize: 12, color: '#999', marginTop: 8, textAlign: 'center' }}>
-                Проверьте результат
-              </div>
-            </div>
-
-            {/* Форма ввода данных */}
-            <form onSubmit={handleScreenshotConfirm} style={{ flex: 1, minWidth: 240 }}>
-              {/* Вид спорта */}
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 13, color: '#666', marginBottom: 6 }}>Вид спорта</div>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {ALL_SPORTS.map((s) => (
-                    <button
-                      type="button"
-                      key={s}
-                      onClick={() => setScrSport(s)}
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: 8,
-                        border: scrSport === s ? `2px solid ${SPORT_COLORS[s]}` : '1px solid #e0e0e0',
-                        background: scrSport === s ? '#fff' : '#eef0f4',
-                        cursor: 'pointer',
-                        fontSize: 13,
-                        fontWeight: scrSport === s ? 600 : 400,
-                        color: scrSport === s ? SPORT_COLORS[s] : '#666',
-                      }}
-                    >
-                      {SPORT_ICONS[s]} {SPORT_LABELS[s]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Дистанция */}
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 4 }}>
-                  Дистанция (км)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={scrDistance}
-                  onChange={(e) => setScrDistance(e.target.value)}
-                  placeholder="5.0"
-                  style={{ ...inputStyle, width: 160 }}
-                />
-              </div>
-
-              {/* Длительность */}
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 4 }}>
-                  Длительность
-                </label>
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <input
-                    type="number"
-                    min="0"
-                    value={scrHours}
-                    onChange={(e) => setScrHours(e.target.value)}
-                    placeholder="ч"
-                    style={{ ...inputStyle, width: 56, textAlign: 'center' }}
-                  />
-                  <span style={{ color: '#999' }}>:</span>
-                  <input
-                    type="number"
-                    min="0"
-                    max="59"
-                    value={scrMinutes}
-                    onChange={(e) => setScrMinutes(e.target.value)}
-                    placeholder="м"
-                    style={{ ...inputStyle, width: 56, textAlign: 'center' }}
-                  />
-                  <span style={{ color: '#999' }}>:</span>
-                  <input
-                    type="number"
-                    min="0"
-                    max="59"
-                    value={scrSeconds}
-                    onChange={(e) => setScrSeconds(e.target.value)}
-                    placeholder="с"
-                    style={{ ...inputStyle, width: 56, textAlign: 'center' }}
-                  />
-                </div>
-              </div>
-
-              {/* Название */}
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 4 }}>
-                  Название (необязательно)
-                </label>
-                <input
-                  value={scrTitle}
-                  onChange={(e) => setScrTitle(e.target.value)}
-                  placeholder="Утренняя пробежка"
-                  style={{ ...inputStyle, width: '100%' }}
-                />
-              </div>
-
-              {/* Дата */}
-              <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 4 }}>
-                  Дата
-                </label>
-                <input
-                  type="date"
-                  value={scrDate}
-                  onChange={(e) => setScrDate(e.target.value)}
-                  style={{ ...inputStyle, width: 180 }}
-                />
-              </div>
-
-              {/* Распознанный текст (collapsible) */}
-              {ocrRawText && (
-                <div style={{ marginBottom: 14 }}>
-                  <button
-                    type="button"
-                    onClick={() => setOcrTextExpanded((v) => !v)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      padding: 0,
-                      cursor: 'pointer',
-                      fontSize: 13,
-                      color: '#666',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 4,
-                    }}
-                  >
-                    <span style={{
-                      display: 'inline-block',
-                      transform: ocrTextExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
-                      transition: 'transform 0.2s',
-                      fontSize: 10,
-                    }}>
-                      ▶
-                    </span>
-                    Распознанный текст
-                  </button>
-                  {ocrTextExpanded && (
-                    <div
-                      style={{
-                        marginTop: 8,
-                        padding: 10,
-                        background: '#f5f5f5',
-                        borderRadius: 8,
-                        fontSize: 12,
-                        color: '#666',
-                        fontFamily: 'monospace',
-                        whiteSpace: 'pre-wrap',
-                        wordBreak: 'break-word',
-                        maxHeight: 200,
-                        overflowY: 'auto',
-                        border: '1px solid #e0e0e0',
-                      }}
-                    >
-                      {ocrRawText}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {scrError && (
-                <div style={{ color: '#d32f2f', fontSize: 13, marginBottom: 10 }}>{scrError}</div>
-              )}
-
-              {scrSuccess && (
-                <div style={{ color: '#1a7f37', fontSize: 13, marginBottom: 10, fontWeight: 600 }}>{scrSuccess}</div>
-              )}
-
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button
-                  type="submit"
-                  disabled={scrSubmitting}
-                  style={{
-                    padding: '10px 24px',
-                    borderRadius: 8,
-                    border: 'none',
-                    background: '#fc4c02',
-                    color: '#fff',
-                    fontSize: 14,
-                    fontWeight: 600,
-                    cursor: scrSubmitting ? 'not-allowed' : 'pointer',
-                    opacity: scrSubmitting ? 0.7 : 1,
-                  }}
-                >
-                  {scrSubmitting ? 'Сохранение...' : 'Подтвердить и сохранить'}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCancelScreenshot}
-                  style={{
-                    padding: '10px 20px',
-                    borderRadius: 8,
-                    border: '1px solid #e0e0e0',
-                    background: '#fff',
-                    color: '#666',
-                    fontSize: 14,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Отмена
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Форма добавления */}
-      {showForm && (
-        <div
-          style={{
-            background: '#fff',
-            borderRadius: 16,
-            padding: 20,
-            boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-            border: '1px solid #e0e0e0',
-            marginBottom: 20,
-          }}
-        >
-          <form onSubmit={handleSubmit}>
-            {/* Вид спорта */}
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 13, color: '#666', marginBottom: 6 }}>Вид спорта</div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {ALL_SPORTS.map((s) => (
-                  <button
-                    type="button"
-                    key={s}
-                    onClick={() => setFormSport(s)}
-                    style={{
-                      padding: '8px 14px',
-                      borderRadius: 8,
-                      border: formSport === s ? `2px solid ${SPORT_COLORS[s]}` : '1px solid #e0e0e0',
-                      background: formSport === s ? '#fff' : '#eef0f4',
-                      cursor: 'pointer',
-                      fontSize: 14,
-                      fontWeight: formSport === s ? 600 : 400,
-                      color: formSport === s ? SPORT_COLORS[s] : '#666',
-                    }}
-                  >
-                    {SPORT_ICONS[s]} {SPORT_LABELS[s]}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Дистанция */}
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 4 }}>
-                Дистанция (км)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={formDistance}
-                onChange={(e) => setFormDistance(e.target.value)}
-                placeholder="5.0"
-                style={{ ...inputStyle, width: isMobile ? '100%' : 160 }}
-              />
-            </div>
-
-            {/* Длительность */}
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 4 }}>
-                Длительность
-              </label>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <input
-                  type="number"
-                  min="0"
-                  value={formHours}
-                  onChange={(e) => setFormHours(e.target.value)}
-                  placeholder="ч"
-                  style={{ ...inputStyle, width: isMobile ? '100%' : 60, textAlign: 'center' }}
-                />
-                <span style={{ color: '#999' }}>:</span>
-                <input
-                  type="number"
-                  min="0"
-                  max="59"
-                  value={formMinutes}
-                  onChange={(e) => setFormMinutes(e.target.value)}
-                  placeholder="м"
-                  style={{ ...inputStyle, width: isMobile ? '100%' : 60, textAlign: 'center' }}
-                />
-                <span style={{ color: '#999' }}>:</span>
-                <input
-                  type="number"
-                  min="0"
-                  max="59"
-                  value={formSeconds}
-                  onChange={(e) => setFormSeconds(e.target.value)}
-                  placeholder="с"
-                  style={{ ...inputStyle, width: isMobile ? '100%' : 60, textAlign: 'center' }}
-                />
-              </div>
-            </div>
-
-            {/* Название */}
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 4 }}>
-                Название (необязательно)
-              </label>
-              <input
-                value={formTitle}
-                onChange={(e) => setFormTitle(e.target.value)}
-                placeholder="Утренняя пробежка"
-                style={{ ...inputStyle, width: '100%' }}
-              />
-            </div>
-
-            {/* Дата */}
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 4 }}>
-                Дата
-              </label>
-              <input
-                type="date"
-                value={formDate}
-                max={new Date().toISOString().split('T')[0]}
-                onChange={(e) => setFormDate(e.target.value)}
-                style={{ ...inputStyle, width: 180 }}
-              />
-            </div>
-
-            {/* Описание */}
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 4 }}>
-                Описание (необязательно)
-              </label>
-              <textarea
-                value={formDesc}
-                onChange={(e) => setFormDesc(e.target.value)}
-                rows={2}
-                style={{ ...inputStyle, width: '100%', resize: 'vertical', fontFamily: 'inherit' }}
-              />
-            </div>
-
-            {formError && (
-              <div style={{ color: '#d32f2f', fontSize: 13, marginBottom: 10 }}>{formError}</div>
-            )}
-
-            <button
-              type="submit"
-              disabled={submitting}
-              style={{
-                padding: '10px 24px',
-                borderRadius: 8,
-                border: 'none',
-                background: '#fc4c02',
-                color: '#fff',
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: submitting ? 'not-allowed' : 'pointer',
-                opacity: submitting ? 0.7 : 1,
-              }}
-            >
-              {submitting ? 'Сохранение...' : 'Сохранить активность'}
-            </button>
-          </form>
-        </div>
-      )}
 
       {/* Фильтры */}
       <div
