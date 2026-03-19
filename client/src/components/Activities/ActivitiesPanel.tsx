@@ -776,7 +776,8 @@ function ActivityWizard({ onClose, onSuccess }: { onClose: () => void; onSuccess
         title: title || undefined, description: desc || undefined,
         startedAt: date ? new Date(date).toISOString() : new Date().toISOString(),
         isManual: true,
-      });
+        ...(screenshotUrl ? { imageUrl: screenshotUrl } : {}),
+      } as Parameters<typeof api.activities.create>[0]);
       if (photoFiles.length > 0 && (activity as { id?: string })?.id) {
         await api.photos.upload((activity as { id: string }).id, photoFiles).catch(() => {});
       }

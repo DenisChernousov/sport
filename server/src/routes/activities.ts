@@ -240,7 +240,7 @@ function toRad(deg: number): number {
 router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { sport, distance, duration, title, startedAt, gpsTrack, description } = req.body;
+    const { sport, distance, duration, title, startedAt, gpsTrack, description, imageUrl } = req.body;
 
     if (!sport || distance == null || duration == null || !startedAt) {
       res.status(400).json({ error: 'sport, distance, duration, and startedAt are required' });
@@ -307,6 +307,7 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
         avgPace,
         avgSpeed,
         gpsTrack: gpsTrack || null,
+        imageUrl: imageUrl || null,
         isManual: true,
         startedAt: new Date(startedAt),
       },
