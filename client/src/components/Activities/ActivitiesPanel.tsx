@@ -405,24 +405,6 @@ function ActivityDetailModal({
           </div>
         )}
 
-        {/* Скриншот */}
-        {activity.imageUrl && (
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 13, color: '#999', marginBottom: 8 }}>Скриншот</div>
-            <img
-              src={activity.imageUrl}
-              alt="Скриншот активности"
-              style={{
-                maxWidth: '100%',
-                maxHeight: 400,
-                borderRadius: 12,
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                objectFit: 'contain',
-                display: 'block',
-              }}
-            />
-          </div>
-        )}
 
         {/* Photo gallery */}
         <div style={{ marginBottom: 20 }}>
@@ -606,22 +588,32 @@ function ActivityDetailModal({
           </div>
         )}
 
-        {/* Карта (заглушка) */}
-        <div
-          style={{
-            background: '#f5f5f5',
-            borderRadius: 12,
-            padding: 20,
-            textAlign: 'center',
-            marginBottom: 20,
-            border: '1px dashed #e0e0e0',
-          }}
-        >
-          <div style={{ fontSize: 24, marginBottom: 8 }}>🗺️</div>
-          <div style={{ fontSize: 14, color: '#999' }}>
-            Карта маршрута скоро будет доступна
+        {/* Скриншот / заглушка карты */}
+        {activity.imageUrl ? (
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 13, color: '#999', marginBottom: 8 }}>Скриншот</div>
+            <img
+              src={activity.imageUrl}
+              alt="Скриншот активности"
+              style={{
+                maxWidth: '100%',
+                maxHeight: 480,
+                borderRadius: 12,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                objectFit: 'contain',
+                display: 'block',
+              }}
+            />
           </div>
-        </div>
+        ) : (
+          <div style={{
+            background: '#f5f5f5', borderRadius: 12, padding: 20,
+            textAlign: 'center', marginBottom: 20, border: '1px dashed #e0e0e0',
+          }}>
+            <div style={{ fontSize: 24, marginBottom: 8 }}>🗺️</div>
+            <div style={{ fontSize: 14, color: '#999' }}>Карта маршрута скоро будет доступна</div>
+          </div>
+        )}
 
         {/* Дополнительная информация */}
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 13, color: '#999' }}>
