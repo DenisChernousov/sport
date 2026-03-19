@@ -88,10 +88,11 @@ function parseDistanceFromText(text: string): string {
 
   // Step 1: Remove everything that is speed (км/ч, km/h, кмч, etc.)
   const noSpeed = allText
-    .replace(/\d{1,4}[.,]?\d{0,3}\s*(?:км\s*\/\s*ч|km\s*\/\s*h|кмч|mph)/gi, '')
-    .replace(/\d{1,4}[.,]?\d{0,3}\s*(?:мин\s*\/\s*км|min\s*\/\s*km)/gi, '')
+    .replace(/\d{1,4}[.,]?\d{0,3}\s*(?:[кК][мМ]\s*\/\s*[чЧ]|km\s*\/\s*h|кмч|mph)/gi, '')
+    .replace(/\d{1,4}[.,]?\d{0,3}\s*(?:[мМ]ин\s*\/\s*[кК][мМ]|min\s*\/\s*km)/gi, '')
     .replace(/\d{1,5}\s*(?:ккал|kcal|cal)/gi, '')
-    .replace(/\d{5,}/g, ''); // remove phone numbers and other long digit sequences
+    .replace(/\d{1,4}[.,]\d{2}\s*(?:\/\s*)?(?:[кК][мМ]|km)\b/gi, '') // pace without explicit unit "мин"
+    .replace(/\d{5,}/g, ''); // remove long digit sequences
 
   // Step 2: Find number + "км" or "km" in cleaned text
   const distMatch = noSpeed.match(/(\d{1,4}[.,]\d{1,3})\s*(?:км|km)/i)
@@ -107,23 +108,23 @@ function parseDistanceFromText(text: string): string {
     }
   }
 
-  // Step 4: Find numbers with decimals first (15.65, 30.37 — these are usually distance)
-  // Then fall back to largest integer
+  // Step 4: Find decimal numbers in order of appearance (top-to-bottom OCR scan).
+  // Distance is usually the first prominent metric shown; pace/speed are already removed.
   const decimalNums = [...noSpeed.matchAll(/(\d{1,4}[.,]\d{1,3})/g)]
     .map(m => ({ raw: m[1], val: parseFloat(m[1].replace(',', '.')) }))
-    .filter(c => c.val >= 1 && c.val <= 500);
+    .filter(c => c.val >= 0.5 && c.val <= 300);
   if (decimalNums.length > 0) {
-    // Prefer the largest decimal number (distance is usually the biggest)
-    decimalNums.sort((a, b) => b.val - a.val);
-    return decimalNums[0].raw.replace(',', '.');
+    // Prefer values in the common recreational distance range (0.5–100 km) that appear first
+    const inRange = decimalNums.filter(c => c.val <= 100);
+    const chosen = inRange.length > 0 ? inRange[0] : decimalNums[0];
+    return chosen.raw.replace(',', '.');
   }
 
-  // Step 5: No decimals found — try integers near "км" context
+  // Step 5: No decimals found — try integers
   const intNums = [...noSpeed.matchAll(/\b(\d{1,4})\b/g)]
     .map(m => ({ raw: m[1], val: parseInt(m[1], 10) }))
-    .filter(c => c.val >= 1 && c.val <= 500);
+    .filter(c => c.val >= 1 && c.val <= 300);
   if (intNums.length > 0) {
-    intNums.sort((a, b) => b.val - a.val);
     return intNums[0].raw;
   }
 
