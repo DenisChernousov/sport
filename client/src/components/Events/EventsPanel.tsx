@@ -665,7 +665,8 @@ export default function EventsPanel() {
   const [sport, setSport]                   = useState<SportType | null>(null);
   const [type, setType]                     = useState<EventType | null>(null);
   const [status, setStatus]                 = useState<EventStatus | null>(null);
-  const [myEventsOpen, setMyEventsOpen]     = useState(true);
+  const [myEventsOpen, setMyEventsOpen]     = useState(false);
+  const [filtersOpen, setFiltersOpen]       = useState(false);
   const [medalShopEvent, setMedalShopEvent] = useState<Event | null>(null);
   const [participantsEvent, setParticipantsEvent] = useState<Event | null>(null);
   const [isMobile, setIsMobile]             = useState(window.innerWidth < 768);
@@ -935,61 +936,93 @@ export default function EventsPanel() {
         );
       })()}
 
-      {/* ── Filters — compact single scrollable row ── */}
-      <div style={{
-        display: 'flex', gap: 6, alignItems: 'center',
-        overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none',
-        marginBottom: isMobile ? 16 : 20,
-      }}>
-        {/* Sport group */}
-        {SPORTS.map(sp => (
-          <FilterPill
-            key={sp ?? 'all-sport'}
-            active={sport === sp}
-            color={sp ? SPORT[sp].color : '#242424'}
-            onClick={() => setSport(sp)}
-          >
-            {sp ? `${SPORT[sp].icon} ${SPORT[sp].label}` : 'Все'}
-          </FilterPill>
-        ))}
-        {/* Separator */}
-        <div style={{ width: 1, height: 20, background: '#ddd', flexShrink: 0, margin: '0 2px' }} />
-        {/* Type group (skip "Все" to save space) */}
-        {TYPES.filter(t => t !== null).map(t => (
-          <FilterPill
-            key={t!}
-            active={type === t}
-            onClick={() => setType(type === t ? null : t)}
-          >
-            {TYPE_LABEL[t!]}
-          </FilterPill>
-        ))}
-        {/* Separator */}
-        <div style={{ width: 1, height: 20, background: '#ddd', flexShrink: 0, margin: '0 2px' }} />
-        {/* Status group (skip "Все") */}
-        {STATUSES.filter(st => st !== null).map(st => (
-          <FilterPill
-            key={st!}
-            active={status === st}
-            color={STATUS[st!].color}
-            onClick={() => setStatus(status === st ? null : st)}
-          >
-            {STATUS[st!].label}
-          </FilterPill>
-        ))}
-        {/* Reset if any filter active */}
-        {(sport || type || status) && (
+      {/* ── Filters ── */}
+      <div style={{ marginBottom: isMobile ? 16 : 20 }}>
+        {/* Trigger row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button
-            onClick={() => { setSport(null); setType(null); setStatus(null); }}
+            onClick={() => setFiltersOpen(o => !o)}
             style={{
-              flexShrink: 0, padding: '5px 12px', borderRadius: 20, fontSize: 12,
-              fontWeight: 600, cursor: 'pointer', border: '1.5px solid #ffccb3',
-              background: '#fff4ef', color: '#fc4c02',
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '7px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600,
+              cursor: 'pointer',
+              border: filtersOpen || sport || type || status ? '2px solid #242424' : '1.5px solid #d8d8d8',
+              background: filtersOpen || sport || type || status ? '#242424' : '#fff',
+              color: filtersOpen || sport || type || status ? '#fff' : '#555',
+              transition: 'all 0.15s',
             }}
           >
-            ✕ Сбросить
+            <span>Фильтры</span>
+            <span style={{
+              transform: filtersOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+              transition: 'transform 0.2s', display: 'inline-block', lineHeight: 1,
+            }}>▾</span>
           </button>
-        )}
+          {(sport || type || status) && (
+            <button
+              onClick={() => { setSport(null); setType(null); setStatus(null); setFiltersOpen(false); }}
+              style={{
+                padding: '6px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+                cursor: 'pointer', border: '1.5px solid #ffccb3',
+                background: '#fff4ef', color: '#fc4c02',
+              }}
+            >
+              ✕ Сбросить
+            </button>
+          )}
+          {/* Active filter chips summary */}
+          {!filtersOpen && (sport || type || status) && (
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {sport && <span style={{ fontSize: 12, background: SPORT[sport].bg, color: SPORT[sport].color, padding: '3px 10px', borderRadius: 12, fontWeight: 600 }}>{SPORT[sport].icon} {SPORT[sport].label}</span>}
+              {type && <span style={{ fontSize: 12, background: '#f5f5f5', color: '#555', padding: '3px 10px', borderRadius: 12, fontWeight: 600 }}>{TYPE_LABEL[type]}</span>}
+              {status && <span style={{ fontSize: 12, background: '#f5f5f5', color: STATUS[status].color, padding: '3px 10px', borderRadius: 12, fontWeight: 600 }}>{STATUS[status].label}</span>}
+            </div>
+          )}
+        </div>
+
+        {/* Expandable filter panel */}
+        <AnimatePresence initial={false}>
+          {filtersOpen && (
+            <motion.div
+              key="filters-panel"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              style={{ overflow: 'hidden' }}
+            >
+              <div style={{ paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {/* Sport */}
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: '#aaa', textTransform: 'uppercase', letterSpacing: 1, minWidth: 40 }}>Спорт</span>
+                  {SPORTS.map(sp => (
+                    <FilterPill key={sp ?? 'all-sport'} active={sport === sp} color={sp ? SPORT[sp].color : '#242424'} onClick={() => setSport(sp)}>
+                      {sp ? `${SPORT[sp].icon} ${SPORT[sp].label}` : 'Все'}
+                    </FilterPill>
+                  ))}
+                </div>
+                {/* Type */}
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: '#aaa', textTransform: 'uppercase', letterSpacing: 1, minWidth: 40 }}>Тип</span>
+                  {TYPES.map(t => (
+                    <FilterPill key={t ?? 'all-type'} active={type === t} onClick={() => setType(type === t && t !== null ? null : t)}>
+                      {t ? TYPE_LABEL[t] : 'Все'}
+                    </FilterPill>
+                  ))}
+                </div>
+                {/* Status */}
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: '#aaa', textTransform: 'uppercase', letterSpacing: 1, minWidth: 40 }}>Статус</span>
+                  {STATUSES.map(st => (
+                    <FilterPill key={st ?? 'all-status'} active={status === st} color={st ? STATUS[st].color : '#242424'} onClick={() => setStatus(status === st && st !== null ? null : st)}>
+                      {st ? STATUS[st].label : 'Все'}
+                    </FilterPill>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* ── Events grid ── */}
