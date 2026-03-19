@@ -335,6 +335,91 @@ router.delete('/achievements/:id', authMiddleware, adminMiddleware, async (req: 
   }
 });
 
+// ─── DELETE /api/admin/users/:id ─────────────────────────
+
+router.delete('/users/:id', authMiddleware, adminMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.params.id as string;
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) { res.status(404).json({ error: 'User not found' }); return; }
+    // Cascade delete dependent records
+    await prisma.userAchievement.deleteMany({ where: { userId } });
+    await prisma.activity.deleteMany({ where: { userId } });
+    await prisma.teamMember.deleteMany({ where: { userId } });
+    await prisma.notification.deleteMany({ where: { OR: [{ userId }, { fromUserId: userId }] } });
+    await prisma.user.delete({ where: { id: userId } });
+    res.status(204).send();
+  } catch (err) {
+    console.error('Admin delete user error:', err);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+// ─── POST /api/admin/users/:id/xp ────────────────────────
+
+router.post('/users/:id/xp', authMiddleware, adminMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.params.id as string;
+    const { amount, reason } = req.body;
+    if (!amount || isNaN(Number(amount))) { res.status(400).json({ error: 'amount required' }); return; }
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) { res.status(404).json({ error: 'User not found' }); return; }
+    const xpDelta = parseInt(String(amount), 10);
+    const newXp = Math.max(0, (user.xp ?? 0) + xpDelta);
+    const newLevel = Math.floor(newXp / 100) + 1;
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { xp: newXp, level: newLevel },
+      select: { id: true, username: true, xp: true, level: true },
+    });
+    if (reason) {
+      await prisma.notification.create({
+        data: { userId, type: 'achievement', text: `Администратор начислил ${xpDelta > 0 ? '+' : ''}${xpDelta} XP. Причина: ${reason}` },
+      }).catch(() => {});
+    }
+    res.json(updated);
+  } catch (err) {
+    console.error('Admin give xp error:', err);
+    res.status(500).json({ error: 'Failed to update XP' });
+  }
+});
+
+// ─── GET /api/admin/activities ────────────────────────────
+
+router.get('/activities', authMiddleware, adminMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const limit = Math.min(100, parseInt(String(req.query.limit ?? '50'), 10));
+    const activities = await prisma.activity.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      select: {
+        id: true, sport: true, title: true, distance: true, duration: true,
+        startedAt: true, createdAt: true,
+        user: { select: { id: true, username: true, avatarUrl: true, level: true } },
+      },
+    });
+    res.json(activities);
+  } catch (err) {
+    console.error('Admin activities error:', err);
+    res.status(500).json({ error: 'Failed to fetch activities' });
+  }
+});
+
+// ─── DELETE /api/admin/activities/:id ────────────────────
+
+router.delete('/activities/:id', authMiddleware, adminMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const activity = await prisma.activity.findUnique({ where: { id } });
+    if (!activity) { res.status(404).json({ error: 'Activity not found' }); return; }
+    await prisma.activity.delete({ where: { id } });
+    res.status(204).send();
+  } catch (err) {
+    console.error('Admin delete activity error:', err);
+    res.status(500).json({ error: 'Failed to delete activity' });
+  }
+});
+
 // ─── POST /api/admin/achievements/:id/icon ──────────────
 
 router.post('/achievements/:id/icon', authMiddleware, adminMiddleware, achIconUpload.single('icon'), async (req: AuthRequest, res: Response) => {

@@ -105,11 +105,18 @@ function IconSettings() {
     </svg>
   );
 }
+function IconActivities() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+    </svg>
+  );
+}
 
 // ─── Styles ──────────────────────────────────────────────
 
 const styles = {
-  container: { maxWidth: 1280, margin: '0 auto', padding: '24px 24px 48px' } as React.CSSProperties,
+  container: { maxWidth: 1280, margin: '0 auto', padding: '24px 16px 48px', minWidth: 0, overflowX: 'hidden' } as React.CSSProperties,
   card: { background: '#fff', borderRadius: 14, border: `1px solid ${BORDER}`, padding: 24, marginBottom: 16 } as React.CSSProperties,
   btn: (variant: 'primary' | 'secondary' | 'danger' = 'primary'): React.CSSProperties => ({
     padding: '10px 20px',
@@ -218,7 +225,7 @@ function useToast() {
 
 // ─── Sidebar Nav ─────────────────────────────────────────
 
-type TabKey = 'stats' | 'users' | 'events' | 'packages' | 'achievements' | 'settings';
+type TabKey = 'stats' | 'users' | 'events' | 'packages' | 'achievements' | 'activities' | 'settings';
 
 const NAV_ITEMS: { key: TabKey; label: string; Icon: () => React.ReactElement }[] = [
   { key: 'stats', label: 'Статистика', Icon: IconStats },
@@ -226,6 +233,7 @@ const NAV_ITEMS: { key: TabKey; label: string; Icon: () => React.ReactElement }[
   { key: 'events', label: 'События', Icon: IconEvents },
   { key: 'packages', label: 'Пакеты', Icon: IconPackages },
   { key: 'achievements', label: 'Достижения', Icon: IconAchievements },
+  { key: 'activities', label: 'Активности', Icon: IconActivities },
   { key: 'settings', label: 'Настройки', Icon: IconSettings },
 ];
 
@@ -235,6 +243,7 @@ const TAB_LABELS: Record<TabKey, string> = {
   events: 'События',
   packages: 'Пакеты',
   achievements: 'Достижения',
+  activities: 'Активности',
   settings: 'Настройки',
 };
 
@@ -1162,6 +1171,12 @@ function UsersTab() {
   const [roleEdits, setRoleEdits] = useState<Record<string, string>>({});
   const [savingRole, setSavingRole] = useState<string | null>(null);
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
+  const [confirmDeleteUser, setConfirmDeleteUser] = useState<AdminUser | null>(null);
+  const [deletingUser, setDeletingUser] = useState<string | null>(null);
+  const [xpModal, setXpModal] = useState<AdminUser | null>(null);
+  const [xpAmount, setXpAmount] = useState('');
+  const [xpReason, setXpReason] = useState('');
+  const [savingXp, setSavingXp] = useState(false);
 
   const loadUsers = useCallback(async (searchVal?: string) => {
     setLoading(true);
@@ -1205,6 +1220,41 @@ function UsersTab() {
       setSavingRole(null);
     }
   }, [roleEdits]);
+
+  const handleDeleteUser = useCallback(async (userId: string) => {
+    setDeletingUser(userId);
+    try {
+      await api.admin.deleteUser(userId);
+      setUsers((prev) => prev.filter((u) => u.id !== userId));
+      setSuccess('Пользователь удалён');
+      setTimeout(() => setSuccess(''), 2000);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Ошибка удаления');
+    } finally {
+      setDeletingUser(null);
+      setConfirmDeleteUser(null);
+    }
+  }, []);
+
+  const handleGiveXp = useCallback(async () => {
+    if (!xpModal) return;
+    const amount = parseInt(xpAmount, 10);
+    if (isNaN(amount)) { setError('Введите число'); return; }
+    setSavingXp(true);
+    try {
+      const updated = await api.admin.giveXp(xpModal.id, amount, xpReason || undefined);
+      setUsers((prev) => prev.map((u) => u.id === xpModal.id ? { ...u, xp: updated.xp, level: updated.level } : u));
+      setSuccess(`XP обновлён: ${updated.xp} XP, уровень ${updated.level}`);
+      setTimeout(() => setSuccess(''), 3000);
+      setXpModal(null);
+      setXpAmount('');
+      setXpReason('');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Ошибка начисления XP');
+    } finally {
+      setSavingXp(false);
+    }
+  }, [xpModal, xpAmount, xpReason]);
 
   const filteredUsers = localFilter.trim()
     ? users.filter((u) => {
@@ -1258,10 +1308,11 @@ function UsersTab() {
                   <th style={styles.th}>Email</th>
                   <th style={styles.th}>Роль</th>
                   <th style={styles.th}>Город</th>
-                  <th style={styles.th}>Уровень</th>
+                  <th style={styles.th}>Уровень / XP</th>
                   <th style={styles.th}>Дистанция</th>
                   <th style={styles.th}>Рефералы</th>
                   <th style={styles.th}>Дата рег.</th>
+                  <th style={styles.th}>Действия</th>
                 </tr>
               </thead>
               <tbody>
@@ -1323,20 +1374,39 @@ function UsersTab() {
                       <td style={{ ...styles.td, color: '#666' }}>{u.city ?? '—'}</td>
                       <td style={styles.td}>
                         <span style={{ padding: '2px 8px', background: '#f5f5f5', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
-                          {u.level}
+                          Ур.{u.level}
                         </span>
+                        <span style={{ marginLeft: 4, fontSize: 11, color: '#888' }}>{u.xp} XP</span>
                       </td>
                       <td style={{ ...styles.td, fontWeight: 600, color: BRAND }}>{(u.totalDistance ?? 0).toFixed(1)} км</td>
                       <td style={{ ...styles.td, textAlign: 'center' }}>{u._count?.referrals ?? 0}</td>
                       <td style={{ ...styles.td, fontSize: 12, color: '#888', whiteSpace: 'nowrap' }}>
                         {new Date(u.createdAt).toLocaleDateString('ru-RU')}
                       </td>
+                      <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button
+                            style={{ ...styles.smallBtn('secondary'), fontSize: 11, padding: '5px 10px' }}
+                            title="Начислить / списать XP"
+                            onClick={() => { setXpModal(u); setXpAmount(''); setXpReason(''); }}
+                          >
+                            ⚡ XP
+                          </button>
+                          <button
+                            style={{ ...styles.smallBtn('danger'), fontSize: 11, padding: '5px 10px', opacity: deletingUser === u.id ? 0.6 : 1 }}
+                            disabled={deletingUser === u.id}
+                            onClick={() => setConfirmDeleteUser(u)}
+                          >
+                            🗑
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   );
                 })}
                 {filteredUsers.length === 0 && (
                   <tr>
-                    <td colSpan={8} style={{ ...styles.td, textAlign: 'center', color: '#888', padding: 48 }}>
+                    <td colSpan={9} style={{ ...styles.td, textAlign: 'center', color: '#888', padding: 48 }}>
                       Пользователи не найдены
                     </td>
                   </tr>
@@ -1345,6 +1415,232 @@ function UsersTab() {
             </table>
           </div>
         </div>
+      )}
+
+      {/* Delete user confirm */}
+      {confirmDeleteUser && (
+        <ConfirmDialog
+          message={`Удалить пользователя "${confirmDeleteUser.username}"? Все его данные будут удалены безвозвратно.`}
+          onConfirm={() => handleDeleteUser(confirmDeleteUser.id)}
+          onCancel={() => setConfirmDeleteUser(null)}
+        />
+      )}
+
+      {/* Give XP modal */}
+      {xpModal && (
+        <div style={styles.overlay} onClick={(e) => { if (e.target === e.currentTarget) setXpModal(null); }}>
+          <div style={{ ...styles.modal, maxWidth: 400 }}>
+            <h3 style={{ fontSize: 20, fontWeight: 900, color: TEXT, marginBottom: 20 }}>
+              ⚡ XP для {xpModal.username}
+            </h3>
+            <div style={{ fontSize: 13, color: '#888', marginBottom: 16 }}>
+              Текущий XP: <strong>{xpModal.xp}</strong> · Уровень: <strong>{xpModal.level}</strong>
+            </div>
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>Количество XP (отрицательное = списание) *</label>
+              <input
+                style={styles.input}
+                type="number"
+                value={xpAmount}
+                onChange={(e) => setXpAmount(e.target.value)}
+                placeholder="+100 или -50"
+                autoFocus
+              />
+            </div>
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>Причина (необязательно)</label>
+              <input
+                style={styles.input}
+                value={xpReason}
+                onChange={(e) => setXpReason(e.target.value)}
+                placeholder="Бонус за активность..."
+              />
+            </div>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
+              <button style={styles.btn('secondary')} onClick={() => setXpModal(null)}>Отмена</button>
+              <button
+                style={{ ...styles.btn('primary'), opacity: savingXp ? 0.6 : 1 }}
+                disabled={savingXp || !xpAmount}
+                onClick={handleGiveXp}
+              >
+                {savingXp ? 'Сохранение...' : 'Применить'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Activities Tab ──────────────────────────────────────
+
+interface AdminActivity {
+  id: string;
+  sport: string;
+  title?: string;
+  distance: number;
+  duration: number;
+  startedAt?: string;
+  createdAt: string;
+  user: { id: string; username: string; avatarUrl?: string; level: number };
+}
+
+const SPORT_LABELS: Record<string, string> = {
+  RUNNING: 'Бег',
+  CYCLING: 'Вело',
+  SKIING: 'Лыжи',
+  WALKING: 'Ходьба',
+  SWIMMING: 'Плавание',
+  TRIATHLON: 'Три',
+};
+const SPORT_COLORS: Record<string, string> = {
+  RUNNING: '#fc4c02',
+  CYCLING: '#2563eb',
+  SKIING: '#0891b2',
+  WALKING: '#16a34a',
+  SWIMMING: '#7c3aed',
+  TRIATHLON: '#ea580c',
+};
+
+function ActivitiesTab() {
+  const [activities, setActivities] = useState<AdminActivity[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState<AdminActivity | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [hoveredRow, setHoveredRow] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await api.admin.listActivities(100);
+      setActivities(res);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Ошибка загрузки');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleDelete = useCallback(async (id: string) => {
+    setDeletingId(id);
+    try {
+      await api.admin.deleteActivity(id);
+      setActivities((prev) => prev.filter((a) => a.id !== id));
+      setSuccess('Активность удалена');
+      setTimeout(() => setSuccess(''), 2000);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Ошибка удаления');
+    } finally {
+      setDeletingId(null);
+      setConfirmDelete(null);
+    }
+  }, []);
+
+  return (
+    <div>
+      {error && <div style={{ padding: '10px 14px', background: '#fff0f0', color: '#c00', borderRadius: 8, fontSize: 13, fontWeight: 600, marginBottom: 16 }}>{error}</div>}
+      {success && <div style={{ padding: '10px 14px', background: '#f0fff0', color: '#16a34a', borderRadius: 8, fontSize: 13, fontWeight: 600, marginBottom: 16 }}>{success}</div>}
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: TEXT }}>Все активности</div>
+          <div style={{ fontSize: 13, color: '#888', marginTop: 2 }}>Последние {activities.length} записей</div>
+        </div>
+        <button style={styles.btn('secondary')} onClick={load}>↻ Обновить</button>
+      </div>
+
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 60, color: '#888', fontSize: 15 }}>Загрузка...</div>
+      ) : (
+        <div style={{ background: '#fff', borderRadius: 14, border: `1px solid ${BORDER}`, overflow: 'hidden' }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={styles.table}>
+              <thead>
+                <tr style={{ background: '#fafafa' }}>
+                  <th style={styles.th}>Спорт</th>
+                  <th style={styles.th}>Название</th>
+                  <th style={styles.th}>Пользователь</th>
+                  <th style={styles.th}>Дистанция</th>
+                  <th style={styles.th}>Время</th>
+                  <th style={styles.th}>Дата</th>
+                  <th style={styles.th}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {activities.map((a, idx) => {
+                  const isHovered = hoveredRow === a.id;
+                  const sportColor = SPORT_COLORS[a.sport] ?? '#888';
+                  return (
+                    <tr
+                      key={a.id}
+                      onMouseEnter={() => setHoveredRow(a.id)}
+                      onMouseLeave={() => setHoveredRow(null)}
+                      style={{ background: isHovered ? '#fff8f5' : idx % 2 === 0 ? '#fff' : '#fafafa', transition: 'background 0.1s' }}
+                    >
+                      <td style={styles.td}>
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '2px 10px',
+                          borderRadius: 20,
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: '#fff',
+                          background: sportColor,
+                        }}>
+                          {SPORT_LABELS[a.sport] ?? a.sport}
+                        </span>
+                      </td>
+                      <td style={{ ...styles.td, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {a.title || '—'}
+                      </td>
+                      <td style={styles.td}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <UserAvatar username={a.user.username} avatarUrl={a.user.avatarUrl} size={26} />
+                          <span style={{ fontSize: 13, fontWeight: 600 }}>{a.user.username}</span>
+                        </div>
+                      </td>
+                      <td style={{ ...styles.td, fontWeight: 700, color: BRAND }}>{(a.distance ?? 0).toFixed(2)} км</td>
+                      <td style={{ ...styles.td, color: '#666' }}>{formatDurationShort(a.duration)}</td>
+                      <td style={{ ...styles.td, fontSize: 12, color: '#888', whiteSpace: 'nowrap' }}>
+                        {new Date(a.createdAt).toLocaleDateString('ru-RU')}
+                      </td>
+                      <td style={styles.td}>
+                        <button
+                          style={{ ...styles.smallBtn('danger'), fontSize: 11, opacity: deletingId === a.id ? 0.6 : 1 }}
+                          disabled={deletingId === a.id}
+                          onClick={() => setConfirmDelete(a)}
+                        >
+                          🗑
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {activities.length === 0 && (
+                  <tr>
+                    <td colSpan={7} style={{ ...styles.td, textAlign: 'center', color: '#888', padding: 48 }}>
+                      Нет активностей
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {confirmDelete && (
+        <ConfirmDialog
+          message={`Удалить активность "${confirmDelete.title || confirmDelete.sport}" пользователя ${confirmDelete.user.username}?`}
+          onConfirm={() => handleDelete(confirmDelete.id)}
+          onCancel={() => setConfirmDelete(null)}
+        />
       )}
     </div>
   );
@@ -1875,6 +2171,9 @@ export default function AdminPanel() {
 
           {/* ─── Users Tab ─────────────────────────────────── */}
           {tab === 'users' && <UsersTab />}
+
+          {/* ─── Activities Tab ────────────────────────────── */}
+          {tab === 'activities' && <ActivitiesTab />}
 
           {/* ─── Events Tab ────────────────────────────────── */}
           {tab === 'events' && !loading && (

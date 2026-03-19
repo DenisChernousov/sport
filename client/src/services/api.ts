@@ -556,6 +556,21 @@ export const api = {
         body: form,
       });
     },
+    deleteUser(userId: string) {
+      return request<void>(`/admin/users/${userId}`, { method: 'DELETE' });
+    },
+    giveXp(userId: string, amount: number, reason?: string) {
+      return request<{ id: string; username: string; xp: number; level: number }>(`/admin/users/${userId}/xp`, {
+        method: 'POST',
+        body: JSON.stringify({ amount, reason }),
+      });
+    },
+    listActivities(limit?: number) {
+      return request<{ id: string; sport: string; title?: string; distance: number; duration: number; startedAt?: string; createdAt: string; user: { id: string; username: string; avatarUrl?: string; level: number } }[]>(`/admin/activities${limit ? `?limit=${limit}` : ''}`);
+    },
+    deleteActivity(id: string) {
+      return request<void>(`/admin/activities/${id}`, { method: 'DELETE' });
+    },
   },
 
   profile: {
